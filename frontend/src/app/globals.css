@@ -7,6 +7,7 @@
 
 @theme {
   --color-dark-green: #0F5C66;
+  --color-light-green: #ECFDF5;
 }
 
 @theme inline {

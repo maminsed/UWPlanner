@@ -9,7 +9,11 @@ const config: Config = {
     './src/**/*.{ts,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        inter: ["var(--font-inter)"]
+      }
+    },
   },
   plugins: [],
 }

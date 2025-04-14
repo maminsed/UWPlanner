@@ -1,0 +1,3 @@
+<svg id="trapezoid" viewBox="0 0 1000 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="meet">
+    <polygon id="shape" points="0,250 1000,250 1000,0 0,200" fill="#0F5C66" />
+</svg>

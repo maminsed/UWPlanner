@@ -8,13 +8,12 @@
 @theme {
   --color-dark-green: #0F5C66;
   --color-light-green: #ECFDF5;
+  --breakpoint-xs: 30rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 /* @media (prefers-color-scheme: dark) {

@@ -4,11 +4,11 @@ import Image from "next/image"
 export default function Landing() {
 
     return (
-        <section className="pt-18 h-dvh flex w-full justify-around items-center">
-            <div>
-                <h1>UWPLANNER</h1>
-                <p>Get ready for future</p>
-                <ul className="flex flex-row justify-center gap-4 items-center">
+        <section className="pt-18 gap-18 mt-20 sm:mt-15 md:h-dvh flex w-full justify-around items-center flex-col md:flex-row md:gap-0 md:mt-0">
+            <div className="max-sm:text-center">
+                <h1 className="text-5xl sm:text-6xl font-extrabold border-b-3 py-1">UWPLANER</h1>
+                <p className="text-2xl font-light">Get ready for future</p>
+                <ul className="flex flex-row justify-center md:justify-start gap-4 items-center mt-5">
                     <li>
                         <Link href="/" className='text-[1.2rem]'>login</Link>
                     </li>
@@ -19,7 +19,12 @@ export default function Landing() {
                 </ul>
             </div>
 
-            <Image className="w-[55%] h-auto max-w-[39rem] shadow-[2px_4px_51px_1px_rgba(58,97,102,0.28)]" src="/mock.png?var=2" alt="Picture of the app in action" width={717} height={511}/>
+            <Image className="w-[95%] sm:w-[80%] md:w-[55%] h-auto max-w-[39rem] shadow-[2px_4px_51px_1px_rgba(58,97,102,0.28)]" src="/mock.png?var=2" alt="Picture of the app in action" width={717} height={511}/>
+
+            <div className="h-[50vh] md:h-fit w-dvw fixed left-0 bottom-0 overflow-x-hidden z-[-1]">
+                <img src="/background.svg" width="1000" height="500" style={{width: "100%", height:"100%", objectFit:"cover", objectPosition:"bottom"}} alt="background"/>
+            </div>
+
         </section>
     )
 }

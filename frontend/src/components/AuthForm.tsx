@@ -34,7 +34,7 @@ export default function SignIn({mode}:{mode:"Sign In"|"Sign Up"}) {
                                 <IoMdEyeOff className="absolute right-2 top-[50%] translate-y-[-50%] cursor-pointer" onClick={reverseVisibility} style={{height:"18px", width:"auto"}}/> : 
                                 <IoMdEye className="absolute right-2 top-[50%] translate-y-[-50%] cursor-pointer" onClick={reverseVisibility} style={{height:"18px", width:"auto"}}/>}
                         </div>}
-                    <button type="submit" className="mt-16 cursor-pointer rounded-3xl bg-light-green text-dark-green py-2 hover:bg-[#00b03e] hover:text-light-green transition-all duration-500 active:bg-green-600">{mode}</button>
+                    <button type="submit" className="mt-16 cursor-pointer rounded-3xl bg-light-green text-dark-green py-2 hover:bg-[#00b03e] hover:text-light-green hover:shadow-[0px_0px_30px_0px_#f0fdfa44] transition-all duration-500 active:bg-green-600">{mode}</button>
                 </form>
 
                 <Link href={mode == "Sign In" ? "/signUp" : "/login" } className="block w-full text-center text-sm mt-2 mb-6 underline">{mode == "Sign Up" ?"Already Have an account?" : "Don't have an account?"}</Link>

@@ -5,11 +5,11 @@ import { FaGithub } from "react-icons/fa";
 
 export default function SignIn({mode}:{mode:"Sign In"|"Sign Up"}) {
     return (
-        <div className="flex flex-col pt-8 rounded-xl bg-white shadow-[0_2px_49.9px_0_#222E3033]">
+        <div className="max-xs:mt-25 max-w-[96vw] w-[270px] flex flex-col pt-8 rounded-xl bg-white shadow-[0_2px_49.9px_0_#222E3033] overflow-x-hidden">
             <h3 className="w-full text-center text-3xl font-bold z-2">{mode}</h3>
             <div className="w-full h-full bg-dark-green p-6 pt-8 pb-8 mt-6 rounded-xl rounded-t-3xl text-light-green drop-shadow-[0_-2px_19.1px_rgba(47,55,56,0.25)]">
                 <form className="flex flex-col">
-                    <input name="Email" required={true} className="mb-2 border-2 border-light-green rounded-xl pl-3 py-2 text-sm w-[220px] focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all" placeholder="Email" type="email"/>
+                    <input name="Email" required={true} className="mb-2 border-2 border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all" placeholder="Email" type="email"/>
                     <input name="password" required={true} className="border-2 border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all mb-2" placeholder="Password" type="password"/>
                     {mode == "Sign In" ? <a className="mr-1.5 cursor-pointer text-xs ml-auto underline">Forgot Password?</a> : 
                     <input name="password" required={true} className="border-2 border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all mb-2" placeholder="Confirm Password" type="password"/>}

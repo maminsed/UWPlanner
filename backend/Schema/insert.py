@@ -1,10 +1,11 @@
-from sqlalchemy import insert, text
+from sqlalchemy import create_engine, insert, Table, MetaData
 from sqlalchemy.sql import func
-from backend.Schema.table import user_table
-from backend.Schema.connect import engine
+from dotenv import load_dotenv
+import os
 
-statement = insert(user_table).values(user_name='abo',pass_hash='123456',login_method=1,created_at=func.now(),last_updated_at=func.now())
-
-with engine.connect() as conn:
-    conn.execute(statement)
-    conn.commit()
+if __name__ == '__main__':
+    load_dotenv()
+    engine = create_engine(os.getenv('DATABASE_URL'))
+    table = Table('user_table', MetaData(), autoload_with=engine)
+    with engine.begin() as conn:
+        conn.execute(insert(table).values(user_name='susy', pass_hash='baka', login_method=1, created_at=func.now(), last_updated_at=func.now()))

@@ -1,12 +1,12 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from datetime import datetime
 from dotenv import load_dotenv
 import os
 load_dotenv()
 
-class Base(MappedAsDataclass, DeclarativeBase):
+class Base(DeclarativeBase):
     pass
 
 db = SQLAlchemy(model_class=Base)

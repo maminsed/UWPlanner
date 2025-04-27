@@ -14,7 +14,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 db.init_app(app)
 
-class User(db.Model):
+class Users(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_name: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
     pass_hash: Mapped[str] = mapped_column(db.String(80), nullable=False)

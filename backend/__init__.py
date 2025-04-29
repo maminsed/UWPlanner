@@ -17,3 +17,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/auth")
 
     return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True, use_reloader=True)

@@ -1,8 +1,9 @@
 from argon2 import PasswordHasher
-from flask import Blueprint, request, make_response, jsonify
-from datetime import datetime
-from ..Schema import db, Users
+from flask import Blueprint, request, jsonify
+from ..Schema import db, Users, LoginMethod
 from argon2 import PasswordHasher
+from codename import codename
+
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
@@ -11,18 +12,24 @@ ph = PasswordHasher()
 def add_user():
     #get the data
     data = request.get_json() or {}
-    username = data.get("username")
+    email = data.get("email")
     password = data.get("password")
-    if not username or not password:
-        return jsonify({"message": "missing username or password"}), 400
+    if not email or not password:
+        return jsonify({"message": "missing email or password"}), 400
 
     #check for duplicates
-    res = Users.query.filter_by(username=username).first()
+    res = Users.query.filter_by(email=email).first()
     if res:
-        return jsonify({"message": "user with username already exists"}), 409
+        return jsonify({"message": "user with email already exists"}), 409
     try:
+        #getting a username for the user
+        username = codename(separator="_")
+        # while Users.query.filter_by(username=username):
+            # username = codename(separator="_")
+        print("UMMM FUCK ME: ", Users.query.filter_by(username=username).first())
+        
         hashpass = ph.hash(password)
-        user = Users(username=username, pass_hash=hashpass, login_method='email', created_at=datetime.now(), last_updated_at=datetime.now())
+        user = Users(email=email, username=username, pass_hash=hashpass, login_method=LoginMethod.email)
         db.session.add(user)
         db.session.commit()
         return jsonify({"message": "user created"}), 201

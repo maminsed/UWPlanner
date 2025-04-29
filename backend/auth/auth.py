@@ -12,7 +12,7 @@ def add_user():
     #get the data
     data = request.get_json() or {}
     username = data.get("username")
-    password = request.get("password")
+    password = data.get("password")
     if not username or not password:
         return jsonify({"message": "missing username or password"}), 400
 
@@ -27,4 +27,4 @@ def add_user():
         db.session.commit()
         return jsonify({"message": "user created"}), 201
     except Exception as e:
-        return jsonify({"message":"error in backend"}), 500
+        return jsonify({"message":"error in backend", "error": str(e)}), 500

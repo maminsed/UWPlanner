@@ -12,8 +12,9 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     db.init_app(app)
     migrate.init_app(app, db)
-    with app.app_context():
-        db.create_all()
+    # with app.app_context():
+    #     db.create_all() #Put this back with deployment
+
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
 

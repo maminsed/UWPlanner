@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 from .Auth import auth_bp
-from .Schema import db
+from .Schema import db, migrate
 load_dotenv()
 
 def create_app():
@@ -11,6 +11,7 @@ def create_app():
     CORS(app)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     db.init_app(app)
+    migrate.init_app(app, db)
     with app.app_context():
         db.create_all()
 

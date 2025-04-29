@@ -1,1 +1,1 @@
-from .db import Users, db
+from .db import Users, db, LoginMethod, migrate

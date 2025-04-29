@@ -22,8 +22,8 @@ class LoginMethod(Pyenum):
 
 class Users(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_name: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
-    email: Mapped[str] = mapped_column(db.String(80), nullable=False, unique=True)
+    username: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
+    email: Mapped[str] = mapped_column(db.String(80), unique=True)
     pass_hash: Mapped[str] = mapped_column(db.String(80), nullable=False)
     login_method: Mapped[LoginMethod] = mapped_column(Enum(LoginMethod, name="login_method", native_enum=True, create_type=False), nullable=False)
     created_at: Mapped[datetime] = mapped_column(db.TIMESTAMP, nullable=False)

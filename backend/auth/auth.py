@@ -57,12 +57,12 @@ def handle_login():
     password = data.get('password')
     email = data.get('email')
     if not password or (not username and not email):
-        return jsonify({"message": "missing username and email or password"}), 400
+        return jsonify({"message": "missing required fields"}), 400
     
     if email:
         user = Users.query.filter_by(email=email).first()
     else:
-        user = Users.query.filter_by(email).first()
+        user = Users.query.filter_by(username=username).first()
     
     if not user:
         return jsonify({"message": "user not found"}), 401

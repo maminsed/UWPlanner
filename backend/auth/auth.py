@@ -24,14 +24,13 @@ def add_user():
     try:
         #getting a username for the user
         username = codename(separator="_")
-        # while Users.query.filter_by(username=username):
-            # username = codename(separator="_")
-        print("UMMM FUCK ME: ", Users.query.filter_by(username=username).first())
+        while Users.query.filter_by(username=username).first() != None:
+            username = codename(separator="_")
         
         hashpass = ph.hash(password)
         user = Users(email=email, username=username, pass_hash=hashpass, login_method=LoginMethod.email)
         db.session.add(user)
         db.session.commit()
-        return jsonify({"message": "user created"}), 201
+        return jsonify({"message": "user created", "username": username}), 201
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500

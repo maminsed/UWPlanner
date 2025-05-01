@@ -4,6 +4,7 @@ from ..Schema import db, Users, LoginMethod
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
+from .jwt import encode
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -68,6 +69,8 @@ def handle_login():
         return jsonify({"message": "user not found"}), 401
     try:
         if ph.verify(user.pass_hash, password):
+            access_token = encode(30, user.username, 'ACCESS')
+            refresh_token = encode(60*60*24, user.username, 'REFRESH')
             return jsonify({"message": "logged in successfully!", 'username': user.username}), 202
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401

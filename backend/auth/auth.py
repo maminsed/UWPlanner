@@ -83,3 +83,13 @@ def handle_login():
         return jsonify({"message": "wrong password"}), 401
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500
+    
+def refresh_token_handle():
+    refresh_token = request.cookies.get('refresh_token')
+    if not refresh_token:
+        return jsonify({"message": "Refresh Cookie Token was not set"}), 401
+
+    jwt_obj = JwtToken.query.filter_by(refresh_token=refresh_token).first()
+    if not jwt_obj:
+        return jsonify({"message": "token was not in databse"}), 403
+    user = jwt_obj.user

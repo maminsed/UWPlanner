@@ -7,6 +7,6 @@ test_bp = Blueprint('test', __name__)
 def verify():
     return verify_jwt()
 
-@test_bp.route('/', methods=['GET'])
+@test_bp.route('/', methods=['GET', 'POST'])
 def test():
     return {"message": f'HI {g.username}'}, 200

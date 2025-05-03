@@ -37,7 +37,7 @@ def verify():
     authHeader = req.split(' ')[1]
     try:
         res = jwt.decode(authHeader, os.getenv('ACCESS_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
-        g.username = res.username
+        g.username = res['username']
         return None
     except ExpiredSignatureError:
         return make_response(jsonify({'message': 'access token has timed out'}), 403)

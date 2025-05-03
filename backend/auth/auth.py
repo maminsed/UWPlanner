@@ -1,6 +1,6 @@
 from argon2 import PasswordHasher
-from flask import Blueprint, request, jsonify
-from ..Schema import db, Users, LoginMethod
+from flask import Blueprint, request, jsonify, make_response
+from ..Schema import db, Users, LoginMethod, JwtToken
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
@@ -69,9 +69,16 @@ def handle_login():
         return jsonify({"message": "user not found"}), 401
     try:
         if ph.verify(user.pass_hash, password):
-            access_token = encode(30, user.username, 'ACCESS')
-            refresh_token = encode(60*60*24, user.username, 'REFRESH')
-            return jsonify({"message": "logged in successfully!", 'username': user.username}), 202
+            #Getting refresh and access tokens
+            access_token = encode(user.username, 'ACCESS')
+            refresh_token = encode(user.username, 'REFRESH')
+            #Saving the refresh token
+            refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
+            db.session.add(refresh_token_instance)
+            db.session.commit()
+            resp = make_response(jsonify({"message": "logged in successfully!", 'username': user.username, 'Access_Token': access_token}), 202)
+            resp.set_cookie('jwt', refresh_token, 24*60*60*1000, httponly=True)
+            return resp
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401
     except Exception as e:

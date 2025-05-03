@@ -1,1 +1,1 @@
-from .db import Users, db, LoginMethod, migrate
+from .db import Users, db, LoginMethod, migrate, JwtToken

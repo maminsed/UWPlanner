@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask_cors import CORS
 from .Auth import auth_bp
+from .Test import test_bp
 from .Schema import db, migrate
 load_dotenv()
 
@@ -17,7 +18,7 @@ def create_app():
 
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
-
+    app.register_blueprint(test_bp, url_prefix='/test')
     return app
 
 if __name__ == '__main__':

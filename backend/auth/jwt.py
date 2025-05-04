@@ -5,6 +5,7 @@ from typing import Literal
 from flask import make_response, jsonify, request, g
 from jwt.exceptions import ExpiredSignatureError
 import jwt
+from ..Schema import Users, db
 load_dotenv()
 
 
@@ -58,3 +59,25 @@ def verify():
     except Exception as e:
         #In case of tampering
         return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e)}), 403)
+
+def clean_up_jwt(username:str):
+    """
+    for the user with username = username, removes any jwt that has expired. 
+
+    Requires:
+        username (string):
+            The username, the user has to exist in the database. 
+    
+    Returns:
+        None - But you should call db.session.commit() after it. 
+    """
+    user = Users.query.filter_by(username=username).first()
+    if not user:
+        raise LookupError(f"{username} is not in the database")
+    for rt in user.refresh_tokens:
+        try:
+            jwt.decode(rt.refresh_token_string, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
+        except ExpiredSignatureError:
+            db.session.delete(rt)
+        except Exception as e:
+            raise RuntimeError(f"token with {rt.id} has been tampered with in the database.")

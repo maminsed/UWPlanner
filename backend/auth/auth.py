@@ -6,7 +6,7 @@ from argon2.exceptions import VerifyMismatchError
 import jwt, os
 from jwt.exceptions import ExpiredSignatureError
 from codename import codename
-from .jwt import encode
+from .jwt import encode, clean_up_jwt
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -79,7 +79,7 @@ def handle_login():
             db.session.add(refresh_token_instance)
             db.session.commit()
             resp = make_response(jsonify({"message": "logged in successfully!", 'username': user.username, 'Access_Token': access_token}), 202)
-            resp.set_cookie('jwt', refresh_token, 24*60*60*1000, httponly=True)
+            resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
             return resp
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401
@@ -98,7 +98,6 @@ def refresh_token_handle():
     if not jwt_obj:
         return jsonify({"message": "token was not in databse"}), 403
     user_table = jwt_obj.user
-    print(refresh_token)
     try:
         #Getting the username based on refresh token
         username_jwt = jwt.decode(refresh_token, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})['username']
@@ -112,3 +111,26 @@ def refresh_token_handle():
         return jsonify({"message": "Token has already expired."}), 403
     except Exception as e:
         return jsonify({"message": "Token has been tampered with"}), 403
+
+@auth_bp.route('/logout', methods=["GET"])
+def log_out():
+    refresh_token = request.cookies.get('jwt')
+    if not refresh_token:
+        return '', 204
+    
+    try:
+        jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
+        if not jwt_db:
+            resp = make_response(jsonify({"message": "refresh token not in database"}), 200)
+            resp.delete_cookie('jwt', httponly=True)# Production add: , secure=True, sameSite=None
+            return resp
+        clean_up_jwt(jwt_db.user.username)
+        db.session.delete(jwt_db)
+        db.session.commit()
+        resp = make_response(jsonify({"message": "logout successfull"}), 200)
+        resp.delete_cookie('jwt',httponly=True) #Production add: , secure=True, sameSite=None
+        return resp
+    except Exception as e:
+        return jsonify({"message": "error in backend", "error": str(e)}), 500
+
+    

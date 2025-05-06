@@ -20,7 +20,7 @@ const schema = z.object({
 
 type FormFields = z.infer<typeof schema>;
 
-export default function SignIn() {
+export default function SignUp() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
 

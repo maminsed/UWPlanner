@@ -19,10 +19,9 @@ const schema = z.object({
 
 type FormFields = z.infer<typeof schema>;
 
-export default function SignIn() {
+export default function LogIn() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
-    console.log(errors)
 
     function reverseVisibility() {
         setVisiblePass(visiblePass == "password" ? "text" : "password");
@@ -30,11 +29,29 @@ export default function SignIn() {
 
     const onSubmit: SubmitHandler<FormFields> = async (data) => {
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            console.log(data)
+            const response = await fetch("http://localhost:5000/auth/login", {
+                "method": "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                "body": JSON.stringify({
+                    "email": data.email,
+                    "password": data.password
+                })
+            })
+            console.log(response)
+            if (!response.ok) {
+                const { message } = await response.json().catch(()=>({}))
+                throw new Error(message || `Request Faild. Res: ${response.status}`)
+            }
+
+            const res = await response.json();
+            console.log(res);
         } catch (err) {
+            console.log("hello")
             setError("root", {
-                "message": "User does not exist or ur gay"
+                "message": err instanceof Error ? err.message : "Error - Please Try again"
             })
         }
     }

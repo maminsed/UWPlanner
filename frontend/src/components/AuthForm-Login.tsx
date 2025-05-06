@@ -40,16 +40,16 @@ export default function LogIn() {
                     "password": data.password
                 })
             })
-            console.log(response)
             if (!response.ok) {
                 const { message } = await response.json().catch(()=>({}))
                 throw new Error(message || `Request Faild. Res: ${response.status}`)
             }
 
             const res = await response.json();
-            console.log(res);
+            let { Access_Token } = res;
+            const { username } = res;
+            console.log(`Welcome Back baby ${username}`)
         } catch (err) {
-            console.log("hello")
             setError("root", {
                 "message": err instanceof Error ? err.message : "Error - Please Try again"
             })

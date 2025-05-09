@@ -12,7 +12,7 @@ def create_app():
     CORS(app,
          origins=["http://localhost:3000"],
          supports_credentials=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://${os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST')}/neondb?sslmode=require"
     db.init_app(app)
     migrate.init_app(app, db)
     # with app.app_context():

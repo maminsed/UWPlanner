@@ -32,10 +32,11 @@ def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
             "username": username,
             'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
         }, key, algorithm='HS256')
+
     return { 'token': jwt.encode({
         "username": username,
         'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
-    }, key, algorithm='HS256'), 'exp': timezone.utc }
+    }, key, algorithm='HS256'), 'exp': datetime.now(tz=timezone.utc) }
 
 
 def verify():

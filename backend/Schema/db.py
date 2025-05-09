@@ -34,6 +34,7 @@ class Users(db.Model):
 
     
 class JwtToken(db.Model):
+    __tablename__ = "jwt_token"
     jwt_token_id: Mapped[int] = mapped_column(primary_key=True)
     refresh_token_string: Mapped[str] = mapped_column(db.String(), nullable=False)
     user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey('users.id'), nullable=False)

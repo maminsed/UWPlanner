@@ -1,6 +1,6 @@
 'use client';
 import Link from "next/link";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form"
 import { z } from "zod";
 
@@ -10,6 +10,7 @@ import { FaApple } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AuthContext } from "@/app/AuthProvider";
 
 
 const schema = z.object({
@@ -22,6 +23,7 @@ type FormFields = z.infer<typeof schema>;
 export default function LogIn() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
+    const { setAccess, setExp } = useContext(AuthContext)
 
     function reverseVisibility() {
         setVisiblePass(visiblePass == "password" ? "text" : "password");
@@ -46,7 +48,9 @@ export default function LogIn() {
             }
 
             const res = await response.json();
-            let { Access_Token } = res;
+            let { Access_Token, exp } = res;
+            setAccess(Access_Token)
+            setExp(exp)
             const { username } = res;
             console.log(`Welcome Back baby ${username}`)
         } catch (err) {

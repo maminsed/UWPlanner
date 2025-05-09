@@ -13,6 +13,7 @@ export function api() {
     return async (input: RequestInfo, init:RequestInit = {}) => {
 
         if (isExpired(exp)) {
+            console.log(`expired with time ${exp}`)
             try {
                 const res = await fetch(`${process.env.API_URL}/auth/refresh`, {
                     method: "GET",
@@ -35,7 +36,6 @@ export function api() {
                 return null
             }
         }
-
         return fetch(input,{
             ...init,
             headers: {

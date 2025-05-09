@@ -15,8 +15,6 @@ export function AuthProvider({children}:{children: React.ReactNode}) {
     const [exp, setExp] = useState<string|undefined>(undefined)
 
     useEffect(()=>{
-        console.log("Hi were at AuthContext")
-        console.log(process.env.NEXT_PUBLIC_API_URL)
         async function handleInitial() {
             try {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
@@ -25,9 +23,15 @@ export function AuthProvider({children}:{children: React.ReactNode}) {
                     headers:{
                         "Content-Type": "application/json",
                     },
-                }).then(res => res.json())
-                setAccess(res.Access_Token.token);
-                setExp(res.Access_Token.exp)
+                })
+                if (res.status != 200) {
+                    setAccess(undefined);
+                    setExp(undefined);
+                } else {
+                    const response = await res.json();
+                    setAccess(response.Access_Token.token);
+                    setExp(response.Access_Token.exp)
+                }
             } catch (err) {
                 setAccess(undefined);
                 setExp(undefined);
@@ -45,3 +49,4 @@ export function AuthProvider({children}:{children: React.ReactNode}) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+export { AuthContext }

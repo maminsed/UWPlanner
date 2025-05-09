@@ -27,10 +27,15 @@ def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
     else:
         expiresIn = 24*60*60
     #creating and sending token
-    return jwt.encode({
+    if type == 'REFRESH':
+        return jwt.encode({
+            "username": username,
+            'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
+        }, key, algorithm='HS256')
+    return { 'token': jwt.encode({
         "username": username,
         'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
-    }, key, algorithm='HS256')
+    }, key, algorithm='HS256'), 'exp': timezone.utc }
 
 
 def verify():

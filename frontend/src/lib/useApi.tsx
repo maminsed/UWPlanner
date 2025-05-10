@@ -11,36 +11,41 @@ export function api() {
     const { access, setAccess, exp, setExp } = useAuth();
 
     return async (input: RequestInfo, init:RequestInit = {}) => {
-
+        let token = access;
+        console.log(`expiration date: ${exp}`)
         if (isExpired(exp)) {
             console.log(`expired with time ${exp}`)
             try {
-                const res = await fetch(`${process.env.API_URL}/auth/refresh`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
                     method: "GET",
                     credentials: "include",
                     headers:{
                         "Content-Type": "application/json",
                     },
-                }).then(res => res.json())
-                if (res.status == 200) {
-                    setAccess(res.Access_Token.token)
-                    setExp(res.Access_Token.exp)
+                })
+
+                if (res.ok) {
+                    const response = await res.json()
+                    setAccess(response.Access_Token.token);
+                    setExp(response.Access_Token.exp);
+                    token = response.Access_Token.token;
                 } else {
-                    setAccess(res.Access_Token.token)
-                    setExp(res.Access_Token.exp)
-                    return null
+                    throw new Error(`Error in Backend: status: ${res.status}`)
                 }
             } catch (err) {
                 setAccess(undefined)
                 setExp(undefined)
+                console.log("error in backend")
                 return null
             }
         }
+
         return fetch(input,{
             ...init,
+            credentials: "include",
             headers: {
                 ...init.headers,
-                'Authorization': `Bearer ${access}`,
+                'Authorization': `Bearer ${token}`,
             }
         })
     }

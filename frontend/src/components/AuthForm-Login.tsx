@@ -31,7 +31,7 @@ export default function LogIn() {
 
     const onSubmit: SubmitHandler<FormFields> = async (data) => {
         try {
-            const response = await fetch("http://localhost:5000/auth/login", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
                 "method": "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -43,7 +43,11 @@ export default function LogIn() {
                 })
             })
             if (!response.ok) {
-                const { message } = await response.json().catch(()=>({}))
+                const { message, error } = await response.json().catch(()=>({}))
+                console.log("Error Occured")
+                console.log(message)
+                console.log(error)
+                console.log(response.status)
                 throw new Error(message || `Request Faild. Res: ${response.status}`)
             }
 

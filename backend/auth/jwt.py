@@ -49,6 +49,16 @@ def verify():
     Returns:
         None | Response in case of an error
     """
+    if request.method == "OPTIONS":
+        resp = make_response("", 204)
+        origin = request.headers.get("Origin")
+        resp.headers.update({
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+            "Access-Control-Allow-Headers": "Authorization,Content-Type",
+            "Access-Control-Allow-Credentials": "true"
+        })
+        return resp
     #Getting the data
     req = request.headers.get('Authorization')
     if not req:

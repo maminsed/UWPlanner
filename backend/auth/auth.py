@@ -64,7 +64,7 @@ def handle_login():
     
     if email:
         user = Users.query.filter_by(email=email).first()
-    else:
+    elif username:
         user = Users.query.filter_by(username=username).first()
     
     if not user:

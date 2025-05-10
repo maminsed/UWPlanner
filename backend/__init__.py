@@ -24,7 +24,8 @@ def create_app():
 
     CORS(app,
          origins=["http://localhost:3000"],
-         supports_credentials=True)
+         supports_credentials=True
+        )
     return app
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from flask import Blueprint, g
+from flask import Blueprint, g, make_response, request
 from ..Auth import verify as verify_jwt
 
 test_bp = Blueprint('test', __name__)
@@ -9,4 +9,4 @@ def verify():
 
 @test_bp.route('/', methods=['GET', 'POST'])
 def test():
-    return {"message": f'HI {g.username}'}, 200
+    return {"message": f'HI {g.username} Stop obesity'}, 200

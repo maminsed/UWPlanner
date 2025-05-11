@@ -62,7 +62,7 @@ def verify():
     #Getting the data
     req = request.headers.get('Authorization')
     if not req:
-        return jsonify({"message": 'missing required field: authorization'}), 401
+        return jsonify({"message": 'missing required field: authorization', "action": "logout"}), 401
     authHeader = req.split(' ')[1]
     try:
         #Checking if it's valid, and adding to g
@@ -71,10 +71,10 @@ def verify():
         return None
     except ExpiredSignatureError:
         #In case of timing out
-        return make_response(jsonify({'message': 'access token has timed out'}), 403)
+        return make_response(jsonify({'message': 'access token has timed out', "action": "logout"}), 403)
     except Exception as e:
         #In case of tampering
-        return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e)}), 403)
+        return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e), "action": "logout"}), 403)
 
 def clean_up_jwt(username:str):
     """

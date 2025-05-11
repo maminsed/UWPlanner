@@ -22,11 +22,13 @@ export default function Test() {
                 })
 
 
+                const response = await (res as Response).json().catch(()=>{})
                 if (!res?.ok) {
-                    router.push('/');
+                    if (response.action == "logout") {
+                        router.push('/');
+                    }
                     throw new Error("Error in Backend")
                 }
-                const response = await res.json()
                 setMessage(response.message)
             } catch (err) {
                 console.log(err)

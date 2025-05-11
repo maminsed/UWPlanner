@@ -39,7 +39,7 @@ export function api() {
                 return null
             }
         }
-
+        
         return fetch(input,{
             ...init,
             credentials: "include",

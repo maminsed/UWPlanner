@@ -11,6 +11,7 @@ import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthContext } from "@/app/AuthProvider";
+import { useRouter } from "next/navigation";
 
 
 const schema = z.object({
@@ -24,6 +25,7 @@ export default function LogIn() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
     const { setAccess, setExp } = useContext(AuthContext)
+    const router = useRouter()
 
     function reverseVisibility() {
         setVisiblePass(visiblePass == "password" ? "text" : "password");
@@ -57,6 +59,7 @@ export default function LogIn() {
             setExp(exp)
             const { username } = res;
             console.log(`Welcome Back baby ${username}`)
+            router.push("/test")
         } catch (err) {
             setError("root", {
                 "message": err instanceof Error ? err.message : "Error - Please Try again"

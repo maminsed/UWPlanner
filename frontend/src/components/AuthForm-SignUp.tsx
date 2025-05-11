@@ -3,13 +3,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form"
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 //Logos
 import { FaGoogle } from "react-icons/fa";
 import { FaApple } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/app/AuthProvider";
+import { useRouter } from "next/navigation";
 
 
 const schema = z.object({
@@ -23,6 +25,8 @@ type FormFields = z.infer<typeof schema>;
 export default function SignUp() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
+    const { setAccess } = useAuth()
+    const router = useRouter()
 
     function reverseVisibility() {
         setVisiblePass(visiblePass == "password" ? "text" : "password");
@@ -30,10 +34,26 @@ export default function SignUp() {
 
     const onSubmit: SubmitHandler<FormFields> = async (data) => {
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
+                method:"POST",
+                body: JSON.stringify({
+                    "email": data.email,
+                    "password": data.password,
+                }),
+                headers: {
+                    "Content-Type":"application/json"
+                }
+            })
+
+            const res = await response.json().catch(()=>{})
+            if (!response.ok) {
+                console.log(res.error)
+                throw new Error(`${res.message || "Error in Backend"}`)
+            }
+            router.push("/test")
         } catch (err) {
             setError("root", {
-                "message": "user already exists"
+                "message": (err as Error)?.message || "Error Occured"
             })
         }
     }

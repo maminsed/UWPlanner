@@ -49,7 +49,8 @@ def add_user():
         #Adding to database
         db.session.add(user)
         db.session.commit()
-        return jsonify({"message": "user created", "username": username}), 201
+        #Adding the tokens
+        return add_tokens("user created", 201, user)
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500
 
@@ -71,20 +72,25 @@ def handle_login():
         return jsonify({"message": "user not found"}), 401
     try:
         if ph.verify(user.pass_hash, password):
-            #Getting refresh and access tokens
-            access_token = encode(user.username, 'ACCESS')
-            refresh_token = encode(user.username, 'REFRESH')
-            #Saving the refresh token
-            refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
-            db.session.add(refresh_token_instance)
-            db.session.commit()
-            resp = make_response(jsonify({"message": "logged in successfully!", 'username': user.username, 'Access_Token': access_token}), 202)
-            resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
-            return resp
+            #Adding the tokens
+            return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500
+    
+def add_tokens(message:str, code:int, user:Users)->make_response:
+    #generating the tokens
+    access_token = encode(user.username, 'ACCESS')
+    refresh_token = encode(user.username, 'REFRESH')
+    #Saving the refresh token
+    refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
+    db.session.add(refresh_token_instance)
+    db.session.commit()
+    #Generating the responses
+    resp = make_response(jsonify({"message": message, 'username': user.username, 'Access_Token': access_token}), code)
+    resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
+    return resp
 
 @auth_bp.route("/refresh", methods=["GET"])
 def refresh_token_handle():

@@ -1,22 +1,35 @@
 'use client'
 import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
+import { useRouter } from "next/navigation";
 
 export default function Test() {
     const [message, setMessage] = useState<string>()
     const backend = api();
+    const router = useRouter();
+
     useEffect(()=>{
         async function initial_handle() {
             try {
                 const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/test/`, {
-                method: "GET",})
+                    method: "POST",
+                    body: JSON.stringify({
+                        "error": "False"
+                    }),
+                    headers: {
+                        "Content-Type": "application/json",
+                    }
+                })
+
 
                 if (!res?.ok) {
+                    router.push('/');
                     throw new Error("Error in Backend")
                 }
                 const response = await res.json()
                 setMessage(response.message)
             } catch (err) {
+                console.log(err)
                 setMessage("Error in Response")
             }
             

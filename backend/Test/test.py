@@ -9,4 +9,9 @@ def verify():
 
 @test_bp.route('/', methods=['GET', 'POST'])
 def test():
+    data = request.get_json()
+    error = data.get("error") or ""
+    if error == "True":
+        return {"message": "You asked for an error buddy"}, 402
+
     return {"message": f'HI {g.username} Stop obesity'}, 200

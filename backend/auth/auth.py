@@ -97,24 +97,24 @@ def refresh_token_handle():
     #Getting the refresh token from user. 
     refresh_token = request.cookies.get('jwt')
     if not refresh_token:
-        return jsonify({"message": "Refresh Cookie Token was not set"}), 401
+        return jsonify({"message": "Refresh Cookie Token was not set", "action": "logout"}), 401
 
     #getting the username based on the refresh token on database
     jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
     if not jwt_obj:
-        return jsonify({"message": "token was not in databse"}), 403
+        return jsonify({"message": "token was not in databse", "action": "logout"}), 403
     user_table = jwt_obj.user
     try:
         #Getting the username based on refresh token
         username_jwt = jwt.decode(refresh_token, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})['username']
         #if the databse does not match the token, it sends an error. 
         if username_jwt != user_table.username:
-            return jsonify({"message": "Token has been tampered with"}), 403
+            return jsonify({"message": "Token has been tampered with", "action": "logout"}), 403
         #encoding a new token and sending it. 
         access_token = encode(username_jwt, 'ACCESS')
         return jsonify({"Access_Token": access_token, "username": user_table.username }), 200
     except ExpiredSignatureError:
-        return jsonify({"message": "Token has already expired."}), 403
+        return jsonify({"message": "Token has already expired.", "action": "logout"}), 403
     except Exception as e:
         return jsonify({"message": "Token has been tampered with"}), 403
 

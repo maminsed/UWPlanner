@@ -30,13 +30,13 @@ export function api() {
                     setUsername(response.username);
                     token = response.Access_Token.token;
                 } else {
-                    throw new Error(`Error in Backend: status: ${res.status}`)
+                    return res
                 }
             } catch (err) {
                 setAccess(undefined)
                 setExp(undefined)
-                console.log("error in backend")
-                return null
+                console.log("error in frontend")
+                return {"ok":false}
             }
         }
         

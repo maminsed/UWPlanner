@@ -2,9 +2,12 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navabar";
+import { useAuth } from "../AuthProvider";
 
 export default function Test() {
     const [message, setMessage] = useState<string>()
+    const { username } = useAuth()
     const backend = api();
     const router = useRouter();
 
@@ -42,8 +45,11 @@ export default function Test() {
     }, [])
     
     return (
-        <div className="bg-amber-400 text-green-300 text-5xl">
-            {message}
-        </div>
+        <>
+            <Navbar signedIn={true} username={username} />
+            <div className="bg-yellow-200 text-green-300 text-5xl mt-20">
+                {message} + cats + {username}
+            </div>
+        </>
     )
 }

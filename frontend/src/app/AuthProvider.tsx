@@ -6,13 +6,16 @@ type AuthCtx = {
     setAccess: (t?:string) => void;
     exp?:string;
     setExp: (t?:string) => void;
+    username?:string;
+    setUsername: (t?:string) => void;
 }
 
-const AuthContext = createContext<AuthCtx>({ setAccess:()=>{}, setExp:()=>{} })
+const AuthContext = createContext<AuthCtx>({ setAccess:()=>{}, setExp:()=>{}, setUsername:()=>{} })
 
 export function AuthProvider({children}:{children: React.ReactNode}) {
     const [access, setAccess] = useState<string|undefined>(undefined)
     const [exp, setExp] = useState<string|undefined>(undefined)
+    const [username, setUsername] = useState<string|undefined>(undefined)
 
     // useEffect(()=>{
     //     async function handleInitial() {
@@ -41,7 +44,7 @@ export function AuthProvider({children}:{children: React.ReactNode}) {
     // }, [])
 
     return (
-        <AuthContext.Provider value={{ access, setAccess, exp, setExp }} >
+        <AuthContext.Provider value={{ access, setAccess, exp, setExp, username, setUsername }} >
             {children}
         </AuthContext.Provider>
     )

@@ -112,7 +112,7 @@ def refresh_token_handle():
             return jsonify({"message": "Token has been tampered with"}), 403
         #encoding a new token and sending it. 
         access_token = encode(username_jwt, 'ACCESS')
-        return jsonify({"Access_Token": access_token}), 200
+        return jsonify({"Access_Token": access_token, "username": user_table.username }), 200
     except ExpiredSignatureError:
         return jsonify({"message": "Token has already expired."}), 403
     except Exception as e:

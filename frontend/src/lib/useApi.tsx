@@ -8,13 +8,12 @@ function isExpired(exp?:string) {
 }
 
 export function api() {
-    const { access, setAccess, exp, setExp } = useAuth();
+    const { access, setAccess, exp, setExp, setUsername } = useAuth();
 
     return async (input: RequestInfo, init:RequestInit = {}) => {
         let token = access;
         console.log(`expiration date: ${exp}`)
         if (isExpired(exp)) {
-            console.log(`expired with time ${exp}`)
             try {
                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
                     method: "GET",
@@ -28,6 +27,7 @@ export function api() {
                     const response = await res.json()
                     setAccess(response.Access_Token.token);
                     setExp(response.Access_Token.exp);
+                    setUsername(response.username);
                     token = response.Access_Token.token;
                 } else {
                     throw new Error(`Error in Backend: status: ${res.status}`)

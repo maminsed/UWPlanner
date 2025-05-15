@@ -47,7 +47,7 @@ export default function Test() {
     return (
         <>
             <Navbar signedIn={true} username={username} />
-            <div className="bg-yellow-200 text-green-300 text-5xl mt-20">
+            <div className="text-black text-xl mt-30">
                 {message} + cats + {username}
             </div>
         </>

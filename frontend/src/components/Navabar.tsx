@@ -1,7 +1,9 @@
-import React from 'react';
+'use client';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MdAccountCircle } from "react-icons/md";
+import { MdAccountCircle, MdExitToApp } from "react-icons/md";
+import { IoMdSettings } from 'react-icons/io';
 
 interface NavbarProps {
     signedIn?:boolean;
@@ -9,8 +11,23 @@ interface NavbarProps {
 };
 
 const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => {
+    const [panelOn, setPanelOn] = useState<boolean>(false)
+    const panelRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLDivElement>(null);
+
+    useEffect(()=>{
+        function handleClick(e: MouseEvent) {
+            if (panelRef.current?.contains(e.target as Node) 
+                || buttonRef.current?.contains(e.target as Node)) return ;
+            setPanelOn(false);
+        }
+
+        window.addEventListener('click', handleClick, true);
+        return () => window.removeEventListener('click', handleClick, true)
+    }, [])
+
     return (
-        <nav className="overflow-x-hidden flex flex-row justify-between items-center px-8 md:px-12 py-8 absolute top-0 left-0 w-full">
+        <nav className="absolute top-0 left-0 right-0 z-50 flex flex-row justify-between items-center px-8 md:px-15 py-8">
             <div>
                 <Link href="/">
                     <Image src="/Logo.png" alt='UWPLANNER logo' width={1722} height={1722} className='h-10 w-auto'/>
@@ -19,7 +36,18 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
             <ul className="flex flex-row justify-center gap-2 xs:gap-4 items-center">
                 {signedIn ? 
                     <>
-                        {username}
+                        <li>
+                            <Link href="/test" className='text-[1.2rem]'>Discussions</Link>
+                        </li>
+                        <li>
+                            <Link href="/test" className='text-[1.2rem]'>Courses</Link>
+                        </li>
+                        <li>
+                            <Link href="/test" className='text-[1.2rem]'>Graph</Link>
+                        </li>
+                        <li>
+                            <Link href="/test" className='text-[1.2rem]'>Semester</Link>
+                        </li>
                     </>
                 :
                     <>
@@ -33,8 +61,15 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
                     </>
                  }
                 
-                <li>
-                    <Link href="/"><MdAccountCircle style={{height:"2.4rem", width:"auto"}}/></Link>
+                <li className='relative'>
+                    <div ref={buttonRef} onClick={()=>setPanelOn((signedIn && !panelOn))} className='cursor-pointer'><MdAccountCircle style={{height:"2.4rem", width:"auto"}}/></div>
+                    {signedIn ? 
+                        <div ref={panelRef} className={`absolute backdrop-blur-xs bg-[#4bac7f49] top-full px-3 rounded-lg right-1/2 translate-x-1/2 font-medium overflow-y-clip ${panelOn ? 'max-h-30 py-[0.85rem]' : 'max-h-0'} transition-all duration-500`}>
+                            <p>{username}</p>
+                            <Link href="/test" className='items-center flex hover:text-[#1a3337] transition-colors duration-300'><IoMdSettings className='mr-1'/>Settings</Link>
+                            <button className='mt-5 text-red-500 cursor-pointer flex items-center hover:text-red-700 transition-colors duration-300'><MdExitToApp className='mr-1'/>Log Out</button>
+                        </div>                     
+                    : ""}
                 </li>
             </ul>
         </nav>

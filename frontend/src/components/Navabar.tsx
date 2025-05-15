@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MdAccountCircle, MdExitToApp } from "react-icons/md";
 import { IoMdSettings } from 'react-icons/io';
+import { useAuth } from '@/app/AuthProvider';
 
 interface NavbarProps {
     signedIn?:boolean;
@@ -14,6 +15,31 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
     const [panelOn, setPanelOn] = useState<boolean>(false)
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
+    const { setAccess, setExp, setUsername} = useAuth()
+
+    async function logOut() {
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+                "credentials": "include"
+            })
+            const res = await response.json().catch(()=>{})
+            if (response.ok) {
+                console.log("loged out!")
+                console.log(res)
+                console.log(response)
+                setAccess(undefined)
+                setExp(undefined)
+                setUsername(undefined)
+            } else {
+                console.log("error in backend")
+                console.log(res.message)
+            }
+
+        } catch (err) {
+            console.log("error occured in logout")
+            console.log(err)
+        }
+    }
 
     useEffect(()=>{
         function handleClick(e: MouseEvent) {
@@ -67,7 +93,7 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
                         <div ref={panelRef} className={`absolute backdrop-blur-xs bg-[#4bac7f49] top-full px-3 rounded-lg right-1/2 translate-x-1/2 font-medium overflow-y-clip ${panelOn ? 'max-h-30 py-[0.85rem]' : 'max-h-0'} transition-all duration-500`}>
                             <p>{username}</p>
                             <Link href="/test" className='items-center flex hover:text-[#1a3337] transition-colors duration-300'><IoMdSettings className='mr-1'/>Settings</Link>
-                            <button className='mt-5 text-red-500 cursor-pointer flex items-center hover:text-red-700 transition-colors duration-300'><MdExitToApp className='mr-1'/>Log Out</button>
+                            <button onClick={logOut} className='mt-5 text-red-500 cursor-pointer flex items-center hover:text-red-700 transition-colors duration-300'><MdExitToApp className='mr-1'/>Log Out</button>
                         </div>                     
                     : ""}
                 </li>

@@ -25,7 +25,7 @@ type FormFields = z.infer<typeof schema>;
 export default function SignUp() {
     const [visiblePass, setVisiblePass] = useState("password");
     const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormFields>({ resolver:zodResolver(schema) });
-    const { setAccess } = useAuth()
+    const { setAccess, setExp, setUsername } = useAuth()
     const router = useRouter()
 
     function reverseVisibility() {
@@ -40,6 +40,7 @@ export default function SignUp() {
                     "email": data.email,
                     "password": data.password,
                 }),
+                credentials: "include",
                 headers: {
                     "Content-Type":"application/json"
                 }
@@ -50,6 +51,9 @@ export default function SignUp() {
                 console.log(res.error)
                 throw new Error(`${res.message || "Error in Backend"}`)
             }
+            setAccess(res.Access_Token.token)
+            setExp(res.Access_Token.exp)
+            setUsername(res.username)
             router.push("/test")
         } catch (err) {
             setError("root", {

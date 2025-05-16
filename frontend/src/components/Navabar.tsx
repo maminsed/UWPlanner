@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { MdAccountCircle, MdExitToApp } from "react-icons/md";
 import { IoMdSettings } from 'react-icons/io';
 import { useAuth } from '@/app/AuthProvider';
+import { useRouter } from 'next/navigation';
 
 interface NavbarProps {
     signedIn?:boolean;
@@ -16,6 +17,7 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
     const { setAccess, setExp, setUsername} = useAuth()
+    const router = useRouter();
 
     async function logOut() {
         try {
@@ -24,12 +26,10 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
             })
             const res = await response.json().catch(()=>{})
             if (response.ok) {
-                console.log("loged out!")
-                console.log(res)
-                console.log(response)
                 setAccess(undefined)
                 setExp(undefined)
                 setUsername(undefined)
+                router.push('/')
             } else {
                 console.log("error in backend")
                 console.log(res.message)
@@ -90,8 +90,12 @@ const Navbar: React.FC<NavbarProps> = ({signedIn=false, username=undefined}) => 
                 <li className='relative'>
                     <div ref={buttonRef} onClick={()=>setPanelOn((signedIn && !panelOn))} className='cursor-pointer'><MdAccountCircle style={{height:"2.4rem", width:"auto"}}/></div>
                     {signedIn ? 
+                        
                         <div ref={panelRef} className={`absolute backdrop-blur-xs bg-[#4bac7f49] top-full px-3 rounded-lg right-1/2 translate-x-1/2 font-medium overflow-y-clip ${panelOn ? 'max-h-30 py-[0.85rem]' : 'max-h-0'} transition-all duration-500`}>
-                            <p>{username}</p>
+                            <div className='group relative w-fit'>
+                                <p className="max-w-[100px] truncate w-fit">{username}</p>
+                                <div className='absolute max-h-0 py-0 group-hover:max-h-6 transition-all duration-600 bg-slate-900/70 overflow-y-hidden text-green-100 text-xs px-2 group-hover:py-1 rounded-md top-5 -right-2'>{username}</div>
+                            </div>
                             <Link href="/test" className='items-center flex hover:text-[#1a3337] transition-colors duration-300'><IoMdSettings className='mr-1'/>Settings</Link>
                             <button onClick={logOut} className='mt-5 text-red-500 cursor-pointer flex items-center hover:text-red-700 transition-colors duration-300'><MdExitToApp className='mr-1'/>Log Out</button>
                         </div>                     

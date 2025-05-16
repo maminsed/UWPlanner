@@ -9,8 +9,10 @@ load_dotenv()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+
+  
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST')}/neondb?sslmode=require"
+
     db.init_app(app)
     migrate.init_app(app, db)
     # with app.app_context():
@@ -19,6 +21,11 @@ def create_app():
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(test_bp, url_prefix='/test')
+
+    CORS(app,
+         origins=["http://localhost:3000"],
+         supports_credentials=True
+        )
     return app
 
 if __name__ == '__main__':

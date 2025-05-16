@@ -49,7 +49,8 @@ def add_user():
         #Adding to database
         db.session.add(user)
         db.session.commit()
-        return jsonify({"message": "user created", "username": username}), 201
+        #Adding the tokens
+        return add_tokens("user created", 201, user)
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500
 
@@ -64,51 +65,56 @@ def handle_login():
     
     if email:
         user = Users.query.filter_by(email=email).first()
-    else:
+    elif username:
         user = Users.query.filter_by(username=username).first()
     
     if not user:
         return jsonify({"message": "user not found"}), 401
     try:
         if ph.verify(user.pass_hash, password):
-            #Getting refresh and access tokens
-            access_token = encode(user.username, 'ACCESS')
-            refresh_token = encode(user.username, 'REFRESH')
-            #Saving the refresh token
-            refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
-            db.session.add(refresh_token_instance)
-            db.session.commit()
-            resp = make_response(jsonify({"message": "logged in successfully!", 'username': user.username, 'Access_Token': access_token}), 202)
-            resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
-            return resp
+            #Adding the tokens
+            return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401
     except Exception as e:
         return jsonify({"message":"error in backend", "error": str(e)}), 500
+    
+def add_tokens(message:str, code:int, user:Users)->make_response:
+    #generating the tokens
+    access_token = encode(user.username, 'ACCESS')
+    refresh_token = encode(user.username, 'REFRESH')
+    #Saving the refresh token
+    refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
+    db.session.add(refresh_token_instance)
+    db.session.commit()
+    #Generating the responses
+    resp = make_response(jsonify({"message": message, 'username': user.username, 'Access_Token': access_token}), code)
+    resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
+    return resp
 
 @auth_bp.route("/refresh", methods=["GET"])
 def refresh_token_handle():
     #Getting the refresh token from user. 
     refresh_token = request.cookies.get('jwt')
     if not refresh_token:
-        return jsonify({"message": "Refresh Cookie Token was not set"}), 401
+        return jsonify({"message": "Refresh Cookie Token was not set", "action": "logout"}), 401
 
     #getting the username based on the refresh token on database
     jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
     if not jwt_obj:
-        return jsonify({"message": "token was not in databse"}), 403
+        return jsonify({"message": "token was not in databse", "action": "logout"}), 403
     user_table = jwt_obj.user
     try:
         #Getting the username based on refresh token
         username_jwt = jwt.decode(refresh_token, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})['username']
         #if the databse does not match the token, it sends an error. 
         if username_jwt != user_table.username:
-            return jsonify({"message": "Token has been tampered with"}), 403
+            return jsonify({"message": "Token has been tampered with", "action": "logout"}), 403
         #encoding a new token and sending it. 
         access_token = encode(username_jwt, 'ACCESS')
-        return jsonify({"Access_Token": access_token}), 200
+        return jsonify({"Access_Token": access_token, "username": user_table.username }), 200
     except ExpiredSignatureError:
-        return jsonify({"message": "Token has already expired."}), 403
+        return jsonify({"message": "Token has already expired.", "action": "logout"}), 403
     except Exception as e:
         return jsonify({"message": "Token has been tampered with"}), 403
 

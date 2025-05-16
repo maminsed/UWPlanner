@@ -27,10 +27,16 @@ def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
     else:
         expiresIn = 24*60*60
     #creating and sending token
-    return jwt.encode({
+    if type == 'REFRESH':
+        return jwt.encode({
+            "username": username,
+            'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
+        }, key, algorithm='HS256')
+
+    return { 'token': jwt.encode({
         "username": username,
         'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
-    }, key, algorithm='HS256')
+    }, key, algorithm='HS256'), 'exp': datetime.now(tz=timezone.utc) }
 
 
 def verify():
@@ -43,10 +49,20 @@ def verify():
     Returns:
         None | Response in case of an error
     """
+    if request.method == "OPTIONS":
+        resp = make_response("", 204)
+        origin = request.headers.get("Origin")
+        resp.headers.update({
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+            "Access-Control-Allow-Headers": "Authorization,Content-Type",
+            "Access-Control-Allow-Credentials": "true"
+        })
+        return resp
     #Getting the data
     req = request.headers.get('Authorization')
     if not req:
-        return jsonify({"message": 'missing required field: authorization'}), 401
+        return jsonify({"message": 'missing required field: authorization', "action": "logout"}), 401
     authHeader = req.split(' ')[1]
     try:
         #Checking if it's valid, and adding to g
@@ -55,10 +71,10 @@ def verify():
         return None
     except ExpiredSignatureError:
         #In case of timing out
-        return make_response(jsonify({'message': 'access token has timed out'}), 403)
+        return make_response(jsonify({'message': 'access token has timed out', "action": "logout"}), 403)
     except Exception as e:
         #In case of tampering
-        return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e)}), 403)
+        return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e), "action": "logout"}), 403)
 
 def clean_up_jwt(username:str):
     """

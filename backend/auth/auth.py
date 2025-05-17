@@ -1,9 +1,9 @@
 from argon2 import PasswordHasher
 from flask import Blueprint, request, jsonify, make_response
 from ..Schema import db, Users, LoginMethod, JwtToken
-from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-import jwt, os
+import jwt
+import os
 from jwt.exceptions import ExpiredSignatureError
 from codename import codename
 from .jwt import encode, clean_up_jwt
@@ -14,8 +14,7 @@ ph = PasswordHasher()
 
 @auth_bp.route("/signup", methods=["POST"])
 def add_user():
-    """
-    Register a new user.
+    """Register a new user.
 
     Expects:
     JSON body with:
@@ -26,6 +25,7 @@ def add_user():
 
     Returns:
     The response
+
     """
     #getting the data
     data = request.get_json() or {}
@@ -41,7 +41,7 @@ def add_user():
     try:
         #getting a username for the user
         username = codename(separator="_")
-        while Users.query.filter_by(username=username).first() != None:
+        while Users.query.filter_by(username=username).first() is not None:
             username = codename(separator="_")
         #hashing password
         hashpass = ph.hash(password)
@@ -56,6 +56,16 @@ def add_user():
 
 @auth_bp.route("/login", methods=["POST"])
 def handle_login():
+    """Logs In the user.
+
+    Requires:
+        - The request body to come with username or email field + the password field.
+        - The user to exist in the database. 
+    
+    Returns:
+        The response with the username and appropriate tokens.
+    
+    """
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
@@ -80,6 +90,21 @@ def handle_login():
         return jsonify({"message":"error in backend", "error": str(e)}), 500
     
 def add_tokens(message:str, code:int, user:Users)->make_response:
+    """Adds Refresh and Access Tokens to response.
+
+    Requires:
+        - Message (str):
+            The message to be sent back.
+        - Code (int):
+            The status code for the response (100 - 599).
+        - user (Users):
+            The user that is requesting the codes.
+        
+    Returns:
+        - The response + Access + Refresh Tokens
+        - Saves the Refresh in the database
+            
+    """
     #generating the tokens
     access_token = encode(user.username, 'ACCESS')
     refresh_token = encode(user.username, 'REFRESH')
@@ -94,6 +119,16 @@ def add_tokens(message:str, code:int, user:Users)->make_response:
 
 @auth_bp.route("/refresh", methods=["GET"])
 def refresh_token_handle():
+    """Returns the new Access_Token in case of success or error in case of error.
+
+    Requires:
+        - The request to have the jwt in the http only cookies. 
+
+    Returns:
+        - Returns the new Access_Token in case of success
+        - Error code in case of Error or wrong request
+        
+    """
     #Getting the refresh token from user. 
     refresh_token = request.cookies.get('jwt')
     if not refresh_token:
@@ -116,10 +151,20 @@ def refresh_token_handle():
     except ExpiredSignatureError:
         return jsonify({"message": "Token has already expired.", "action": "logout"}), 403
     except Exception as e:
-        return jsonify({"message": "Token has been tampered with"}), 403
+        return jsonify({"message": "Token has been tampered with", "error": str(e)}), 403
 
 @auth_bp.route('/logout', methods=["GET"])
 def log_out():
+    """Logs Out the user.
+
+    Requires:
+        - The request to include jwt in httponly cookies
+    
+    Returns:
+        - The response Code
+        - Removes the jwt from the database
+    
+    """
     refresh_token = request.cookies.get('jwt')
     if not refresh_token:
         return '', 204

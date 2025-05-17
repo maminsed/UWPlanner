@@ -1,4 +1,3 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -6,10 +5,11 @@ from sqlalchemy import Enum, ForeignKey
 from datetime import datetime
 from dotenv import load_dotenv
 from enum import Enum as Pyenum
-import os
 load_dotenv()
 
 class Base(DeclarativeBase):
+    """The model_class for SQLAlchemy."""
+
     pass
 
 db = SQLAlchemy(model_class=Base, engine_options={
@@ -19,12 +19,16 @@ db = SQLAlchemy(model_class=Base, engine_options={
 migrate = Migrate()
 
 class LoginMethod(Pyenum):
+    """Enums for login Methods."""
+
     email  = "email"
     google = "google"
     apple  = "apple"
     github = "github" 
 
 class Users(db.Model):
+    """The Users Table."""
+
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(db.String(80), unique=True, nullable=False)
@@ -37,6 +41,8 @@ class Users(db.Model):
 
     
 class JwtToken(db.Model):
+    """The JwtToken table."""
+
     __tablename__ = "jwt_token"
     jwt_token_id: Mapped[int] = mapped_column(primary_key=True)
     refresh_token_string: Mapped[str] = mapped_column(db.String(), nullable=False)

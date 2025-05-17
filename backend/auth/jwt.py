@@ -10,15 +10,17 @@ load_dotenv()
 
 
 def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
-    """
-    Generate (encode and sign) a JWT.
+    """Generate (encode and sign) a JWT.
 
-    Args:
-        username: The user identifier to embed as the token’s subject (“sub” claim).
-        token_type: Kind of token being generated — either `"ACCESS"` or `"REFRESH"`.
+    Requires:
+        username (str): 
+            The user identifier to embed as the token’s subject (“sub” claim).
+        token_type (ACCESS|REFRESH): 
+            Kind of token being generated — either `"ACCESS"` or `"REFRESH"`.
 
     Returns:
         The compact JWT string.
+
     """
     #Checking which token they need, and setting expiration time
     key = os.getenv(f'{type.upper()}_TOKEN_SECRET')
@@ -40,14 +42,14 @@ def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
 
 
 def verify():
-    """
-    Verifies that a user's Access Token is valid
+    """Verifies that a user's Access Token is valid.
 
     Requires:
         Request to inlclude Authorization Header.
     
     Returns:
-        None | Response in case of an error
+        None | Response in case of an error.
+
     """
     if request.method == "OPTIONS":
         resp = make_response("", 204)
@@ -77,8 +79,7 @@ def verify():
         return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e), "action": "logout"}), 403)
 
 def clean_up_jwt(username:str):
-    """
-    for the user with username = username, removes any jwt that has expired. 
+    """For the user with username = username, removes any jwt that has expired.
 
     Requires:
         username (string):
@@ -86,6 +87,7 @@ def clean_up_jwt(username:str):
     
     Returns:
         None - But you should call db.session.commit() after it. 
+
     """
     user = Users.query.filter_by(username=username).first()
     if not user:
@@ -95,5 +97,5 @@ def clean_up_jwt(username:str):
             jwt.decode(rt.refresh_token_string, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
         except ExpiredSignatureError:
             db.session.delete(rt)
-        except Exception as e:
+        except Exception:
             raise RuntimeError(f"token with {rt.id} has been tampered with in the database.")

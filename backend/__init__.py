@@ -1,3 +1,4 @@
+"""Setps up the Database and Flask Backend."""
 from flask import Flask
 import os
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ from .Schema import db, migrate
 load_dotenv()
 
 def create_app():
+    """Setps up the Database and Flask Backend."""
     app = Flask(__name__)
 
   

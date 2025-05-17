@@ -1,0 +1,17 @@
+force-exclude = true
+extend-exclude = ["backend/migrations/**"]
+
+[lint]
+extend-select = [
+    "D", # pydocstyle – docstring conventions
+]
+ignore = [
+    "D100",
+    "D401",
+    "D203",
+    "D213",
+]
+
+
+[format]
+quote-style= "double"

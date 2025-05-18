@@ -1,21 +1,22 @@
-from argon2 import PasswordHasher
-from flask import Blueprint, request, jsonify, make_response
-from ..Schema import db, Users, LoginMethod, JwtToken
+import os
+
+import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-import jwt, os
-from jwt.exceptions import ExpiredSignatureError
 from codename import codename
-from .jwt import encode, clean_up_jwt
+from flask import Blueprint, jsonify, make_response, request
+from jwt.exceptions import ExpiredSignatureError
 
+from ..Schema import JwtToken, LoginMethod, Users, db
+from .jwt import clean_up_jwt, encode
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
 
+
 @auth_bp.route("/signup", methods=["POST"])
 def add_user():
-    """
-    Register a new user.
+    """Register a new user.
 
     Expects:
     JSON body with:
@@ -26,117 +27,204 @@ def add_user():
 
     Returns:
     The response
+
     """
-    #getting the data
+    # getting the data
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
     if not email or not password:
         return jsonify({"message": "missing email or password"}), 400
 
-    #check for duplicates
+    # check for duplicates
     res = Users.query.filter_by(email=email).first()
     if res:
         return jsonify({"message": "user with email already exists"}), 409
     try:
-        #getting a username for the user
+        # getting a username for the user
         username = codename(separator="_")
-        while Users.query.filter_by(username=username).first() != None:
+        while Users.query.filter_by(username=username).first() is not None:
             username = codename(separator="_")
-        #hashing password
+        # hashing password
         hashpass = ph.hash(password)
-        user = Users(email=email, username=username, pass_hash=hashpass, login_method=LoginMethod.email)
-        #Adding to database
+        user = Users(
+            email=email,
+            username=username,
+            pass_hash=hashpass,
+            login_method=LoginMethod.email,
+        )
+        # Adding to database
         db.session.add(user)
         db.session.commit()
-        #Adding the tokens
+        # Adding the tokens
         return add_tokens("user created", 201, user)
     except Exception as e:
-        return jsonify({"message":"error in backend", "error": str(e)}), 500
+        return jsonify({"message": "error in backend", "error": str(e)}), 500
+
 
 @auth_bp.route("/login", methods=["POST"])
 def handle_login():
+    """Logs In the user.
+
+    Requires:
+        - The request body to come with username or email field + the password field.
+        - The user to exist in the database.
+
+    Returns:
+        The response with the username and appropriate tokens.
+
+    """
     data = request.get_json() or {}
-    username = data.get('username')
-    password = data.get('password')
-    email = data.get('email')
+    username = data.get("username")
+    password = data.get("password")
+    email = data.get("email")
     if not password or (not username and not email):
         return jsonify({"message": "missing required fields"}), 400
-    
+
     if email:
         user = Users.query.filter_by(email=email).first()
     elif username:
         user = Users.query.filter_by(username=username).first()
-    
+
     if not user:
         return jsonify({"message": "user not found"}), 401
     try:
         if ph.verify(user.pass_hash, password):
-            #Adding the tokens
+            # Adding the tokens
             return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
         return jsonify({"message": "wrong password"}), 401
     except Exception as e:
-        return jsonify({"message":"error in backend", "error": str(e)}), 500
-    
-def add_tokens(message:str, code:int, user:Users)->make_response:
-    #generating the tokens
-    access_token = encode(user.username, 'ACCESS')
-    refresh_token = encode(user.username, 'REFRESH')
-    #Saving the refresh token
-    refresh_token_instance = JwtToken(refresh_token_string=refresh_token, user_id=user.id, user=user)
+        return jsonify({"message": "error in backend", "error": str(e)}), 500
+
+
+def add_tokens(message: str, code: int, user: Users) -> make_response:
+    """Adds Refresh and Access Tokens to response.
+
+    Requires:
+        - Message (str):
+            The message to be sent back.
+        - Code (int):
+            The status code for the response (100 - 599).
+        - user (Users):
+            The user that is requesting the codes.
+
+    Returns:
+        - The response + Access + Refresh Tokens
+        - Saves the Refresh in the database
+
+    """
+    # generating the tokens
+    access_token = encode(user.username, "ACCESS")
+    refresh_token = encode(user.username, "REFRESH")
+    # Saving the refresh token
+    refresh_token_instance = JwtToken(
+        refresh_token_string=refresh_token, user_id=user.id, user=user
+    )
     db.session.add(refresh_token_instance)
     db.session.commit()
-    #Generating the responses
-    resp = make_response(jsonify({"message": message, 'username': user.username, 'Access_Token': access_token}), code)
-    resp.set_cookie('jwt', refresh_token, max_age=24*60*60*1000, httponly=True) #PRODUCTION set: , secure=True, samesite=None
+    # Generating the responses
+    resp = make_response(
+        jsonify(
+            {
+                "message": message,
+                "username": user.username,
+                "Access_Token": access_token,
+            }
+        ),
+        code,
+    )
+    resp.set_cookie(
+        "jwt", refresh_token, max_age=24 * 60 * 60 * 1000, httponly=True
+    )  # PRODUCTION set: , secure=True, samesite=None
     return resp
+
 
 @auth_bp.route("/refresh", methods=["GET"])
 def refresh_token_handle():
-    #Getting the refresh token from user. 
-    refresh_token = request.cookies.get('jwt')
-    if not refresh_token:
-        return jsonify({"message": "Refresh Cookie Token was not set", "action": "logout"}), 401
+    """Returns the new Access_Token in case of success or error in case of error.
 
-    #getting the username based on the refresh token on database
+    Requires:
+        - The request to have the jwt in the http only cookies.
+
+    Returns:
+        - Returns the new Access_Token in case of success
+        - Error code in case of Error or wrong request
+
+    """
+    # Getting the refresh token from user.
+    refresh_token = request.cookies.get("jwt")
+    if not refresh_token:
+        return jsonify(
+            {"message": "Refresh Cookie Token was not set", "action": "logout"}
+        ), 401
+
+    # getting the username based on the refresh token on database
     jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
     if not jwt_obj:
         return jsonify({"message": "token was not in databse", "action": "logout"}), 403
     user_table = jwt_obj.user
     try:
-        #Getting the username based on refresh token
-        username_jwt = jwt.decode(refresh_token, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})['username']
-        #if the databse does not match the token, it sends an error. 
+        # Getting the username based on refresh token
+        username_jwt = jwt.decode(
+            refresh_token,
+            os.getenv("REFRESH_TOKEN_SECRET"),
+            algorithms="HS256",
+            options={"require": ["exp", "username"], "verify_exp": "verify_signature"},
+        )["username"]
+        # if the databse does not match the token, it sends an error.
         if username_jwt != user_table.username:
-            return jsonify({"message": "Token has been tampered with", "action": "logout"}), 403
-        #encoding a new token and sending it. 
-        access_token = encode(username_jwt, 'ACCESS')
-        return jsonify({"Access_Token": access_token, "username": user_table.username }), 200
+            return jsonify(
+                {"message": "Token has been tampered with", "action": "logout"}
+            ), 403
+        # encoding a new token and sending it.
+        access_token = encode(username_jwt, "ACCESS")
+        return jsonify(
+            {"Access_Token": access_token, "username": user_table.username}
+        ), 200
     except ExpiredSignatureError:
-        return jsonify({"message": "Token has already expired.", "action": "logout"}), 403
+        return jsonify(
+            {"message": "Token has already expired.", "action": "logout"}
+        ), 403
     except Exception as e:
-        return jsonify({"message": "Token has been tampered with"}), 403
+        return jsonify(
+            {"message": "Token has been tampered with", "error": str(e)}
+        ), 403
 
-@auth_bp.route('/logout', methods=["GET"])
+
+@auth_bp.route("/logout", methods=["GET"])
 def log_out():
-    refresh_token = request.cookies.get('jwt')
+    """Logs Out the user.
+
+    Requires:
+        - The request to include jwt in httponly cookies
+
+    Returns:
+        - The response Code
+        - Removes the jwt from the database
+
+    """
+    refresh_token = request.cookies.get("jwt")
     if not refresh_token:
-        return '', 204
-    
+        return "", 204
+
     try:
         jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
         if not jwt_db:
-            resp = make_response(jsonify({"message": "refresh token not in database"}), 200)
-            resp.delete_cookie('jwt', httponly=True)# Production add: , secure=True, sameSite=None
+            resp = make_response(
+                jsonify({"message": "refresh token not in database"}), 200
+            )
+            resp.delete_cookie(
+                "jwt", httponly=True
+            )  # Production add: , secure=True, sameSite=None
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
-        resp.delete_cookie('jwt',httponly=True) #Production add: , secure=True, sameSite=None
+        resp.delete_cookie(
+            "jwt", httponly=True
+        )  # Production add: , secure=True, sameSite=None
         return resp
     except Exception as e:
         return jsonify({"message": "error in backend", "error": str(e)}), 500
-
-    

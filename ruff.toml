@@ -4,6 +4,12 @@ extend-exclude = ["backend/migrations/**"]
 [lint]
 extend-select = [
     "D", # pydocstyle – docstring conventions
+    "B", # flake8-bugbear – likely bugs & performance foot-guns
+    "I", # isort – import ordering (auto-fixable),
+    "UP", # pyupgrade – rewrites to modern Python syntax & stdlib
+    "S", # bandit – common security issues (injection, weak RNG, etc.)
+    "N", # pep8-naming – function/class/constant naming conventions
+    "ANN",    # flake8-annotations – enforce/validate type hints
 ]
 ignore = [
     "D100",

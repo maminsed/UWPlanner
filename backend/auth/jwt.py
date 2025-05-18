@@ -1,11 +1,14 @@
 import os
-from dotenv import load_dotenv
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal
-from flask import make_response, jsonify, request, g
-from jwt.exceptions import ExpiredSignatureError
+
 import jwt
+from dotenv import load_dotenv
+from flask import g, jsonify, make_response, request
+from jwt.exceptions import ExpiredSignatureError
+
 from ..Schema import Users, db
+
 load_dotenv()
 
 
@@ -25,19 +28,19 @@ def encode(username:str, type:Literal['ACCESS', 'REFRESH'])->str:
     #Checking which token they need, and setting expiration time
     key = os.getenv(f'{type.upper()}_TOKEN_SECRET')
     if type.upper() == 'ACCESS': 
-        expiresIn = 30
+        expires_in = 30
     else:
-        expiresIn = 24*60*60
+        expires_in = 24*60*60
     #creating and sending token
     if type == 'REFRESH':
         return jwt.encode({
             "username": username,
-            'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
+            'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
         }, key, algorithm='HS256')
 
     return { 'token': jwt.encode({
         "username": username,
-        'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expiresIn)
+        'exp': datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
     }, key, algorithm='HS256'), 'exp': datetime.now(tz=timezone.utc) }
 
 
@@ -65,10 +68,10 @@ def verify():
     req = request.headers.get('Authorization')
     if not req:
         return jsonify({"message": 'missing required field: authorization', "action": "logout"}), 401
-    authHeader = req.split(' ')[1]
+    auth_header = req.split(' ')[1]
     try:
         #Checking if it's valid, and adding to g
-        res = jwt.decode(authHeader, os.getenv('ACCESS_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
+        res = jwt.decode(auth_header, os.getenv('ACCESS_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
         g.username = res['username']
         return None
     except ExpiredSignatureError:
@@ -76,7 +79,7 @@ def verify():
         return make_response(jsonify({'message': 'access token has timed out', "action": "logout"}), 403)
     except Exception as e:
         #In case of tampering
-        return make_response(jsonify({'message': 'authHeader was tampered with', 'error': str(e), "action": "logout"}), 403)
+        return make_response(jsonify({'message': 'auth_header was tampered with', 'error': str(e), "action": "logout"}), 403)
 
 def clean_up_jwt(username:str):
     """For the user with username = username, removes any jwt that has expired.
@@ -97,5 +100,5 @@ def clean_up_jwt(username:str):
             jwt.decode(rt.refresh_token_string, os.getenv('REFRESH_TOKEN_SECRET'), algorithms='HS256', options={'require':['exp', 'username'], 'verify_exp':'verify_signature'})
         except ExpiredSignatureError:
             db.session.delete(rt)
-        except Exception:
-            raise RuntimeError(f"token with {rt.id} has been tampered with in the database.")
+        except Exception as err:
+            raise RuntimeError(f"token with {rt.id} has been tampered with in the database.") from err

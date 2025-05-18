@@ -1,10 +1,12 @@
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Enum, ForeignKey
 from datetime import datetime
-from dotenv import load_dotenv
 from enum import Enum as Pyenum
+
+from dotenv import load_dotenv
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Enum, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 load_dotenv()
 
 class Base(DeclarativeBase):

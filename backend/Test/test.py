@@ -1,4 +1,5 @@
 from flask import Blueprint, g, request
+
 from ..Auth import verify as verify_jwt
 
 test_bp = Blueprint('test', __name__)

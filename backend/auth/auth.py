@@ -1,13 +1,14 @@
-from argon2 import PasswordHasher
-from flask import Blueprint, request, jsonify, make_response
-from ..Schema import db, Users, LoginMethod, JwtToken
-from argon2.exceptions import VerifyMismatchError
-import jwt
 import os
-from jwt.exceptions import ExpiredSignatureError
-from codename import codename
-from .jwt import encode, clean_up_jwt
 
+import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+from codename import codename
+from flask import Blueprint, jsonify, make_response, request
+from jwt.exceptions import ExpiredSignatureError
+
+from ..Schema import JwtToken, LoginMethod, Users, db
+from .jwt import clean_up_jwt, encode
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()

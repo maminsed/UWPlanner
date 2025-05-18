@@ -1,11 +1,14 @@
 """Setps up the Database and Flask Backend."""
-from flask import Flask
 import os
+
 from dotenv import load_dotenv
+from flask import Flask
 from flask_cors import CORS
+
 from .Auth import auth_bp
-from .Test import test_bp
 from .Schema import db, migrate
+from .Test import test_bp
+
 load_dotenv()
 
 def create_app():

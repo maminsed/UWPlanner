@@ -46,6 +46,9 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 
+#Ruff
+.ruff_cache/
+
 # VSCode or other editors
 .vscode/
 .idea/

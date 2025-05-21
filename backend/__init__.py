@@ -9,6 +9,7 @@ from flask_cors import CORS
 from .Auth import auth_bp
 from .Schema import db, migrate
 from .Test import test_bp
+from .LoginActions import UpdateInfo
 
 load_dotenv()
 
@@ -28,6 +29,7 @@ def create_app():
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(test_bp, url_prefix="/test")
+    app.register_blueprint(UpdateInfo, url_prefix="/updateInfo")
 
     CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
     return app

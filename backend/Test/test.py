@@ -1,4 +1,6 @@
-from flask import Blueprint, g, request
+from typing import Optional
+
+from flask import Blueprint, g, jsonify, make_response, request
 
 from ..Auth import verify as verify_jwt
 
@@ -6,13 +8,13 @@ test_bp = Blueprint("test", __name__)
 
 
 @test_bp.before_request
-def verify():
+def verify() -> Optional[make_response]:
     """Verifies Users trying to access."""
     return verify_jwt()
 
 
 @test_bp.route("/", methods=["GET", "POST"])
-def test():
+def test() -> tuple[str, int]:
     """Test route.
 
     Requires:
@@ -26,4 +28,4 @@ def test():
     if error == "True":
         return {"message": "You asked for an error buddy"}, 402
 
-    return {"message": f"HI {g.username} Stop obesity"}, 200
+    return jsonify({"message": f"HI {g.username} Stop obesity"}), 200

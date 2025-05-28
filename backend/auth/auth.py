@@ -9,6 +9,7 @@ from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Users, db
 from .jwt import clean_up_jwt, encode
+from .sendMail import send_verification_mail
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
@@ -56,6 +57,7 @@ def add_user():
         # Adding to database
         db.session.add(user)
         db.session.commit()
+        send_verification_mail(user)
         # Adding the tokens
         return add_tokens("user created", 201, user)
     except Exception as e:

@@ -54,6 +54,7 @@ def gmail_send_message(to: str, body: str, subject: str) -> Optional[dict]:
         client_service = os.path.relpath(
             os.path.join(os.getcwd(), "..", "client_secret.json")
         )
+        print(f"Client Secret Path: {os.path.join(os.getcwd(), "..", "client_secret.json")}")
         service = init_gmail_service(client_service)
         message = EmailMessage()
 

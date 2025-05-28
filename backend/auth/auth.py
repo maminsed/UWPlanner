@@ -144,13 +144,14 @@ def add_tokens(message: str, code: int, user: Users) -> make_response:
 
 @auth_bp.route("/refresh_veri", methods=["POST"])
 def refresh_ver_code():
-    """Function to refresh verification code, or to get it in the first place. 
+    """Function to refresh verification code, or to get it in the first place.
 
     Requires:
         request to come with 'email' in body.
 
     Returns:
         The Response. Also adds it to database.
+
     """
     #Getting data and making sure it's valid
     email = (request.get_data()).get('email')
@@ -173,6 +174,7 @@ def confirm_ver_code():
 
     Returns:
         The Response.
+
     """
     #Getting data and making sure it's valid
     data = request.get_data()

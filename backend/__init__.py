@@ -14,7 +14,7 @@ from .Test import test_bp
 load_dotenv()
 
 
-def create_app():
+def create_app()->Flask:
     """Setps up the Database and Flask Backend."""
     app = Flask(__name__)
 

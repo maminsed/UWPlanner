@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Literal
+from typing import Literal, Optional
 
 import jwt
 from dotenv import load_dotenv
@@ -55,7 +55,7 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     }
 
 
-def verify():
+def verify()->Optional[make_response]:
     """Verifies that a user's Access Token is valid.
 
     Requires:

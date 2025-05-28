@@ -1,8 +1,9 @@
 import random
+from datetime import datetime, timedelta, timezone
 
 from ..google_api.gmail_api import gmail_send_message
 from ..Schema import Users, db
-from datetime import datetime, timedelta, timezone
+
 
 def send_verification_mail(user:Users)->None:
     """Sends a verification email to user and saves the code in database.

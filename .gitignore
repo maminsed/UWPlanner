@@ -57,3 +57,6 @@ token_files/
 .vscode/
 .idea/
 *.swp
+
+#Personal
+docs.md

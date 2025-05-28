@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 import jwt
 from argon2 import PasswordHasher
@@ -140,6 +141,68 @@ def add_tokens(message: str, code: int, user: Users) -> make_response:
         "jwt", refresh_token, max_age=24 * 60 * 60 * 1000, httponly=True
     )  # PRODUCTION set: , secure=True, samesite=None
     return resp
+
+@auth_bp.route("/refresh_veri", methods=["POST"])
+def refresh_ver_code():
+    """Function to refresh verification code, or to get it in the first place. 
+
+    Requires:
+        request to come with 'email' in body.
+
+    Returns:
+        The Response. Also adds it to database.
+    """
+    #Getting data and making sure it's valid
+    email = (request.get_data()).get('email')
+    if not email:
+        return jsonify({"message": "username not provided"}), 400
+    user = Users.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message": "user with that email does not exist"}), 401
+
+    #sending the code
+    send_verification_mail(user)
+    return jsonify({"message": "email sent"}), 200
+
+@auth_bp.route("/confirm_veri", methods=["GET"])
+def confirm_ver_code():
+    """Function to confirm verification code.
+
+    Requires:
+        The request to come with email and code parameters.
+
+    Returns:
+        The Response.
+    """
+    #Getting data and making sure it's valid
+    data = request.get_data()
+    email = data.get("email")
+    code = data.get("code")
+    if not email or not code:
+        return jsonify({"message": "email or code not provided"}), 400
+
+    user = Users.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"message": "user does not exist"}), 401
+    
+    #Making sure the user isn't already verified
+    if user.is_verified:
+        return jsonify({"message": "user already verified"}), 200
+    #if there is issue with verification code, ask to reverify
+    if user.verification_expiration < datetime.now(timezone.utc) or user.verification_code == 0:
+        return jsonify({"message": "code has timed out", "action": "verify_code"}), 401
+    
+    #Making sure the code is correct
+    if user.verification_code != code:
+        return jsonify({"message": "wrong code. Please try again."}), 403
+
+    #Adding to database and sending back the result.
+    user.is_verified = True
+    user.verification_code = 0
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "successfull"}), 200
+
 
 
 @auth_bp.route("/refresh", methods=["GET"])

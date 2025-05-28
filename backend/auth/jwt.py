@@ -113,7 +113,7 @@ def verify()->Optional[make_response]:
         )
 
 
-def clean_up_jwt(username: str):
+def clean_up_jwt(username: str)->None:
     """For the user with username = username, removes any jwt that has expired.
 
     Requires:

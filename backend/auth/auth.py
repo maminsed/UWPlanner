@@ -10,14 +10,14 @@ from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Users, db
 from .jwt import clean_up_jwt, encode
-from .sendMail import send_verification_mail
+from .send_mail import send_verification_mail
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user():
+def add_user()->make_response|tuple[str,int]:
     """Register a new user.
 
     Expects:
@@ -66,7 +66,7 @@ def add_user():
 
 
 @auth_bp.route("/login", methods=["POST"])
-def handle_login():
+def handle_login()->make_response|tuple[str,int]:
     """Logs In the user.
 
     Requires:
@@ -101,7 +101,7 @@ def handle_login():
         return jsonify({"message": "error in backend", "error": str(e)}), 500
 
 
-def add_tokens(message: str, code: int, user: Users) -> make_response:
+def add_tokens(message: str, code: int, user: Users)->make_response:
     """Adds Refresh and Access Tokens to response.
 
     Requires:
@@ -143,7 +143,7 @@ def add_tokens(message: str, code: int, user: Users) -> make_response:
     return resp
 
 @auth_bp.route("/refresh_veri", methods=["POST"])
-def refresh_ver_code():
+def refresh_ver_code()->tuple[str, int]:
     """Function to refresh verification code, or to get it in the first place.
 
     Requires:
@@ -166,7 +166,7 @@ def refresh_ver_code():
     return jsonify({"message": "email sent"}), 200
 
 @auth_bp.route("/confirm_veri", methods=["GET"])
-def confirm_ver_code():
+def confirm_ver_code()->tuple[str, int]:
     """Function to confirm verification code.
 
     Requires:
@@ -208,7 +208,7 @@ def confirm_ver_code():
 
 
 @auth_bp.route("/refresh", methods=["GET"])
-def refresh_token_handle():
+def refresh_token_handle()->tuple[str, int]:
     """Returns the new Access_Token in case of success or error in case of error.
 
     Requires:
@@ -260,7 +260,7 @@ def refresh_token_handle():
 
 
 @auth_bp.route("/logout", methods=["GET"])
-def log_out():
+def log_out()->make_response:
     """Logs Out the user.
 
     Requires:
@@ -273,7 +273,7 @@ def log_out():
     """
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
-        return "", 204
+        return make_response("", 204)
 
     try:
         jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
@@ -294,4 +294,4 @@ def log_out():
         )  # Production add: , secure=True, sameSite=None
         return resp
     except Exception as e:
-        return jsonify({"message": "error in backend", "error": str(e)}), 500
+        return make_response(jsonify({"message": "error in backend", "error": str(e)}), 500)

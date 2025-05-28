@@ -1,7 +1,7 @@
-import random
+import secrets
 from datetime import datetime, timedelta, timezone
 
-from ..google_api.gmail_api import gmail_send_message
+from ..Google_api.gmail_api import gmail_send_message
 from ..Schema import Users, db
 
 
@@ -13,7 +13,7 @@ def send_verification_mail(user:Users)->None:
             The user which is being sent to.
     
     """
-    code=random.randint(100000, 999999)
+    code=secrets.randbelow(900_000) + 100_000
     body=f"""
 Hi,
 

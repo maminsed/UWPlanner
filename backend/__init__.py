@@ -7,7 +7,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from .Auth import auth_bp
-from .LoginActions import UpdateInfo
+from .Login_actions import UpdateInfo
 from .Schema import db, migrate
 from .Test import test_bp
 

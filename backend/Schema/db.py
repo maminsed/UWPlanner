@@ -48,7 +48,7 @@ class Users(db.Model):
     )
     is_verified: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False, server_default=text('FALSE'))
     verification_code: Mapped[int] = mapped_column(db.Integer, nullable=False, default=0, server_default=text('0'))
-    verification_expiration: Mapped[int] = mapped_column(db.Integer, nullable=True)
+    verification_expiration: Mapped[datetime] = mapped_column(db.DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
     )

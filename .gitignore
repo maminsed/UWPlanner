@@ -46,6 +46,10 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 
+# Google API
+client_secret.json
+token_files/
+
 #Ruff
 .ruff_cache/
 

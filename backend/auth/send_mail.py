@@ -5,16 +5,16 @@ from ..Google_api.gmail_api import gmail_send_message
 from ..Schema import Users, db
 
 
-def send_verification_mail(user:Users)->None:
+def send_verification_mail(user: Users) -> None:
     """Sends a verification email to user and saves the code in database.
 
     Requires:
         user (Users):
             The user which is being sent to.
-    
+
     """
-    code=secrets.randbelow(900_000) + 100_000
-    body=f"""
+    code = secrets.randbelow(900_000) + 100_000
+    body = f"""
 Hi,
 
 Your verification code is: [{code}]
@@ -32,4 +32,6 @@ This e-mail was sent from a notification-only address that cannot accept incomin
         print("ERROR OCCURED NO VERIFICATION CODE SENT")
         print(e)
 
-    gmail_send_message(to=user.email, body=body, subject="Verification Code For UWPlanner")
+    gmail_send_message(
+        to=user.email, body=body, subject="Verification Code For UWPlanner"
+    )

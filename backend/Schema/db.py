@@ -46,9 +46,15 @@ class Users(db.Model):
         Enum(LoginMethod, name="login_method", native_enum=True, create_type=False),
         nullable=False,
     )
-    is_verified: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False, server_default=text('FALSE'))
-    verification_code: Mapped[int] = mapped_column(db.Integer, nullable=False, default=0, server_default=text('0'))
-    verification_expiration: Mapped[datetime] = mapped_column(db.DateTime(timezone=True), nullable=True)
+    is_verified: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, default=False, server_default=text("FALSE")
+    )
+    verification_code: Mapped[int] = mapped_column(
+        db.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    verification_expiration: Mapped[datetime] = mapped_column(
+        db.DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
     )

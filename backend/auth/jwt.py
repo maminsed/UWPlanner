@@ -55,7 +55,7 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     }
 
 
-def verify()->Optional[make_response]:
+def verify() -> Optional[make_response]:
     """Verifies that a user's Access Token is valid.
 
     Requires:
@@ -113,7 +113,7 @@ def verify()->Optional[make_response]:
         )
 
 
-def clean_up_jwt(username: str)->None:
+def clean_up_jwt(username: str) -> None:
     """For the user with username = username, removes any jwt that has expired.
 
     Requires:

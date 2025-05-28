@@ -8,13 +8,13 @@ test_bp = Blueprint("test", __name__)
 
 
 @test_bp.before_request
-def verify()->Optional[make_response]:
+def verify() -> Optional[make_response]:
     """Verifies Users trying to access."""
     return verify_jwt()
 
 
 @test_bp.route("/", methods=["GET", "POST"])
-def test()->tuple[str, int]:
+def test() -> tuple[str, int]:
     """Test route.
 
     Requires:

@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 import jwt
 from dotenv import load_dotenv
-from flask import g, jsonify, make_response, request
+from flask import Response, g, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import Users, db
@@ -55,7 +55,7 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     }
 
 
-def verify() -> Optional[make_response]:
+def verify() -> Optional[Response]:
     """Verifies that a user's Access Token is valid.
 
     Requires:

@@ -5,7 +5,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
-from flask import Blueprint, jsonify, make_response, request
+from flask import Blueprint, jsonify, make_response, request, Response
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Users, db
@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user() -> make_response | tuple[str, int]:
+def add_user() -> Response|tuple[str, int]:
     """Register a new user.
 
     Expects:
@@ -66,7 +66,7 @@ def add_user() -> make_response | tuple[str, int]:
 
 
 @auth_bp.route("/login", methods=["POST"])
-def handle_login() -> make_response | tuple[str, int]:
+def handle_login() -> Response | tuple[str, int]:
     """Logs In the user.
 
     Requires:
@@ -101,7 +101,7 @@ def handle_login() -> make_response | tuple[str, int]:
         return jsonify({"message": "error in backend", "error": str(e)}), 500
 
 
-def add_tokens(message: str, code: int, user: Users) -> make_response:
+def add_tokens(message: str, code: int, user: Users) -> Response:
     """Adds Refresh and Access Tokens to response.
 
     Requires:
@@ -264,7 +264,7 @@ def refresh_token_handle() -> tuple[str, int]:
 
 
 @auth_bp.route("/logout", methods=["GET"])
-def log_out() -> make_response:
+def log_out() -> Response:
     """Logs Out the user.
 
     Requires:

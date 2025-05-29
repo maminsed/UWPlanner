@@ -93,6 +93,10 @@ def verify() -> Optional[Response]:
             options={"require": ["exp", "username"], "verify_exp": "verify_signature"},
         )
         g.username = res["username"]
+        user = Users.query.filter_by(username=res["username"]).first()
+        if not user.is_verified:
+            return make_response(jsonify({"message": "user not verified", "action": "verify_code"}), 403)
+        
         return None
     except ExpiredSignatureError:
         # In case of timing out

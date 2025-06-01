@@ -168,6 +168,9 @@ def refresh_ver_code() -> tuple[str, int]:
     if not user:
         return jsonify({"message": "user with that email or username does not exist"}), 401
 
+    if user.is_verified:
+        return jsonify({"message": "user already verified", "action": "main_page"}),403
+
     # sending the code
     send_verification_mail(user)
     return jsonify({"message": "email sent", "email": user.email}), 200

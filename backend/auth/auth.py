@@ -155,19 +155,25 @@ def refresh_ver_code() -> tuple[str, int]:
 
     """
     # Getting data and making sure it's valid
-    email = (request.get_data()).get("email")
-    if not email:
-        return jsonify({"message": "username not provided"}), 400
-    user = Users.query.filter_by(email=email).first()
+    data = request.get_json()
+    email = data.get("email")
+    username = data.get("username")
+    if not email and not username:
+        return jsonify({"message": "username or email not provided"}), 400
+    if email:
+        user = Users.query.filter_by(email=email).first()
+    else:
+        user = Users.query.filter_by(username=username).first()
+
     if not user:
-        return jsonify({"message": "user with that email does not exist"}), 401
+        return jsonify({"message": "user with that email or username does not exist"}), 401
 
     # sending the code
     send_verification_mail(user)
-    return jsonify({"message": "email sent"}), 200
+    return jsonify({"message": "email sent", "email": user.email}), 200
 
 
-@auth_bp.route("/confirm_veri", methods=["GET"])
+@auth_bp.route("/confirm_veri", methods=["POST"])
 def confirm_ver_code() -> tuple[str, int]:
     """Function to confirm verification code.
 
@@ -179,13 +185,13 @@ def confirm_ver_code() -> tuple[str, int]:
 
     """
     # Getting data and making sure it's valid
-    data = request.get_data()
-    email = data.get("email")
+    data = request.get_json()
+    username = data.get("username")
     code = data.get("code")
-    if not email or not code:
+    if not username or not code:
         return jsonify({"message": "email or code not provided"}), 400
 
-    user = Users.query.filter_by(email=email).first()
+    user = Users.query.filter_by(username=username).first()
     if not user:
         return jsonify({"message": "user does not exist"}), 401
 
@@ -199,9 +205,14 @@ def confirm_ver_code() -> tuple[str, int]:
     ):
         return jsonify({"message": "code has timed out", "action": "verify_code"}), 401
 
+    try:
+        code = int(code)
+    except ValueError as e:
+        return jsonify({"message": "Wrong code"}), 403
+
     # Making sure the code is correct
     if user.verification_code != code:
-        return jsonify({"message": "wrong code. Please try again."}), 403
+        return jsonify({"message": "wrong code"}), 403
 
     # Adding to database and sending back the result.
     user.is_verified = True

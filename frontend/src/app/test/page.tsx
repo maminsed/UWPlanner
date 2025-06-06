@@ -27,9 +27,10 @@ export default function Test() {
 
                 const response = await (res as Response).json().catch(()=>{})
                 if (!res?.ok) {
-                    console.log(response)
                     if (response.action == "logout") {
                         router.push('/');
+                    } else if (response.action == "verify_code") {
+                        router.push('/verify')
                     } else {
                         throw new Error("Error in Backend")
                     }

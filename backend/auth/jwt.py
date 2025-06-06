@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 import jwt
 from dotenv import load_dotenv
-from flask import g, jsonify, make_response, request
+from flask import Response, g, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import Users, db
@@ -28,9 +28,9 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     # Checking which token they need, and setting expiration time
     key = os.getenv(f"{type.upper()}_TOKEN_SECRET")
     if type.upper() == "ACCESS":
-        expires_in = 30
+        expires_in = 30 * 60
     else:
-        expires_in = 24 * 60 * 60
+        expires_in = 7 * 24 * 60 * 60
     # creating and sending token
     if type == "REFRESH":
         return jwt.encode(
@@ -55,7 +55,7 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     }
 
 
-def verify() -> Optional[make_response]:
+def verify() -> Optional[Response]:
     """Verifies that a user's Access Token is valid.
 
     Requires:
@@ -93,6 +93,10 @@ def verify() -> Optional[make_response]:
             options={"require": ["exp", "username"], "verify_exp": "verify_signature"},
         )
         g.username = res["username"]
+        user = Users.query.filter_by(username=res["username"]).first()
+        if not user.is_verified:
+            return make_response(jsonify({"message": "user not verified", "action": "verify_code"}), 403)
+        
         return None
     except ExpiredSignatureError:
         # In case of timing out

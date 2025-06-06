@@ -54,7 +54,7 @@ export default function SignUp() {
             setAccess(res.Access_Token.token)
             setExp(res.Access_Token.exp)
             setUsername(res.username)
-            router.push("/test")
+            router.push("/verify")
         } catch (err) {
             setError("root", {
                 "message": (err as Error)?.message || "Error Occured"

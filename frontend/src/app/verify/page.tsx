@@ -18,7 +18,7 @@ export default function Verify() {
     //                                                 start, end
     const [last, setLast] = useState<[number, number]>([0,0])
     const [email, setEmail] = useState<string>('')
-    const { handleSubmit, register, setError, formState: {errors} } = useForm<FormFields>({ resolver: zodResolver(Schema)})
+    const { handleSubmit, register, setError, clearErrors, formState: {errors} } = useForm<FormFields>({ resolver: zodResolver(Schema)})
     const {username} = useAuth()
     const router = useRouter()
 
@@ -50,6 +50,7 @@ export default function Verify() {
             return 
         }
         setEmail(res.email);
+        clearErrors();
     }
 
     const onSubmit: SubmitHandler<FormFields> = async (data) => {
@@ -76,6 +77,7 @@ export default function Verify() {
                 })
             } else {
                 console.log("Congrats: "+res.message)
+                router.push('test')
             }   
         } catch (err) {
             setError("code", {

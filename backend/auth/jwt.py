@@ -28,9 +28,9 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
     # Checking which token they need, and setting expiration time
     key = os.getenv(f"{type.upper()}_TOKEN_SECRET")
     if type.upper() == "ACCESS":
-        expires_in = 30
+        expires_in = 30 * 60
     else:
-        expires_in = 24 * 60 * 60
+        expires_in = 7 * 24 * 60 * 60
     # creating and sending token
     if type == "REFRESH":
         return jwt.encode(

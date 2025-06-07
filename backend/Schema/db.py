@@ -26,11 +26,18 @@ db = SQLAlchemy(
 )
 migrate = Migrate()
 
+#Many to Many relationships
 minor_user = Table(
     "minor_user",
     Base.metadata,
     Column("users_id", db.Integer, ForeignKey("users.id"), primary_key=True),
     Column("minor_id", db.Integer, ForeignKey("minors.id"), primary_key=True)
+)
+major_specialization = Table(
+    "major_specialization",
+    Base.metadata,
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
+    Column("specialization_id", db.Integer, ForeignKey("specializations.id"), primary_key=True)
 )
 
 
@@ -115,6 +122,10 @@ class Major(db.Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[int] = mapped_column(db.String, nullable=False)
+    faculty: Mapped[str] = mapped_column(db.String(), nullable=False, server_default="MATH")
+    coop_offered: Mapped[bool] = mapped_column(db.Boolean, nullable=False, server_default=text("TRUE"))
+    
+    specializations: Mapped[list["Specialization"]] = relationship("Specialization", back_populates="program", secondary=major_specialization)
     main_major_users: Mapped[list["Users"]] = relationship("Users", back_populates="major", foreign_keys="[Users.major_id]")
     second_major_users: Mapped[list["Users"]] = relationship("Users", back_populates="second_major", foreign_keys="Users.second_major_id")
 
@@ -138,4 +149,5 @@ class Sequence(db.Model):
     __tablename__ = "sequences"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    programs: Mapped[list["Major"]] = relationship("Major", back_populates="specializations", secondary=major_specialization)
     students: Mapped[list["Users"]] = relationship("Users", back_populates="sequence", foreign_keys="[Users.sequence_id]")

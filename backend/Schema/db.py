@@ -85,6 +85,11 @@ class Users(db.Model):
 
     minors: Mapped[list["Minor"]] = relationship("Minor", back_populates="users", secondary=minor_user)
 
+    specialization_id: Mapped[Optional[int]] = mapped_column(ForeignKey("specializations.id"))
+    specialization: Mapped[Optional["Specialization"]] = relationship("Specialization", back_populates="students", foreign_keys=[specialization_id])
+
+    sequence_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sequences.id"))
+    sequence: Mapped[Optional["Sequence"]] = relationship("Sequence", back_populates="students", foreign_keys=[sequence_id])
 
 
 
@@ -113,4 +118,19 @@ class Minor(db.Model):
     __tablename__ = "minors"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(), nullable=False)
     users: Mapped[list[Optional["Users"]]] = relationship("Users", back_populates="minors", secondary=minor_user)
+
+class Specialization(db.Model):
+    """Database for Specializations"""
+    __tablename__ = "specializations"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    students: Mapped[list["Users"]] = relationship("Users", back_populates="specialization", foreign_keys="[Users.specialization_id]")
+
+class Sequence(db.Model):
+    """Database for Sequences"""
+    __tablename__ = "sequences"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    students: Mapped[list["Users"]] = relationship("Users", back_populates="sequence", foreign_keys="[Users.sequence_id]")

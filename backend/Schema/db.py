@@ -46,6 +46,7 @@ class LoginMethod(Pyenum):
 class Users(db.Model):
     """The Users Table."""
 
+    #Student basic Information
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(db.String(80), unique=True, nullable=False)
@@ -91,6 +92,10 @@ class Users(db.Model):
     sequence_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sequences.id"))
     sequence: Mapped[Optional["Sequence"]] = relationship("Sequence", back_populates="students", foreign_keys=[sequence_id])
 
+    #Student detailed information
+    current_term: Mapped[int] = mapped_column(db.Integer, default=0, server_default=text('0'))
+    started_year: Mapped[int] = mapped_column(db.Integer, default=datetime.now().year, server_default=text('2024'))
+    started_month: Mapped[int] = mapped_column(db.Integer, default=9, server_default=text('9'))
 
 
 class JwtToken(db.Model):

@@ -5,7 +5,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Enum, ForeignKey, text
+from sqlalchemy import Column, Enum, ForeignKey, Table, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 load_dotenv()
@@ -25,6 +25,13 @@ db = SQLAlchemy(
     },
 )
 migrate = Migrate()
+
+minor_user = Table(
+    "minor_user",
+    Base.metadata,
+    Column("users_id", db.Integer, ForeignKey("users.id"), primary_key=True),
+    Column("minor_id", db.Integer, ForeignKey("minors.id"), primary_key=True)
+)
 
 
 class LoginMethod(Pyenum):
@@ -76,6 +83,7 @@ class Users(db.Model):
     second_major_id: Mapped[Optional[int]] = mapped_column(ForeignKey("major.id"))
     second_major: Mapped[Optional["Major"]] = relationship("Major", back_populates="second_major_users", foreign_keys=[second_major_id])
 
+    minors: Mapped[list["Minor"]] = relationship("Minor", back_populates="users", secondary=minor_user)
 
 
 
@@ -100,8 +108,9 @@ class Major(db.Model):
     main_major_users: Mapped[list["Users"]] = relationship("Users", back_populates="major", foreign_keys="[Users.major_id]")
     second_major_users: Mapped[list["Users"]] = relationship("Users", back_populates="second_major", foreign_keys="Users.second_major_id")
 
-# class Minor(db.Model):
-#     """Database for the minors"""
+class Minor(db.Model):
+    """Database for the minors"""
+    __tablename__ = "minors"
 
-#     id: Mapped[int] = mapped_column(primary_key=True)
-#     users: Mapped[list[Optional["Users"]]] = relationship("Users", back_populates="minors")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    users: Mapped[list[Optional["Users"]]] = relationship("Users", back_populates="minors", secondary=minor_user)

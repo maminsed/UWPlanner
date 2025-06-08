@@ -118,7 +118,7 @@ class JwtToken(db.Model):
     user: Mapped["Users"] = relationship("Users", back_populates="refresh_tokens")
 
 class Major(db.Model):
-    """Database for the majors"""
+    """Database for the majors."""
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[int] = mapped_column(db.String, nullable=False)
@@ -130,7 +130,8 @@ class Major(db.Model):
     second_major_users: Mapped[list["Users"]] = relationship("Users", back_populates="second_major", foreign_keys="Users.second_major_id")
 
 class Minor(db.Model):
-    """Database for the minors"""
+    """Database for the minors."""
+
     __tablename__ = "minors"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -138,14 +139,16 @@ class Minor(db.Model):
     users: Mapped[list[Optional["Users"]]] = relationship("Users", back_populates="minors", secondary=minor_user)
 
 class Specialization(db.Model):
-    """Database for Specializations"""
+    """Database for Specializations."""
+
     __tablename__ = "specializations"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
     students: Mapped[list["Users"]] = relationship("Users", back_populates="specialization", foreign_keys="[Users.specialization_id]")
 
 class Sequence(db.Model):
-    """Database for Sequences"""
+    """Database for Sequences."""
+
     __tablename__ = "sequences"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)

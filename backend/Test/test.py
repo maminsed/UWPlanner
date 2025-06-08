@@ -2,9 +2,8 @@ from typing import Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
 
-from ..School_info.majors import add_major, enrol_to_major
-
 from ..Auth import verify as verify_jwt
+from ..School_info.majors import add_major, enrol_to_major
 
 test_bp = Blueprint("test", __name__)
 
@@ -34,6 +33,10 @@ def test() -> tuple[str, int]:
 
 @test_bp.route("/add_major", methods=["POST"])
 def create_major() -> tuple[str, int]:
+    """Test route to add major.
+
+    - basically there to make sure database is setup correctly
+    """
     data = request.get_json()
     major = data.get("major")
     if not major:
@@ -44,8 +47,12 @@ def create_major() -> tuple[str, int]:
         return jsonify({"message": res[1]}), 400
     return jsonify({"message": res[1]}), 200
 
-@test_bp.route("/add_user", methods=["UPDATE", "POST"])
-def add_user_to_major():
+@test_bp.route("/enrol_student", methods=["UPDATE", "POST"])
+def add_user_to_major()-> tuple[str, int]:
+    """Test route to enrol a student in a major.
+
+    - basically there to check if database is setup correctly
+    """
     data = request.get_json()
     major = data.get("major")
     if not major:

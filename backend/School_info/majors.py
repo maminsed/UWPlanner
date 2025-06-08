@@ -1,7 +1,9 @@
 from ..Schema import db
 from ..Schema.db import Major, Users
 
+
 def add_major(major_name:str)->tuple[bool, str]:
+    """Function to add a major. Not Completed!"""
     res = Major.query.filter_by(name=major_name).first()
     print(res)
     if res:
@@ -13,6 +15,7 @@ def add_major(major_name:str)->tuple[bool, str]:
     return (True, "Major Added with 0 users")
 
 def enrol_to_major(major_name:str, username:str)->tuple[bool, str]:
+    """Function to enrol a student in a major. Not Completed!"""
     major = Major.query.filter_by(name=major_name).first()
     user = Users.query.filter_by(username=username).first()
     if not major or not user:

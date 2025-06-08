@@ -5,7 +5,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
-from flask import Blueprint, jsonify, make_response, request, Response
+from flask import Blueprint, Response, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Users, db
@@ -210,7 +210,7 @@ def confirm_ver_code() -> tuple[str, int]:
 
     try:
         code = int(code)
-    except ValueError as e:
+    except ValueError:
         return jsonify({"message": "Wrong code"}), 403
 
     # Making sure the code is correct

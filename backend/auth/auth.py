@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user() -> Response|tuple[str, int]:
+def add_user() -> Response | tuple[str, int]:
     """Register a new user.
 
     Expects:
@@ -166,10 +166,12 @@ def refresh_ver_code() -> tuple[str, int]:
         user = Users.query.filter_by(username=username).first()
 
     if not user:
-        return jsonify({"message": "user with that email or username does not exist"}), 401
+        return jsonify(
+            {"message": "user with that email or username does not exist"}
+        ), 401
 
     if user.is_verified:
-        return jsonify({"message": "user already verified", "action": "main_page"}),403
+        return jsonify({"message": "user already verified", "action": "main_page"}), 403
 
     # sending the code
     send_verification_mail(user)

@@ -31,6 +31,7 @@ def test() -> tuple[str, int]:
 
     return jsonify({"message": f"HI {g.username} Stop obesity"}), 200
 
+
 @test_bp.route("/add_major", methods=["POST"])
 def create_major() -> tuple[str, int]:
     """Test route to add major.
@@ -41,14 +42,15 @@ def create_major() -> tuple[str, int]:
     major = data.get("major")
     if not major:
         return jsonify({"message": "error"}), 400
-    
+
     res = add_major(major)
     if not res[0]:
         return jsonify({"message": res[1]}), 400
     return jsonify({"message": res[1]}), 200
 
+
 @test_bp.route("/enrol_student", methods=["UPDATE", "POST"])
-def add_user_to_major()-> tuple[str, int]:
+def add_user_to_major() -> tuple[str, int]:
     """Test route to enrol a student in a major.
 
     - basically there to check if database is setup correctly
@@ -61,5 +63,5 @@ def add_user_to_major()-> tuple[str, int]:
     res = enrol_to_major(major, g.username)
     if not res[0]:
         return jsonify({"message": res[1]}), 400
-    
+
     return jsonify({"message": res[1]}), 200

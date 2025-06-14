@@ -149,12 +149,14 @@ class Major(db.Model):
         "Major", back_populates="majors", secondary=major_student)
     name: Mapped[int] = mapped_column(db.String, nullable=False)
     faculty: Mapped[str] = mapped_column(
-        db.String(), nullable=False, server_default="MATH"
+        db.String(), nullable=False
+    )
+    url: Mapped[str] = mapped_column(
+        db.String(), nullable=False, server_default="https://uwaterloo.ca/future-students/programs/by-faculty"
     )
     coop_offered: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, server_default=text("TRUE")
     )
-
     specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="program", secondary=major_specialization
     )

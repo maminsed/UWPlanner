@@ -2,17 +2,24 @@ from ..Schema import db
 from ..Schema.db import Major, Users
 
 
-def add_major(major_name: str) -> tuple[bool, str]:
+def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
     """Function to add a major. Not Completed!"""
-    res = Major.query.filter_by(name=major_name).first()
-    print(res)
-    if res:
-        return (False, "Major Already Exists")
+    try:
+        res = Major.query.filter_by(name=major_name).first()
+        if res:
+            major.faculty = faculty
+            major.url = url
+            db.session.add(major)
+            db.session.commit()
+            return (True, "Major Already Exists - Infomration updated")
 
-    major = Major(name=major_name)
-    db.session.add(major)
-    db.session.commit()
-    return (True, "Major Added with 0 users")
+        major = Major(name=major_name, faculty=faculty, url=url)
+        db.session.add(major)
+        db.session.commit()
+        return (True, "Major Added with 0 users")
+    except Exception as e:
+        return (False, "Error in backend")
+
 
 
 def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:

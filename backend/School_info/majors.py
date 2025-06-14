@@ -18,7 +18,7 @@ def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
         db.session.commit()
         return (True, "Major Added with 0 users")
     except Exception as e:
-        return (False, "Error in backend")
+        return (False, "Error in backend", str(e))
 
 
 

@@ -7,9 +7,9 @@ def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
     try:
         res = Major.query.filter_by(name=major_name).first()
         if res:
-            major.faculty = faculty
-            major.url = url
-            db.session.add(major)
+            res.faculty = faculty
+            res.url = url
+            db.session.add(res)
             db.session.commit()
             return (True, "Major Already Exists - Infomration updated")
 

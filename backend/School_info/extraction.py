@@ -15,6 +15,7 @@ def extract_majors():
     result = soup.find_all("section", class_=[faculty_class, program_class])
 
     cur_faculty = None
+    added = []
     for item in result:
         if "layout--uw-1-col" in item["class"]:
             faculty = item.find("h2")
@@ -27,6 +28,12 @@ def extract_majors():
             for lst in lsts_majors:
                 for major in lst.find_all("a"):
                     major_name, url = major.text, major["href"]
-                    print(major_name, cur_faculty, url)
+                    print(major_name)
+                    added.append(major_name)
                     res = add_major(major_name, cur_faculty, url)
                     print(res)
+                    if not res[0]:
+                        return False
+                    
+
+    return added

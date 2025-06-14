@@ -52,6 +52,13 @@ major_student = Table(
     Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
 )
 
+specialization_student = Table(
+    "specialization_student",
+    Base.metadata,
+    Column("spec_id", db.Integer, ForeignKey("specializations.id"), primary_key=True),
+    Column("user_id", db.Integer, ForeignKey("users.id"), primary_key=True)
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -105,11 +112,8 @@ class Users(db.Model):
         "Minor", back_populates="users", secondary=minor_user
     )
 
-    specialization_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("specializations.id")
-    )
     specialization: Mapped[Optional["Specialization"]] = relationship(
-        "Specialization", back_populates="students", foreign_keys=[specialization_id]
+        "Specialization", back_populates="students", secondary=specialization_student
     )
 
     sequence_id: Mapped[Optional[int]] = mapped_column(ForeignKey("sequences.id"))
@@ -145,8 +149,6 @@ class JwtToken(db.Model):
 class Major(db.Model):
     """Database for the majors."""
     id: Mapped[int] = mapped_column(primary_key=True)
-    students: Mapped[list["Major"]] = relationship(
-        "Major", back_populates="majors", secondary=major_student)
     name: Mapped[int] = mapped_column(db.String, nullable=False)
     faculty: Mapped[str] = mapped_column(
         db.String(), nullable=False
@@ -157,8 +159,10 @@ class Major(db.Model):
     coop_offered: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, server_default=text("TRUE")
     )
+    students: Mapped[list["Major"]] = relationship(
+        "Users", back_populates="majors", secondary=major_student)
     specializations: Mapped[list["Specialization"]] = relationship(
-        "Specialization", back_populates="program", secondary=major_specialization
+        "Specialization", back_populates="major", secondary=major_specialization
     )
 
 
@@ -180,10 +184,11 @@ class Specialization(db.Model):
     __tablename__ = "specializations"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    major: Mapped[list["Major"]] = relationship("Major", back_populates="specializations", secondary=major_specialization)
     students: Mapped[list["Users"]] = relationship(
         "Users",
         back_populates="specialization",
-        foreign_keys="[Users.specialization_id]",
+        secondary=specialization_student
     )
 
 

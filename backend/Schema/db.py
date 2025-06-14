@@ -45,6 +45,13 @@ major_specialization = Table(
     ),
 )
 
+major_student = Table(
+    "major_student",
+    Base.metadata,
+    Column("students_id", db.Integer, ForeignKey("users.id"), primary_key=True),
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -90,14 +97,8 @@ class Users(db.Model):
         "JwtToken", back_populates="user", cascade="all, delete-orphan, save-update"
     )
     # School related Information
-    major_id: Mapped[Optional[int]] = mapped_column(ForeignKey("major.id"))
-    major: Mapped[Optional["Major"]] = relationship(
-        "Major", back_populates="main_major_users", foreign_keys=[major_id]
-    )
-
-    second_major_id: Mapped[Optional[int]] = mapped_column(ForeignKey("major.id"))
-    second_major: Mapped[Optional["Major"]] = relationship(
-        "Major", back_populates="second_major_users", foreign_keys=[second_major_id]
+    majors: Mapped[list["Major"]] = relationship(
+        "Major", back_populates="students", secondary=major_student
     )
 
     minors: Mapped[list["Minor"]] = relationship(
@@ -143,8 +144,9 @@ class JwtToken(db.Model):
 
 class Major(db.Model):
     """Database for the majors."""
-
     id: Mapped[int] = mapped_column(primary_key=True)
+    students: Mapped[list["Major"]] = relationship(
+        "Major", back_populates="majors", secondary=major_student)
     name: Mapped[int] = mapped_column(db.String, nullable=False)
     faculty: Mapped[str] = mapped_column(
         db.String(), nullable=False, server_default="MATH"
@@ -155,12 +157,6 @@ class Major(db.Model):
 
     specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="program", secondary=major_specialization
-    )
-    main_major_users: Mapped[list["Users"]] = relationship(
-        "Users", back_populates="major", foreign_keys="[Users.major_id]"
-    )
-    second_major_users: Mapped[list["Users"]] = relationship(
-        "Users", back_populates="second_major", foreign_keys="Users.second_major_id"
     )
 
 

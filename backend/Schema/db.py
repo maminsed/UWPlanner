@@ -198,9 +198,6 @@ class Sequence(db.Model):
     __tablename__ = "sequences"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
-    programs: Mapped[list["Major"]] = relationship(
-        "Major", back_populates="specializations", secondary=major_specialization
-    )
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )

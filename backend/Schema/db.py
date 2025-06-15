@@ -149,7 +149,7 @@ class JwtToken(db.Model):
 class Major(db.Model):
     """Database for the majors."""
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[int] = mapped_column(db.String, nullable=False)
+    name: Mapped[int] = mapped_column(db.String, nullable=False, unique=True)
     faculty: Mapped[str] = mapped_column(
         db.String(), nullable=False
     )
@@ -175,7 +175,7 @@ class Minor(db.Model):
     __tablename__ = "minors"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
     users: Mapped[list[Optional["Users"]]] = relationship(
         "Users", back_populates="minors", secondary=minor_user
     )
@@ -186,7 +186,7 @@ class Specialization(db.Model):
 
     __tablename__ = "specializations"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
     major: Mapped[list["Major"]] = relationship("Major", back_populates="specializations", secondary=major_specialization)
     students: Mapped[list["Users"]] = relationship(
         "Users",

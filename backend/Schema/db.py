@@ -156,7 +156,10 @@ class Major(db.Model):
     url: Mapped[str] = mapped_column(
         db.String(), nullable=False, server_default="https://uwaterloo.ca/future-students/programs/by-faculty"
     )
-    coop_offered: Mapped[bool] = mapped_column(
+    coop: Mapped[bool] = mapped_column(
+        db.Boolean, nullable=False, server_default=text("FALSE")
+    )
+    regular: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, server_default=text("TRUE")
     )
     students: Mapped[list["Major"]] = relationship(

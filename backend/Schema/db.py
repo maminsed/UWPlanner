@@ -176,6 +176,8 @@ class Minor(db.Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
+    theme: Mapped[str] = mapped_column(db.String(), nullable=True)
+    url: Mapped[str] = mapped_column(db.String(), server_default="https://uwaterloo.ca/future-students/programs/minors")
     users: Mapped[list[Optional["Users"]]] = relationship(
         "Users", back_populates="minors", secondary=minor_user
     )

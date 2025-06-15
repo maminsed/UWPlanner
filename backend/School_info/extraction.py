@@ -1,8 +1,7 @@
-import requests 
-import os
+import requests
 from bs4 import BeautifulSoup
 
-from .majors import add_major, update_coop_info
+from .majors import add_major, update_coop_info, add_minor
 from ..Schema import Major
 
 def extract_majors():
@@ -74,3 +73,25 @@ def update_major_info():
         print(m.name, " is successfull")
         print(coop, regular, minor)
     print("No coop section in: ", errors)
+
+def extract_minors():
+    URL = "https://uwaterloo.ca/future-students/programs/minors"
+    page = requests.get(URL)
+    soup = BeautifulSoup(page.content, "html.parser")
+
+    minors_class = "block block-uw-custom-blocks block-uw-cbl-expand-collapse"
+    all_minors = soup.find("div", class_=minors_class)
+    errors = []
+    for section in all_minors.find_all("details", class_="uw-details"):
+        theme = section.find("h3").text
+        for minor in section.find_all("a"):
+            link = minor["href"]
+            name = minor.text
+            res = add_minor(name, theme, link)
+            print(res)
+            if not res[0]:
+                errors.append(name)
+    print("errors: ", errors)
+
+if __name__ == "__main__":
+    extract_minors()

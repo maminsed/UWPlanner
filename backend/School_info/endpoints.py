@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from .extraction import extract_majors, update_major_info
+from .extraction import extract_majors, extract_minors, update_major_info
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -15,4 +15,9 @@ def EM_fn():
 @school_info_bp.route("/update_major_info", methods=["GET"])
 def UMI_fn():
     update_major_info()
+    return "", 204
+
+@school_info_bp.route("/extract_minors", methods=["GET"])
+def UMinor_Info_fn():
+    extract_minors()
     return "", 204

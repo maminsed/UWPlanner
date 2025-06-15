@@ -1,5 +1,5 @@
 from ..Schema import db
-from ..Schema.db import Major, Users
+from ..Schema.db import Major, Users, Minor
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
@@ -34,3 +34,16 @@ def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
     db.session.add(user)
     db.session.commit()
     return (True, f"{user.username} is enroled in {major.name}")
+
+def update_coop_info(major, coop=False, regular=True, minor=False):
+    major.coop = coop
+    major.regular = regular
+
+    if minor:
+        exists = Minor.query.filter_by(name=major.name)
+        if not exists:
+            new_minor = Minor(name=major.name)
+            db.session.add(new_minor)
+    db.session.add(major)
+    db.session.commit()
+    return True, "Majro updated"

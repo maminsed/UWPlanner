@@ -1,12 +1,14 @@
 import requests 
+import os
 from bs4 import BeautifulSoup
 
-from .majors import add_major
+from .majors import add_major, update_coop_info
 from ..Schema import Major
 
 def extract_majors():
+    """Function to extract majors from uwaterloo website."""
     #Getting the url and setting up beautiful soup
-    URL = "https://uwaterloo.ca/future-students/programs/by-faculty#health"
+    URL = "https://uwaterloo.ca/future-students/programs/by-faculty"
     page = requests.get(URL)
 
     soup = BeautifulSoup(page.content, "html.parser")
@@ -48,4 +50,20 @@ def extract_majors():
 
 def update_major_info():
     for m in Major.query.all():
-        print(m.url)
+        page = requests.get(m.url)
+        coop_section_class = "uw-contained-width uw-contained-width--wide uw-section__background--full-width uw-section-spacing--default uw-section-separator--none uw-column-separator--between uw-section__background-image uw-section__tint-color--none uw-section__text-color--black-white-shadow layout layout--uw-3-col even-split uw-section__background-image-2547"
+        soup = BeautifulSoup(page.content, "html.parser")
+
+        coop_section = soup.find("section", class_=coop_section_class)
+
+        program_info_class = "uw-copy-text__wrapper"
+        program_info = coop_section.find_all("div", class_=program_info_class)
+        if not program_info:
+            print(m.name, " Does not have program_info")
+            continue
+        coop = (program_info[0].find("strong")).text.strip().lower() != "no"
+        regular = (program_info[1].find("strong")).text.strip().lower() != "no"
+        minor = (program_info[2].find("strong")).text.strip().lower() != "no"
+        update_coop_info(m, coop, regular,minor)
+        print(m.name, " is successfull")
+        print(coop, regular, minor)

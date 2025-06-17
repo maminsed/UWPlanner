@@ -5,3 +5,5 @@ Enroling Students in mms.
 """
 
 from .endpoints import school_info_bp
+
+__all__ = ["school_info_bp"]

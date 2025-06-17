@@ -5,11 +5,14 @@ from ..Schema import Major
 from .majors import add_major, add_minor, update_coop_info
 
 
-def extract_majors() -> list[str]:
+def extract_majors() -> dict[str:list[str]|str]:
     """Function to extract majors from uwaterloo website."""
     # Getting the url and setting up beautiful soup
     URL = "https://uwaterloo.ca/future-students/programs/by-faculty"
-    page = requests.get(URL)
+    try:
+        page = requests.get(URL, timeout=10)
+    except Exception:
+        return {"satatus": "False", "message": "webside took too long to load"}
 
     soup = BeautifulSoup(page.content, "html.parser")
 
@@ -45,7 +48,7 @@ def extract_majors() -> list[str]:
                     if not res[0]:
                         return False
 
-    return added
+    return {"status": "True", "added":added}
 
 
 def update_major_info() -> None:
@@ -54,7 +57,10 @@ def update_major_info() -> None:
     #Going through each major added
     for m in Major.query.all():
         #Downloading the page and finding the coop info section.
-        page = requests.get(m.url)
+        try:
+            page = requests.get(m.url, timeout=10)
+        except Exception:
+            errors.append(m.name)
         coop_section_class = [
             "uw-contained-width uw-contained-width--wide uw-section__background--full-width uw-section-spacing--default uw-section-separator--none uw-column-separator--between uw-section__background-image uw-section__tint-color--none uw-section__text-color--black-white-shadow layout layout--uw-3-col even-split uw-section__background-image-2547",
             "uw-contained-width uw-contained-width--wide uw-section__background--full-width uw-section-spacing--default uw-section-separator--none uw-column-separator--between uw-section-alignment--top-align-content uw-section__background-image uw-section__tint-color--none uw-section__text-color--black-white-shadow layout layout--uw-3-col even-split uw-section__background-image-2547",
@@ -90,7 +96,7 @@ def update_major_info() -> None:
 def extract_minors() -> None:
     """Function to extract minors from uwaterloo website."""
     URL = "https://uwaterloo.ca/future-students/programs/minors"
-    page = requests.get(URL)
+    page = requests.get(URL, timeout=10)
     soup = BeautifulSoup(page.content, "html.parser")
 
     minors_class = "block block-uw-custom-blocks block-uw-cbl-expand-collapse"

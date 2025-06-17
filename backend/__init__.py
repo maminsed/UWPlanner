@@ -8,9 +8,9 @@ from flask_cors import CORS
 
 from .Auth import auth_bp
 from .Login_actions import UpdateInfo
-from .Test import test_bp
-from .School_info import school_info_bp
 from .Schema import db, migrate
+from .School_info import school_info_bp
+from .Test import test_bp
 
 load_dotenv()
 

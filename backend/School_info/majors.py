@@ -1,18 +1,34 @@
 from ..Schema import db
-from ..Schema.db import Major, Users, Minor
+from ..Schema.db import Major, Minor, Users
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
-    """Function to add a major. Not Completed!"""
+    """Function to add a major. If the major already exists, it updates it.
+
+    Requires:
+        - major_name (str):
+            The name of the major.
+        - faculty (str):
+            The faculty it belongs to.
+        - url (str):
+            This one is any url that gives information about the major.
+        
+    Returns:
+        Information about what happened.
+
+    """
     try:
+        # Checking if the major exists
         res = Major.query.filter_by(name=major_name).first()
         if res:
+            #If it exists updating it and sending back a resopnse. 
             res.faculty = faculty
             res.url = url
             db.session.add(res)
             db.session.commit()
             return (True, "Major Already Exists - Infomration updated")
 
+        #If it doesn't exist create a major with 0 students enroled.
         major = Major(name=major_name, faculty=faculty, url=url)
         db.session.add(major)
         db.session.commit()
@@ -21,10 +37,29 @@ def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
         return (False, "Error in backend", str(e))
 
 
-def add_minor(name: str, theme: str | None = None, url: str | None = None):
+def add_minor(name: str, theme: str | None = None, url: str | None = None) -> tuple[bool, str]:
+    """Function to add a minor. If the minor already exists, it updates it.
+
+    Requires:
+        - name (str):
+            The name of the minor.
+        - theme (Optional[str]):
+            The theme it belongs to. 
+            For more information check the uwaterloo official minor page. 
+            Defaults None.
+        - url (Optional[str]):
+            This one is any url that gives information about the minor. 
+            Defaults None.
+        
+    Returns:
+        Information about what happened.
+
+    """
     try:
+        #Check if the minor exists
         exists = Minor.query.filter_by(name=name).first()
         if exists:
+            #If it exists updating accordingly and sending back the response. 
             if theme is not None:
                 exists.theme = theme
             if exists is not None:
@@ -33,8 +68,10 @@ def add_minor(name: str, theme: str | None = None, url: str | None = None):
             db.session.commit()
             return (True, "Updated Minor: " + name)
 
+        #Giving default values in case of ""
         theme = theme or ""
         url = url or ""
+        #Creating minor and returning the response.
         minor = Minor(name=name, theme=theme, url=url)
         db.session.add(minor)
         db.session.commit()
@@ -44,7 +81,7 @@ def add_minor(name: str, theme: str | None = None, url: str | None = None):
 
 
 def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
-    """Function to enrol a student in a major. Not Completed!"""
+    """Function to enrol a student in a major. Not Completed."""
     major = Major.query.filter_by(name=major_name).first()
     user = Users.query.filter_by(username=username).first()
     if not major or not user:
@@ -57,10 +94,12 @@ def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
     return (True, f"{user.username} is enroled in {major.name}")
 
 
-def update_coop_info(major, coop=False, regular=True, minor=False):
+def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=False) -> tuple[bool, str]:
+    """Function to add whether a major has a coop a regular or is enrolable as a minor."""
     major.coop = coop
     major.regular = regular
 
+    #If it does have a minor, creating it and returning back the response.
     if minor:
         add_minor(major.name)
     db.session.add(major)

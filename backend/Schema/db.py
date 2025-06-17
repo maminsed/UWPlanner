@@ -49,14 +49,14 @@ major_student = Table(
     "major_student",
     Base.metadata,
     Column("students_id", db.Integer, ForeignKey("users.id"), primary_key=True),
-    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
 )
 
 specialization_student = Table(
     "specialization_student",
     Base.metadata,
     Column("spec_id", db.Integer, ForeignKey("specializations.id"), primary_key=True),
-    Column("user_id", db.Integer, ForeignKey("users.id"), primary_key=True)
+    Column("user_id", db.Integer, ForeignKey("users.id"), primary_key=True),
 )
 
 
@@ -148,13 +148,14 @@ class JwtToken(db.Model):
 
 class Major(db.Model):
     """Database for the majors."""
+
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[int] = mapped_column(db.String, nullable=False, unique=True)
-    faculty: Mapped[str] = mapped_column(
-        db.String(), nullable=False
-    )
+    faculty: Mapped[str] = mapped_column(db.String(), nullable=False)
     url: Mapped[str] = mapped_column(
-        db.String(), nullable=False, server_default="https://uwaterloo.ca/future-students/programs/by-faculty"
+        db.String(),
+        nullable=False,
+        server_default="https://uwaterloo.ca/future-students/programs/by-faculty",
     )
     coop: Mapped[bool] = mapped_column(
         db.Boolean, nullable=False, server_default=text("FALSE")
@@ -163,7 +164,8 @@ class Major(db.Model):
         db.Boolean, nullable=False, server_default=text("TRUE")
     )
     students: Mapped[list["Major"]] = relationship(
-        "Users", back_populates="majors", secondary=major_student)
+        "Users", back_populates="majors", secondary=major_student
+    )
     specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="major", secondary=major_specialization
     )
@@ -177,7 +179,10 @@ class Minor(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
     theme: Mapped[str] = mapped_column(db.String(), nullable=True)
-    url: Mapped[str] = mapped_column(db.String(), server_default="https://uwaterloo.ca/future-students/programs/minors")
+    url: Mapped[str] = mapped_column(
+        db.String(),
+        server_default="https://uwaterloo.ca/future-students/programs/minors",
+    )
     users: Mapped[list[Optional["Users"]]] = relationship(
         "Users", back_populates="minors", secondary=minor_user
     )
@@ -189,11 +194,11 @@ class Specialization(db.Model):
     __tablename__ = "specializations"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
-    major: Mapped[list["Major"]] = relationship("Major", back_populates="specializations", secondary=major_specialization)
+    major: Mapped[list["Major"]] = relationship(
+        "Major", back_populates="specializations", secondary=major_specialization
+    )
     students: Mapped[list["Users"]] = relationship(
-        "Users",
-        back_populates="specialization",
-        secondary=specialization_student
+        "Users", back_populates="specialization", secondary=specialization_student
     )
 
 

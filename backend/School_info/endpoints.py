@@ -4,11 +4,12 @@ from .extraction import extract_majors, extract_minors, update_major_info
 
 school_info_bp = Blueprint("school_info", __name__)
 
+
 @school_info_bp.route("/extract_major", methods=["GET"])
 def EM_fn():
     res = extract_majors()
     if res is False:
-        return "",400
+        return "", 400
     return jsonify(res), 204
 
 
@@ -16,6 +17,7 @@ def EM_fn():
 def UMI_fn():
     update_major_info()
     return "", 204
+
 
 @school_info_bp.route("/extract_minors", methods=["GET"])
 def UMinor_Info_fn():

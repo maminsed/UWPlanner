@@ -19,8 +19,9 @@ def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
         return (True, "Major Added with 0 users")
     except Exception as e:
         return (False, "Error in backend", str(e))
-    
-def add_minor(name: str, theme:str|None = None, url:str|None = None):
+
+
+def add_minor(name: str, theme: str | None = None, url: str | None = None):
     try:
         exists = Minor.query.filter_by(name=name).first()
         if exists:
@@ -30,17 +31,16 @@ def add_minor(name: str, theme:str|None = None, url:str|None = None):
                 exists.url = url
             db.session.add(exists)
             db.session.commit()
-            return (True, "Updated Minor: "+name)
-        
+            return (True, "Updated Minor: " + name)
+
         theme = theme or ""
         url = url or ""
         minor = Minor(name=name, theme=theme, url=url)
         db.session.add(minor)
         db.session.commit()
-        return (True, "Minor added: "+name)
+        return (True, "Minor added: " + name)
     except Exception as e:
         return (False, "Errror in Backend", str(e))
-
 
 
 def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
@@ -55,6 +55,7 @@ def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
     db.session.add(user)
     db.session.commit()
     return (True, f"{user.username} is enroled in {major.name}")
+
 
 def update_coop_info(major, coop=False, regular=True, minor=False):
     major.coop = coop

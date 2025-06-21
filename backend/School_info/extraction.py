@@ -2,7 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from ..Schema import Major
-from .majors import add_major, add_minor, update_coop_info
+from .majors import add_major, add_minor, update_coop_info, add_specialization
+from .selenium.exctraction import extract_spec_page
 
 
 def extract_majors() -> dict[str:list[str]|str]:
@@ -116,3 +117,13 @@ def extract_minors() -> None:
                 errors.append(name)
     #Printing errors if any.
     print("errors: ", errors)
+
+def extract_specializations() -> None:
+    specs = extract_spec_page()
+
+    errors = []
+    for name,link,field in specs:
+        res = add_specialization(name,link,field)
+        print(res)
+        if not res[0]:
+            errors.append((name, res[1]))

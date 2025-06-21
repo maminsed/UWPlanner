@@ -33,17 +33,17 @@ minor_user = Table(
     Column("users_id", db.Integer, ForeignKey("users.id"), primary_key=True),
     Column("minor_id", db.Integer, ForeignKey("minors.id"), primary_key=True),
 )
-major_specialization = Table(
-    "major_specialization",
-    Base.metadata,
-    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
-    Column(
-        "specialization_id",
-        db.Integer,
-        ForeignKey("specializations.id"),
-        primary_key=True,
-    ),
-)
+# major_specialization = Table(
+#     "major_specialization",
+#     Base.metadata,
+#     Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
+#     Column(
+#         "specialization_id",
+#         db.Integer,
+#         ForeignKey("specializations.id"),
+#         primary_key=True,
+#     ),
+# )
 
 major_student = Table(
     "major_student",
@@ -167,7 +167,7 @@ class Major(db.Model):
         "Users", back_populates="majors", secondary=major_student
     )
     specializations: Mapped[list["Specialization"]] = relationship(
-        "Specialization", back_populates="major", secondary=major_specialization
+        "Specialization", back_populates="major", foreign_keys="specializations.major_id"
     )
 
 
@@ -195,8 +195,9 @@ class Specialization(db.Model):
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
     link: Mapped[Optional[str]] = mapped_column(db.String())
-    major: Mapped[list["Major"]] = relationship(
-        "Major", back_populates="specializations", secondary=major_specialization
+    major_id: Mapped[Optional[int]] = mapped_column(db.Integer(), ForeignKey("major.id"))
+    major: Mapped[Optional["Major"]] = relationship(
+        "Major", back_populates="specializations", foreign_keys=major_id
     )
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="specialization", secondary=specialization_student

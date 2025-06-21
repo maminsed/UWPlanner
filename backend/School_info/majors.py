@@ -26,7 +26,7 @@ def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
             res.url = url
             db.session.add(res)
             db.session.commit()
-            return (True, "Major Already Exists - Infomration updated")
+            return (True, "Major Already Exists - Information updated")
 
         #If it doesn't exist create a major with 0 students enroled.
         major = Major(name=major_name, faculty=faculty, url=url)
@@ -77,7 +77,7 @@ def add_minor(name: str, theme: str | None = None, url: str | None = None) -> tu
         db.session.commit()
         return (True, "Minor added: " + name)
     except Exception as e:
-        return (False, "Errror in Backend", str(e))
+        return (False, "Error in Backend", str(e))
 
 
 def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
@@ -104,7 +104,7 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
         add_minor(major.name)
     db.session.add(major)
     db.session.commit()
-    return True, "Majro updated"
+    return True, "Major updated"
 
 def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
     res = Specialization.query.filter_by(name=name, field=field).first()

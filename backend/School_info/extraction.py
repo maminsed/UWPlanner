@@ -13,7 +13,7 @@ def extract_majors() -> dict[str:list[str]|str]:
     try:
         page = requests.get(URL, timeout=10)
     except Exception:
-        return {"satatus": "False", "message": "webside took too long to load"}
+        return {"status": "False", "message": "website took too long to load"}
 
     soup = BeautifulSoup(page.content, "html.parser")
 
@@ -88,7 +88,7 @@ def update_major_info() -> None:
 
         #Updating coop information and printing the result
         update_coop_info(m, coop, regular, minor)
-        print(m.name, " is successfull")
+        print(m.name, " is successful")
         print(coop, regular, minor)
     #Printing the errors
     print("No coop section in: ", errors)

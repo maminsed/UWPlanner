@@ -5,7 +5,7 @@ import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
-from flask import Blueprint, jsonify, make_response, request, Response
+from flask import Blueprint, Response, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Users, db
@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user() -> Response|tuple[str, int]:
+def add_user() -> Response | tuple[str, int]:
     """Register a new user.
 
     Expects:
@@ -166,10 +166,12 @@ def refresh_ver_code() -> tuple[str, int]:
         user = Users.query.filter_by(username=username).first()
 
     if not user:
-        return jsonify({"message": "user with that email or username does not exist"}), 401
+        return jsonify(
+            {"message": "user with that email or username does not exist"}
+        ), 401
 
     if user.is_verified:
-        return jsonify({"message": "user already verified", "action": "main_page"}),403
+        return jsonify({"message": "user already verified", "action": "main_page"}), 403
 
     # sending the code
     send_verification_mail(user)
@@ -210,7 +212,7 @@ def confirm_ver_code() -> tuple[str, int]:
 
     try:
         code = int(code)
-    except ValueError as e:
+    except ValueError:
         return jsonify({"message": "Wrong code"}), 403
 
     # Making sure the code is correct

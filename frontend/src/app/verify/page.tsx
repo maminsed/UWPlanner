@@ -78,7 +78,7 @@ export default function Verify() {
                 })
             } else {
                 console.log("Congrats: "+res.message)
-                router.push('test')
+                router.push('/test')
             }   
         } catch (err) {
             setError("code", {
@@ -119,8 +119,7 @@ export default function Verify() {
                                     key={index} 
                                     maxLength={1} 
                                     value={item} 
-                                    readOnly={true} 
-                                    onClick={()=>{console.log("HOLA")}}
+                                    readOnly={true}
                                     className={`bg-light-green text-dark-green text-center rounded-md font-semibold text-xl ${(index >= last[0] && index <= last[1]) ? "shadow-[0_0_21.7px_0px_#DEF2F580]" : ""} w-8 aspect-[4/5]`}/>
                             ))}
                         </div>
@@ -136,7 +135,7 @@ export default function Verify() {
                             className="absolute font-mono inset-0 w-full h-full text-amber-800 pl-[0.92rem] tracking-[1.61rem] text-2xl font-semibold opacity-0"
                             />
                     </div>
-                    <p className="text-sm text-center mt-1 mb-5">didn't recieve a code? <button type="button" onClick={sendVerification} className="text-cyan-400 underline cursor-pointer hover:text-cyan-500 active:text-cyan-600 transition-colors duration-500">resend</button></p>
+                    <p className="text-sm text-center mt-1 mb-5">didn't receive a code? <button type="button" onClick={sendVerification} className="text-cyan-400 underline cursor-pointer hover:text-cyan-500 active:text-cyan-600 transition-colors duration-500">resend</button></p>
                     {errors?.code && <p className="text-sm text-red-400 mb-1">{errors.code.message}</p>}
                     <button type="submit" className="bg-light-green text-dark-green px-8 py-1 rounded-md font-semibold cursor-pointer hover:text-[#549aa4] active:inset-shadow-sm active:inset-shadow-dark-green transition duration-200 ease-in">Verify</button>
                 </form>

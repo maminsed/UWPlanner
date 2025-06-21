@@ -194,6 +194,7 @@ class Specialization(db.Model):
     __tablename__ = "specializations"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
+    link: Mapped[Optional[str]] = mapped_column(db.String())
     major: Mapped[list["Major"]] = relationship(
         "Major", back_populates="specializations", secondary=major_specialization
     )

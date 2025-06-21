@@ -1,5 +1,5 @@
 from ..Schema import db
-from ..Schema.db import Major, Minor, Users
+from ..Schema.db import Major, Minor, Users, Specialization
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
@@ -105,3 +105,35 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
     db.session.add(major)
     db.session.commit()
     return True, "Majro updated"
+
+def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
+    res = Specialization.query.filter_by(name=name).first()
+
+    if res:
+        if res.link != link:
+            res.link = link
+            db.session.add(res)
+            db.session.commit()
+        add_relation_res = add_relation(res,field)
+        return add_relation_res[0],add_relation_res[1] + " " + "Specialization already existed!"
+    
+    s = Specialization(name = name, link=link)
+    db.session.add(s)
+    db.session.commit()
+    add_relation_res = add_relation(s,field)
+    return add_relation_res[0],add_relation_res[1] + " " + "Specialization Created"
+    
+    
+def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
+    """Finds the major for the specialization with the field."""
+    major =  Major.query.filter_by(name=field).first()
+    if not major:
+        return False,f"{field} is not a major"
+    
+    if specialization in major.specializations:
+        return True,"Connection already exists"
+    
+    specialization.major.append(specialization)
+    db.session.add(specialization)
+    db.session.commit()
+    return True,"Connection created"

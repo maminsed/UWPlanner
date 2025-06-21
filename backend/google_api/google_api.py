@@ -36,7 +36,7 @@ def create_service(
     scope = scopes[0]
 
     creds = None
-    working_dir = "C:\\Users\\mamin\\Desktop\\UWPlanner\\backend\\google_api"
+    working_dir = os.path.abspath(os.path.dirname(__file__))
     token_dir = "token_files"  # noqa: S105
     token_file = f"token_{api_name}_{api_version}{prefix}.json"
 

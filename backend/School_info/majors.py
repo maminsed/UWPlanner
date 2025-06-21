@@ -135,4 +135,15 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     return True,"Connection created"
 
 def add_option(name:str, link:str, field:str):
-    pass
+    """Function to add Options to the database. """
+    res = Specialization.query.filter_by(name=name, field=field, is_option=True).first()
+    if res:
+        res.link = link
+        db.session.add(res)
+        db.session.commit()
+        return True,f"{name} already existed"
+
+    option = Specialization(name=name, field=field, is_option=True, link=link)
+    db.session.add(option)
+    db.session.commit()
+    return True,f"{name}-Option added"

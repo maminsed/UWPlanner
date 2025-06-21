@@ -133,3 +133,6 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     db.session.add(specialization)
     db.session.commit()
     return True,"Connection created"
+
+def add_option(name:str, link:str, field:str):
+    pass

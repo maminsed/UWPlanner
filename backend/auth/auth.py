@@ -170,7 +170,6 @@ def refresh_ver_code() -> tuple[str, int]:
     else:
         user = Users.query.filter_by(username=username).first()
 
-    print("hieuvgiurwvgrwuvbw")
     if not user:
         return jsonify(
             {"message": "user with that email or username does not exist"}
@@ -246,7 +245,7 @@ def refresh_token_handle() -> tuple[str, int]:
 
     """
     # Getting the refresh token from user.
-    refresh_token = request.cookies.get("jwt") # PRODUCTION set: , secure=True, samesite=None
+    refresh_token = request.cookies.get("jwt")
     if not refresh_token:
         return jsonify(
             {"message": "Refresh Cookie Token was not set", "action": "logout"}
@@ -297,7 +296,7 @@ def log_out() -> Response:
         - Removes the jwt from the database
 
     """
-    refresh_token = request.cookies.get("jwt") # PRODUCTION set: , secure=True, samesite=None
+    refresh_token = request.cookies.get("jwt")
     if not refresh_token:
         return make_response("", 204)
 

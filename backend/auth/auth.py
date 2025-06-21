@@ -138,7 +138,7 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
         code,
     )
     resp.set_cookie(
-        "jwt", refresh_token, max_age=24 * 60 * 60 * 1000, httponly=True
+        "jwt", refresh_token, max_age=24 * 60 * 60 * 1000, httponly=True, secure=True, samesite=None
     )  # PRODUCTION set: , secure=True, samesite=None
     return resp
 
@@ -302,16 +302,16 @@ def log_out() -> Response:
                 jsonify({"message": "refresh token not in database"}), 200
             )
             resp.delete_cookie(
-                "jwt", httponly=True
-            )  # Production add: , secure=True, sameSite=None
+                "jwt", httponly=True, secure=True, samesite=None
+            )  # Production add: , secure=True, samesite=None
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
         resp.delete_cookie(
-            "jwt", httponly=True
-        )  # Production add: , secure=True, sameSite=None
+            "jwt", httponly=True, secure=True, samesite=None
+        )  # Production add: 
         return resp
     except Exception as e:
         return make_response(

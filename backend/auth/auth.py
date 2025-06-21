@@ -23,7 +23,7 @@ def add_user() -> Response | tuple[str, int]:
     Expects:
     JSON body with:
         email : str
-            User’s e-mail address (must be unique).
+            User's e-mail address (must be unique).
         password : str
             Plain-text password; will be Argon2-hashed before storage.
 
@@ -138,8 +138,13 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
         code,
     )
     resp.set_cookie(
-        "jwt", refresh_token, max_age=24 * 60 * 60 * 1000, httponly=True
-    )  # PRODUCTION set: , secure=True, samesite=None
+        "jwt",
+        refresh_token,
+        max_age=24 * 60 * 60 * 1000,
+        httponly=True,
+        secure=True,
+        samesite="None",
+    ) # PRODUCTION set: , secure=True, samesite=None
     return resp
 
 
@@ -165,6 +170,7 @@ def refresh_ver_code() -> tuple[str, int]:
     else:
         user = Users.query.filter_by(username=username).first()
 
+    print("hieuvgiurwvgrwuvbw")
     if not user:
         return jsonify(
             {"message": "user with that email or username does not exist"}
@@ -240,7 +246,7 @@ def refresh_token_handle() -> tuple[str, int]:
 
     """
     # Getting the refresh token from user.
-    refresh_token = request.cookies.get("jwt")
+    refresh_token = request.cookies.get("jwt") # PRODUCTION set: , secure=True, samesite=None
     if not refresh_token:
         return jsonify(
             {"message": "Refresh Cookie Token was not set", "action": "logout"}
@@ -291,7 +297,7 @@ def log_out() -> Response:
         - Removes the jwt from the database
 
     """
-    refresh_token = request.cookies.get("jwt")
+    refresh_token = request.cookies.get("jwt") # PRODUCTION set: , secure=True, samesite=None
     if not refresh_token:
         return make_response("", 204)
 
@@ -301,17 +307,13 @@ def log_out() -> Response:
             resp = make_response(
                 jsonify({"message": "refresh token not in database"}), 200
             )
-            resp.delete_cookie(
-                "jwt", httponly=True
-            )  # Production add: , secure=True, sameSite=None
+            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None") # PRODUCTION set: , secure=True, samesite=None
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
-        resp.delete_cookie(
-            "jwt", httponly=True
-        )  # Production add: , secure=True, sameSite=None
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None") # PRODUCTION set: , secure=True, samesite=None
         return resp
     except Exception as e:
         return make_response(

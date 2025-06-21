@@ -50,6 +50,9 @@ __pycache__/
 client_secret.json
 token_files/
 
+#Selenium
+chromedriver.exe
+
 #Ruff
 .ruff_cache/
 

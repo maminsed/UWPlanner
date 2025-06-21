@@ -136,6 +136,8 @@ def extract_options() -> None:
 
     errors= []
     for name,link,field  in options:
+        if field.lower().find("faculty of") != -1:
+            field = field.removeprefix("Options: Faculty of ")
         res = add_option(name,link,field)
         print(res)
 

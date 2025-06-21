@@ -107,17 +107,16 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
     return True, "Majro updated"
 
 def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
-    res = Specialization.query.filter_by(name=name).first()
+    res = Specialization.query.filter_by(name=name, field=field).first()
 
     if res:
         if res.link != link:
             res.link = link
             db.session.add(res)
             db.session.commit()
-        add_relation_res = add_relation(res,field)
-        return add_relation_res[0],add_relation_res[1] + " " + "Specialization already existed!"
+        return True,"Specialization already existed!"
     
-    s = Specialization(name = name, link=link)
+    s = Specialization(name = name, link=link, field=field)
     db.session.add(s)
     db.session.commit()
     add_relation_res = add_relation(s,field)
@@ -130,10 +129,7 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     if not major:
         return False,f"{field} is not a major"
     
-    if specialization in major.specializations:
-        return True,"Connection already exists"
-    
-    specialization.major.append(specialization)
+    specialization.major = major
     db.session.add(specialization)
     db.session.commit()
     return True,"Connection created"

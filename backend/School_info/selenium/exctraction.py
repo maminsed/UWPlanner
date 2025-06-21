@@ -12,9 +12,9 @@ def extract_spec_page():
     web_path = "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Specialization"
     driver.get(web_path)
 
-    time.sleep(0.5)
+    time.sleep(2)
     specializations = driver.find_elements(By.CSS_SELECTOR, "li.style__item___1ewOk")
-
+    print(len(specializations))
     res = []
     for s in specializations:
         name = s.find_element(By.TAG_NAME, "a").text.removesuffix("Specialization")

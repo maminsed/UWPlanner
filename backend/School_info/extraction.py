@@ -119,6 +119,7 @@ def extract_minors() -> None:
     print("errors: ", errors)
 
 def extract_specializations() -> None:
+    """Function to extract Specializations. Uses the Selenium Version."""
     specs = extract_spec_page()
 
     errors = []
@@ -127,3 +128,4 @@ def extract_specializations() -> None:
         print(res)
         if not res[0]:
             errors.append((name, res[1]))
+    print("errors: ", errors)

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from .extraction import extract_majors, extract_minors, update_major_info
+from .extraction import extract_majors, extract_minors, update_major_info, extract_specializations
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -25,4 +25,10 @@ def update_major_info_ep()->tuple[str,int]:
 def extract_minors_ep()->tuple[str,int]:
     """Endpoint to extract Minors."""
     extract_minors()
+    return "", 204
+
+@school_info_bp.route("/extract_specializations", methods=["GET"])
+def extract_specs_ep()->tuple[str,int]:
+    """Endpoint to extract Minors."""
+    extract_specializations()
     return "", 204

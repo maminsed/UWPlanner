@@ -5,6 +5,17 @@
   --foreground: #0F5C66;
 }
 
+.scroller {
+  --scrollbar-color-track: #ECFDF5;
+}
+
+@supports (scrollbar-width: auto) {
+  .scroller {
+    scrollbar-color: #23656E var(--scrollbar-color-track);
+    scrollbar-width: thin;
+  }
+}
+
 @theme {
   --color-dark-green: #0F5C66;
   --color-light-green: #ECFDF5;

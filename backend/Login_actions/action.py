@@ -18,8 +18,8 @@ def get_majors()->tuple[str,int]:
         majors = Major.query.all()
         res = defaultdict(list)
         for m in majors:
-            res[m.faculty].append(m.name)
-        return jsonify({"data": res}), 200
+            res[m.faculty].append([m.name, m.id])
+        return jsonify({"data": [[f,res[f]] for f in res.keys()]}), 200
     except Exception as e:
         print(e)
         return jsonify({"message": "error in Backend", "error": str(e)}), 500

@@ -4,12 +4,12 @@ from selenium.webdriver.common.by import By
 import time
 import os
 
-def extract_spec_page():
+def extract_spec_page(web_path:str):
     file_path = os.path.abspath(os.path.join(__file__, "..", "chromedriver.exe"))
     service = Service(executable_path=file_path)
     driver = webdriver.Chrome(service=service)
 
-    web_path = "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Specialization"
+
     driver.get(web_path)
 
     time.sleep(2)

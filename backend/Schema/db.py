@@ -145,7 +145,7 @@ class Major(db.Model):
 
     __tablename__ = "major"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[int] = mapped_column(db.String, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(db.String, nullable=False, unique=True)
     faculty: Mapped[str] = mapped_column(db.String(), nullable=False)
     url: Mapped[str] = mapped_column(
         db.String(),

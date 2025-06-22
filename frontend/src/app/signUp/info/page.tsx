@@ -8,7 +8,7 @@ export default function Info() {
 
     return (
         <main>
-            <h2 className="md:mt-15 px-3 mt-5 text-center md:text-2xl text-xl font-semibold">Just a few more questions to know you better</h2>
+            <h2 className="md:mt-15 px-3 mt-8 text-center md:text-2xl text-xl font-semibold">Just a few more questions to know you better</h2>
 
             <div className="mx-auto w-fit mt-20 px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
                 <h5 className="text-2xl font-medium mb-10 text-center">What's your Major?</h5>

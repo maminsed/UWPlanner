@@ -45,7 +45,7 @@ export default function DropDown() {
                         if (!isSelectorOpen && search.current) search.current.focus();
                         setIsSelectorOpen(!isSelectorOpen)
                     }}
-                    className="w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
+                    className="w-70 truncate bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
                 >
                     <span>{selectedValue}</span>
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
@@ -63,7 +63,7 @@ export default function DropDown() {
                     </span>
                 </div>
                 
-                <ul className={`overflow-y-auto mt-1 rounded-md w-70 bg-light-green ${isSelectorOpen ? "max-h-60 px-1" : "max-h-0 py-0"}`}>
+                <ul className={`scroller overflow-y-auto mt-1 rounded-md w-70 bg-light-green ${isSelectorOpen ? "max-h-25 px-1" : "max-h-0 py-0"}`}>
                     <div className="flex py-2 items-center sticky top-0 bg-light-green">
                         <FiSearch />
                         <input 

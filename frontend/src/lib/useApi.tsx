@@ -10,34 +10,37 @@ function isExpired(exp?:string) {
 export function api() {
     const { access, setAccess, exp, setExp, setUsername } = useAuth();
 
-    return async (input: RequestInfo, init:RequestInit = {}) => {
+    return async (input: RequestInfo, init:RequestInit = {}, check_protectioon:boolean = true) => {
         let token = access;
-        console.log(`expiration date: ${exp}`)
-        if (isExpired(exp)) {
-            try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
-                    method: "GET",
-                    credentials: "include",
-                    headers:{
-                        "Content-Type": "application/json",
-                    },
-                })
+        if (check_protectioon) {
+            console.log(`expiration date: ${exp}`)
+            if (isExpired(exp)) {
+                try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+                        method: "GET",
+                        credentials: "include",
+                        headers:{
+                            "Content-Type": "application/json",
+                        },
+                    })
 
-                if (res.ok) {
-                    const response = await res.json()
-                    setAccess(response.Access_Token.token);
-                    setExp(response.Access_Token.exp);
-                    setUsername(response.username);
-                    token = response.Access_Token.token;
-                } else {
-                    return res
+                    if (res.ok) {
+                        const response = await res.json()
+                        setAccess(response.Access_Token.token);
+                        setExp(response.Access_Token.exp);
+                        setUsername(response.username);
+                        token = response.Access_Token.token;
+                    } else {
+                        return res
+                    }
+                } catch (err) {
+                    setAccess(undefined)
+                    setExp(undefined)
+                    console.log("error in frontend")
+                    return {"ok":false}
                 }
-            } catch (err) {
-                setAccess(undefined)
-                setExp(undefined)
-                console.log("error in frontend")
-                return {"ok":false}
             }
+
         }
         
         return fetch(input,{

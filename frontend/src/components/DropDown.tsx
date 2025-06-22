@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { FiSearch } from "react-icons/fi";
 import { api } from "@/lib/useApi";
 import { Fragment } from "react";
+import HoverEffect from "./HoverEffect";
 
 export default function DropDown() {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
@@ -45,9 +46,9 @@ export default function DropDown() {
                         if (!isSelectorOpen && search.current) search.current.focus();
                         setIsSelectorOpen(!isSelectorOpen)
                     }}
-                    className="w-70 truncate bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
+                    className="w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
                 >
-                    <span>{selectedValue}</span>
+                    <HoverEffect text={selectedValue} maxWidth="260px"/>
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
                         <svg
                             className="w-6 h-6 text-dark-green"
@@ -63,7 +64,7 @@ export default function DropDown() {
                     </span>
                 </div>
                 
-                <ul className={`scroller overflow-y-auto mt-1 rounded-md w-70 bg-light-green ${isSelectorOpen ? "max-h-25 px-1" : "max-h-0 py-0"}`}>
+                <ul className={`relative scroller overflow-y-auto mt-1 rounded-md w-70 bg-light-green ${isSelectorOpen ? "max-h-25 px-1" : "max-h-0 py-0"}`}>
                     <div className="flex py-2 items-center sticky top-0 bg-light-green">
                         <FiSearch />
                         <input 

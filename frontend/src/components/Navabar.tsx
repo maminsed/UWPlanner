@@ -6,6 +6,7 @@ import { MdAccountCircle, MdExitToApp } from "react-icons/md";
 import { IoMdSettings } from "react-icons/io";
 import { useAuth } from "@/app/AuthProvider";
 import { useRouter } from "next/navigation";
+import HoverEffect from "./HoverEffect";
 
 interface NavbarProps {
     signedIn?: boolean;
@@ -131,14 +132,15 @@ const Navbar: React.FC<NavbarProps> = ({
                                 panelOn ? "max-h-30 py-[0.85rem]" : "max-h-0"
                             } transition-all duration-500`}
                         >
-                            <div className="group relative w-fit">
+                            {/* <div className="group relative w-fit">
                                 <p className="max-w-[100px] truncate w-fit">
                                     {username}
                                 </p>
                                 <div className="absolute max-h-0 py-0 group-hover:max-h-6 transition-all duration-600 bg-slate-900/70 overflow-y-hidden text-green-100 text-xs px-2 group-hover:py-1 rounded-md top-5 -right-2">
                                     {username}
                                 </div>
-                            </div>
+                            </div> */}
+                            <HoverEffect text={username || ""}/>
                             <Link
                                 href="/test"
                                 className="items-center flex hover:text-[#1a3337] transition-colors duration-300"

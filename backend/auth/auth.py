@@ -307,6 +307,7 @@ def log_out() -> Response:
                 jsonify({"message": "refresh token not in database"}), 200
             )
             resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None") # PRODUCTION set: , secure=True, samesite=None
+
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)

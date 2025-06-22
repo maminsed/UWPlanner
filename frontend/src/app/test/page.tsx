@@ -12,7 +12,7 @@ export default function Test() {
     const router = useRouter();
 
     useEffect(()=>{
-        console.log("username:"+username)
+        console.log("username: "+username)
         async function initial_handle() {
             try {
                 const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/test/`, {

@@ -188,6 +188,7 @@ class Specialization(db.Model):
     major: Mapped[Optional["Major"]] = relationship(
         "Major", back_populates="specializations"
     )
+    is_option: Mapped[bool] = mapped_column(server_default=text("FALSE"))
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="specialization", secondary=specialization_student
     )

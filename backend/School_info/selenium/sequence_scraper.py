@@ -20,7 +20,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Because this script is nested deeper, it needs to go up three levels to find the root.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from backend import create_app
+#This causes looping imports im pretty sure, because backend also imports School_info
+# from backend import create_app
 from backend.Schema import Major, Sequence, db
 
 
@@ -151,6 +152,3 @@ def scrape_sequences():
         
         print("\nScraping complete.")
 
-
-if __name__ == "__main__":
-    scrape_sequences() 

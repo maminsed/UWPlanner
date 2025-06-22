@@ -1,13 +1,16 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FiSearch } from "react-icons/fi";
 import { api } from "@/lib/useApi";
+import { Fragment } from "react";
 
 export default function DropDown() {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
     const [selectedId, setSelectedId] = useState<number>(-1)
     const [selectedValue, setSelectedValue] = useState<string>("Choose your option")
+    const [options, setOptions] = useState<[string,[string,number][]][]>([])
+    const search = useRef<HTMLInputElement>(null);
     const backend = api();
 
     useEffect(()=> {
@@ -23,9 +26,9 @@ export default function DropDown() {
                     console.log(response)
                     return 
                 }
-
-                console.log(response.data)
+                setOptions(response.data)
             } catch (err) {
+                console.log("Error: ")
                 console.log(err)
             }
         }
@@ -33,26 +36,15 @@ export default function DropDown() {
         gettingData()
     }, [])
 
-    const options: [string,[string,number][]][] = [
-        ["engineering", [
-            ["Architectural",0],
-            ["fat",1],
-            ["say",2],
-            ["KYS",3]
-        ]],
-        ["obesity", [
-            ["Atectural asdfasdklfjad  alksdjfla skdjflalakds fj",4],
-            ["faties",5],
-            ["sasdfsy",6],
-            ["KYSSS",7]
-        ]]
-    ]
 
     return (
         <div>
             <div>
                 <div
-                    onClick={() => setIsSelectorOpen(!isSelectorOpen)}
+                    onClick={() => {
+                        if (!isSelectorOpen && search.current) search.current.focus();
+                        setIsSelectorOpen(!isSelectorOpen)
+                    }}
                     className="w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
                 >
                     <span>{selectedValue}</span>
@@ -76,25 +68,31 @@ export default function DropDown() {
                         <FiSearch />
                         <input 
                             type="text" 
+                            ref={search}
                             value={searchValue} 
                             onChange={(e)=>{setSearchValue(e.target.value)}} 
                             placeholder="search..."
                             className="ml-1 focus:outline-none"/>
                     </div>
                     {options.map(item => {
+                        const santizedList : [string,number][] = []
+                        item[1].forEach(option => {
+                            if (option[0].toLowerCase().includes(searchValue.toLowerCase())) santizedList.push(option);
+                        })
+                        if (santizedList.length == 0) return ;
                         return (
-                            <>
+                            <Fragment key={item[0]}>
                             <div className="text-dark-green/60">{item[0]}</div>
-                            {item[1].map(option => {
+                            {santizedList.map(option => {
                                 return (<ul
-                                        className={`truncate ${option[1] == selectedId ? "bg-dark-green/30" : ""} ${option[0].toLowerCase().includes(searchValue.toLowerCase()) ? "" : "hidden"}`}
                                         key={option[1]}
+                                        className={`truncate ${option[1] == selectedId ? "bg-dark-green/30" : ""}`}
                                         onClick={()=>{setSelectedId(option[1]); setIsSelectorOpen(false); setSelectedValue(option[0])}}
                                         >
                                             {option[0]}
                                         </ul>)
                             })}
-                            </>
+                            </Fragment>
                         )
                     })}
                 </ul>

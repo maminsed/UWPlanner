@@ -1,12 +1,37 @@
 'use client';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
+import { api } from "@/lib/useApi";
 
 export default function DropDown() {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
     const [selectedId, setSelectedId] = useState<number>(-1)
     const [selectedValue, setSelectedValue] = useState<string>("Choose your option")
+    const backend = api();
+
+    useEffect(()=> {
+        async function gettingData() {
+            try {
+                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+                    method: "GET"
+                }, false)
+
+                const response = await (res as Response).json().catch(()=>{})
+                if (!res.ok) {
+                    console.log("Error in Resposne")
+                    console.log(response)
+                    return 
+                }
+
+                console.log(response.data)
+            } catch (err) {
+                console.log(err)
+            }
+        }
+
+        gettingData()
+    }, [])
 
     const options: [string,[string,number][]][] = [
         ["engineering", [

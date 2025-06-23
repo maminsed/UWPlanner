@@ -10,8 +10,8 @@ export default function Info() {
     const [message, setMessage] = useState<undefined|string>(undefined)
     const backend = api();
 
-    function handleNext() {
-        backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+    async function handleNext() {
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
             method: "POST",
             body: JSON.stringify({
                 "majors": dropIds.map(i=>i[1])
@@ -20,6 +20,13 @@ export default function Info() {
                 "Content-Type":"application/json"
             }
         })
+
+        const response = await (res as Response).json().catch(()=>{})
+        if (res.ok) {
+            setMessage("Enroled")
+        } else {
+            setMessage(response.message || "error occured")
+        }
     }
     
     function handleAdd() {

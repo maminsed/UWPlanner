@@ -37,7 +37,7 @@ def extract_specs_ep()->tuple[str,int]:
     return "", 204
 
 
-@school_info_bp.route("/extract_sequences",method=["GET"])
+@school_info_bp.route("/extract_sequences",methods=["GET"])
 def extract_sequences_ep()->tuple[str,int]:
     """Endpoint to extract Sequences."""
     success,errors = scrape_sequences()

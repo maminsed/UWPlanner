@@ -48,6 +48,12 @@ specialization_student = Table(
     Column("user_id", db.Integer, ForeignKey("users.id"), primary_key=True),
 )
 
+major_sequence = Table(
+    "major_sequence",
+    Base.metadata,
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
+    Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
+)
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -137,8 +143,9 @@ class JwtToken(db.Model):
 class Major(db.Model):
     """Database for the majors."""
 
+    __tablename__ = "major"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[int] = mapped_column(db.String, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(db.String, nullable=False, unique=True)
     faculty: Mapped[str] = mapped_column(db.String(), nullable=False)
     url: Mapped[str] = mapped_column(
         db.String(),
@@ -157,13 +164,15 @@ class Major(db.Model):
     specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="major"
     )
+    sequences: Mapped[list["Sequence"]] = relationship(
+        "Sequence", back_populates="majors", secondary=major_sequence
+    )
 
 
 class Minor(db.Model):
     """Database for the minors."""
 
     __tablename__ = "minors"
-
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False, unique=True)
     theme: Mapped[str] = mapped_column(db.String(), nullable=True)
@@ -203,3 +212,5 @@ class Sequence(db.Model):
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )
+    plan: Mapped[str] = mapped_column(db.String(), nullable=False)
+    majors: Mapped[list["Major"]] = relationship("Major", back_populates="sequences", secondary=major_sequence)

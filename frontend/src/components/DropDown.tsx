@@ -19,7 +19,7 @@ export default function DropDown() {
             try {
                 const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
                     method: "GET"
-                }, false)
+                })
 
                 const response = await (res as Response).json().catch(()=>{})
                 if (!res.ok) {

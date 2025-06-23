@@ -1,5 +1,7 @@
-from flask import Blueprint, jsonify
-from ..Schema import Major
+from typing import Optional
+from flask import Blueprint, jsonify, make_response
+from backend.Schema import Major
+from backend.Auth import verify as verify_jwt
 
 from collections import defaultdict
 
@@ -10,6 +12,11 @@ NOTE TO SELF:
 
 """
 update_info = Blueprint("UpdateInfo", __name__)
+
+@update_info.before_request
+def verify() -> Optional[make_response]:
+    return verify_jwt()
+
 
 @update_info.route("/majors", methods=["GET"])
 def get_majors()->tuple[str,int]:

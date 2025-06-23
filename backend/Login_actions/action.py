@@ -1,7 +1,8 @@
 from typing import Optional
-from flask import Blueprint, jsonify, make_response
+from flask import Blueprint, jsonify, make_response, g, request
 from backend.Schema import Major
 from backend.Auth import verify as verify_jwt
+from ..School_info import enrol_to_major
 
 from collections import defaultdict
 
@@ -30,3 +31,31 @@ def get_majors()->tuple[str,int]:
     except Exception as e:
         print(e)
         return jsonify({"message": "error in Backend", "error": str(e)}), 500
+
+@update_info.route("/majors", methods=["POST"])
+def add_majors()->tuple[str,int]:
+    """Endpoint that takes in the user and adds the users choices to it."""
+    username = g.username
+    data = request.get_json()
+    majors = data.get("majors")
+    if not username:
+        return jsonify({"message": "Please sign in first"}), 401
+    if not majors or len(majors) <= 0:
+        return jsonify({"message":"Select at lease one major"}), 400
+    
+    #Checking for duplicates:
+    visited = set()
+    for m in majors:
+        if m in visited:
+            return jsonify({"message": "You have duplicate majors."}), 400
+        visited.add(m)
+    
+    
+    for m in visited:
+        status,message = enrol_to_major(m, username)
+        if status == 500:
+            return jsonify({"message": "error in backend", "error": message}), status
+        if status >= 400 and status <= 500:
+            return jsonify({"message": message}), status
+    return jsonify({"message": "user enroled!"}), 200
+

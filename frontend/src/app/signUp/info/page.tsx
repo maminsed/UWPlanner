@@ -2,11 +2,25 @@
 import { LuCircleMinus, LuCirclePlus } from "react-icons/lu"
 import DropDown from "@/components/DropDown";
 import { useState } from "react";
+import { api } from "@/lib/useApi";
 
 export default function Info() {
     const [nextId, setNextId] = useState<number>(1)
     const [dropIds, setDropIds] = useState<[number, string|undefined][]>([[0,undefined]])
     const [message, setMessage] = useState<undefined|string>(undefined)
+    const backend = api();
+
+    function handleNext() {
+        backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+            method: "POST",
+            body: JSON.stringify({
+                "majors": dropIds.map(i=>i[1])
+            }),
+            headers: {
+                "Content-Type":"application/json"
+            }
+        })
+    }
     
     function handleAdd() {
         setNextId(nextId+1)
@@ -41,7 +55,7 @@ export default function Info() {
                     </div>
                 ))}
                 <button className="mt-1 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>
-                <button className="mt-1 text-center w-full bg-dark-green text-light-green rounded-sm py-1 cursor-pointer hover:bg-dark-green/95 active:bg-[#204044] duration-300 ease-in">Next</button>
+                <button className="mt-1 text-center w-full bg-dark-green text-light-green rounded-sm py-1 cursor-pointer hover:bg-dark-green/95 active:bg-[#204044] duration-300 ease-in" onClick={handleNext}>Next</button>
                 {message && <p className="text-red-500 mt-1">{message}</p>}
             </div>
 

@@ -5,11 +5,11 @@ import { useState } from "react";
 
 export default function Info() {
     const [nextId, setNextId] = useState<number>(1)
-    const [dropIds, setDropIds] = useState<[number, string][]>([[0,"Choose your option"]])
+    const [dropIds, setDropIds] = useState<[number, string|undefined][]>([[0,undefined]])
 
     function handleAdd() {
         setNextId(nextId+1)
-        setDropIds((ids)=>[...ids,[nextId, "Choose your option"]])
+        setDropIds((ids)=>[...ids,[nextId, undefined]])
     }
 
     function handleRemove(id:number) {

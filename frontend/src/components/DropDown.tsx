@@ -6,16 +6,15 @@ import { Fragment } from "react";
 import HoverEffect from "./HoverEffect";
 
 interface DropDownType {
-    selectedValue:string;
+    selectedValue:string|undefined;
     setSelectedValue: (value:string)=>void;
     className?: string;
 }
 
-export default function DropDown({className, selectedValue="Choose your option", setSelectedValue}:DropDownType) {
+export default function DropDown({className, selectedValue, setSelectedValue}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
     const [selectedId, setSelectedId] = useState<number>(-1)
-    // const [selectedValue, setSelectedValue] = useState<string>("Choose your option")
     const [options, setOptions] = useState<[string,[string,number][]][]>([])
     const search = useRef<HTMLInputElement>(null);
     const backend = api();
@@ -54,7 +53,7 @@ export default function DropDown({className, selectedValue="Choose your option",
                     }}
                     className="w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
                 >
-                    {selectedValue == "Choose your option" ? 
+                    {selectedValue === undefined ? 
                         <div>Choose your option</div>
                     : <HoverEffect text={selectedValue} maxWidth="260px"/>}
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>

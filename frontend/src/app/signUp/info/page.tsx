@@ -13,8 +13,9 @@ export default function Info() {
         setDropIds((ids)=>[...ids,[nextId, undefined]])
         if (nextId == 2) setMessage("You should try the job market");
     }
-
+    
     function handleRemove(id:number) {
+        if (nextId >= 2 && dropIds.length <= 2) setMessage("Good job");
         setDropIds((ids)=>ids.filter(x=>x[0] !== id))
     }
 

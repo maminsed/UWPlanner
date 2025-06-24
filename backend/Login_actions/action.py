@@ -1,17 +1,12 @@
 from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major
+from backend.Schema import Major, Minor
 from backend.Auth import verify as verify_jwt
 from ..School_info import enrol_to_major
 
 from collections import defaultdict
 
-"""
-NOTE TO SELF:
-    DON't FORGET TO ADD BEFOREREQUEST FOR VERIFYING
 
-
-"""
 update_info = Blueprint("UpdateInfo", __name__)
 
 @update_info.before_request
@@ -29,7 +24,6 @@ def get_majors()->tuple[str,int]:
             res[m.faculty].append([m.name, m.id])
         return jsonify({"data": [[f,res[f]] for f in res.keys()]}), 200
     except Exception as e:
-        print(e)
         return jsonify({"message": "error in Backend", "error": str(e)}), 500
 
 @update_info.route("/majors", methods=["POST"])
@@ -37,7 +31,7 @@ def add_majors()->tuple[str,int]:
     """Endpoint that takes in the user and adds the users choices to it."""
     username = g.username
     data = request.get_json()
-    majors = data.get("majors")
+    majors = data.get("selected")
     if not username:
         return jsonify({"message": "Please sign in first"}), 401
     if not majors or len(majors) <= 0:
@@ -59,3 +53,13 @@ def add_majors()->tuple[str,int]:
             return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
 
+@update_info.route("/minors", methods=["GET"])
+def get_minors() -> tuple[str,int]:
+    try:
+        minors = Minor.query.all()
+        res = defaultdict(list)
+        for m in minors:
+            res[m.theme].append([m.name, m.id])
+        return jsonify({"data": [[f,res[f]] for f in res.keys()]}), 200
+    except Exception as e:
+        return jsonify({"message": "error in backend", "error": str(e)}), 500

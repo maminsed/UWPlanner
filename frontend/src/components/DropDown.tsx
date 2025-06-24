@@ -9,9 +9,10 @@ interface DropDownType {
     selectedValue:string|undefined;
     setSelectedValue: (value:string)=>void;
     className?: string;
+    curr: string;
 }
 
-export default function DropDown({className, selectedValue, setSelectedValue}:DropDownType) {
+export default function DropDown({className, curr, selectedValue, setSelectedValue}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
     const [selectedId, setSelectedId] = useState<number>(-1)
@@ -22,7 +23,7 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
     useEffect(()=> {
         async function gettingData() {
             try {
-                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
                     method: "GET"
                 })
 
@@ -40,7 +41,7 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
         }
 
         gettingData()
-    }, [])
+    }, [curr])
 
 
     return (

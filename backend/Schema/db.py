@@ -126,6 +126,9 @@ class Users(db.Model):
     started_month: Mapped[int] = mapped_column(
         db.Integer, default=9, server_default=text("9")
     )
+    coop: Mapped[bool] = mapped_column(
+        db.Boolean(), default=True, server_default=text("True")
+    )
 
 
 class JwtToken(db.Model):

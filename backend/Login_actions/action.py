@@ -1,6 +1,6 @@
 from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major, Minor
+from backend.Schema import Major, Minor, Specialization
 from backend.Auth import verify as verify_jwt
 from ..School_info import enrol_to_major, enrol_to_minor
 
@@ -89,3 +89,15 @@ def add_minor() -> tuple[str,int]:
         if status >= 400 and status <= 500:
             return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
+
+@update_info.route("/specializations", methods=["GET"])
+def get_specializations() -> tuple[str,int]:
+    # try:
+    ss = Specialization.query.all()
+    res = defaultdict(list)
+    for s in ss:
+        res[s.field].append([s.name, s.id])
+    return jsonify({"data": [[f,res[f]] for f in res.keys()]}), 200
+    # except Exception as e:
+    #     print(e)
+    #     return jsonify({"message": "error in backend", "error": str(e)}), 500

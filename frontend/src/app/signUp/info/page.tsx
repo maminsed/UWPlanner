@@ -4,17 +4,25 @@ import DropDown from "@/components/DropDown";
 import { useState } from "react";
 import { api } from "@/lib/useApi";
 
+const ordering = ["majors", "minors", "specializations", "co-op", "sequence"]
+
 export default function Info() {
     const [nextId, setNextId] = useState<number>(1)
     const [dropIds, setDropIds] = useState<[number, string|undefined][]>([[0,undefined]])
     const [message, setMessage] = useState<undefined|string>(undefined)
+    const [order, setOrder] = useState<number>(0)
     const backend = api();
 
+    const curr = ordering[order];
+    const multiple = order < 3;
+    const blank_allowed = order == 1 || order == 2;
+    
     async function handleNext() {
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+        setMessage("loading...")
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
             method: "POST",
             body: JSON.stringify({
-                "majors": dropIds.map(i=>i[1])
+                "selected": dropIds.map(i=>i[1])
             }),
             headers: {
                 "Content-Type":"application/json"
@@ -23,7 +31,19 @@ export default function Info() {
 
         const response = await (res as Response).json().catch(()=>{})
         if (res.ok) {
-            setMessage("Enroled")
+            if (order == ordering.length - 1) {
+                console.log("ended")
+                return
+            }
+            setOrder(order+1)
+            if (order+1 == 1 || order+1 == 2) {
+                setNextId(0)
+                setDropIds([])
+            } else {
+                setNextId(1)
+                setDropIds([[0,undefined]])
+            }
+            setMessage(undefined)
         } else {
             setMessage(response.message || "error occured")
         }
@@ -54,11 +74,13 @@ export default function Info() {
             <h2 className="md:mt-15 px-3 mt-5 text-center md:text-2xl text-xl font-semibold">Just a few more questions to know you better</h2>
 
             <div className="mx-auto w-fit mt-20 px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
-                <h5 className="text-2xl font-medium mb-10 text-center">What's your Major?</h5>
+                <h5 className="text-2xl font-medium text-center mt-2">What's your {curr[0].toUpperCase() + curr.substring(1,curr.length-1)+(multiple ? `(${curr[curr.length-1]})` : curr[curr.length-1])}</h5>
+                {blank_allowed ? <p className="text-center">You can leave it blank if you want</p> : ""}
+                <div className="mb-8"></div>
                 {dropIds.map(item => (
                     <div key={item[0]} className="flex items-center gap-2">
-                        <DropDown className="mt-1" selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
-                        {dropIds.length != 1 && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
+                        <DropDown className="mt-1" curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
+                        {(dropIds.length != 1 || blank_allowed) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
                     </div>
                 ))}
                 <button className="mt-1 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>

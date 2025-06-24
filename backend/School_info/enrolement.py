@@ -1,11 +1,11 @@
-from ..Schema import Major, Users, db, Minor
+from ..Schema import Major, Users, db, Minor, Specialization
 
 def enrol_to_major(major_name: str, username: str) -> tuple[int, str]:
     """Function to enrol a student in a major. Not Complete"""
     major = Major.query.filter_by(name=major_name).first()
     user = Users.query.filter_by(username=username).first()
     if not major:
-        return (403, "Major does not exist")
+        return (403, "Minor does not exist")
     if not user:
         return (403, "Username does not exist")
 
@@ -36,3 +36,21 @@ def enrol_to_minor(minor_name: str, username: str) -> tuple[int, str]:
         return (201, f"{user.username} is enroled in {minor.name}")
     except Exception as e:
         return (500, str(e))
+
+def enrol_to_spec(spec_name: str, username: str) -> tuple[int, str]:
+    spec = Specialization.query.filter_by(name=spec_name).first()
+    user = Users.query.filter_by(username=username).first()
+    if not spec:
+        return (403, "Specializations does not exist")
+    if not user:
+        return (403, "Username does not exist")
+    
+    # try:
+    if spec in user.specialization:
+        return (202, f"{user.username} is already in {spec.name}")
+    user.specialization.append(spec)
+    db.session.add(user)
+    db.session.commit()
+    return (201, f"{user.username} is enroled in {spec.name}")
+    # except Exception as e:
+    #     return (500, str(e))

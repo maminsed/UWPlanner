@@ -107,7 +107,7 @@ class Users(db.Model):
         "Minor", back_populates="users", secondary=minor_user
     )
 
-    specialization: Mapped[Optional["Specialization"]] = relationship(
+    specialization: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="students", secondary=specialization_student
     )
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { api } from "@/lib/useApi";
 
 const ordering = ["majors", "minors", "specializations", "co-op", "sequence"]
+const heading = ["What's your Major(s)?", "What's your Minor(s)?", "What's your Specialization(s)?", "Are you in Co-op?", "What's your Sequence?"]
 
 export default function Info() {
     const [nextId, setNextId] = useState<number>(1)
@@ -74,7 +75,7 @@ export default function Info() {
             <h2 className="md:mt-15 px-3 mt-5 text-center md:text-2xl text-xl font-semibold">Just a few more questions to know you better</h2>
 
             <div className="mx-auto w-fit mt-20 px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
-                <h5 className="text-2xl font-medium text-center mt-2">What's your {curr[0].toUpperCase() + curr.substring(1,curr.length-1)+(multiple ? `(${curr[curr.length-1]})` : curr[curr.length-1])}</h5>
+                <h5 className="text-2xl font-medium text-center mt-2">{heading[order]}</h5>
                 {blank_allowed ? <p className="text-center">You can leave it blank if you want</p> : ""}
                 <div className="mb-8"></div>
                 {dropIds.map(item => (

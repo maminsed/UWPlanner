@@ -28,6 +28,8 @@ def enrol_to_minor(minor_name: str, username: str) -> tuple[int, str]:
         return (403, "Username does not exist")
     
     try:
+        if minor in user.majors:
+            return (403, f"Can't choose your major as your minor.")
         if minor in user.minors:
             return (202, f"{user.username} is already in {minor.name}")
         user.minors.append(minor)
@@ -45,12 +47,12 @@ def enrol_to_spec(spec_name: str, username: str) -> tuple[int, str]:
     if not user:
         return (403, "Username does not exist")
     
-    # try:
-    if spec in user.specialization:
-        return (202, f"{user.username} is already in {spec.name}")
-    user.specialization.append(spec)
-    db.session.add(user)
-    db.session.commit()
-    return (201, f"{user.username} is enroled in {spec.name}")
-    # except Exception as e:
-    #     return (500, str(e))
+    try:
+        if spec in user.specialization:
+            return (202, f"{user.username} is already in {spec.name}")
+        user.specialization.append(spec)
+        db.session.add(user)
+        db.session.commit()
+        return (201, f"{user.username} is enroled in {spec.name}")
+    except Exception as e:
+        return (500, str(e))

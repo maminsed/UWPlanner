@@ -140,3 +140,21 @@ def add_specializations() -> tuple[str, int]:
         if status >= 400 and status <= 500:
             return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
+
+@update_info.route("/coop", methods=["GET"])
+def get_coop() -> tuple[str, int]:
+    return jsonify({"data": [["_", [["yes", 1], ["no",2]]]]}), 200
+
+@update_info.route("/coop", methods=["GET"])
+def add_coop() -> tuple[str, int]:
+    username = g.username
+    data = request.get_json()
+    coop = data.get("selected")
+    if not username:
+        return jsonify({"message": "Please sign in first"}), 401
+    if not coop or len(coop) != 1 or coop[0] not in ["yes", "no"]:
+        return "Please select an option", 400
+
+    username.coop = coop == "yes"
+    return jsonify({"message": "coop option set"}), 204
+

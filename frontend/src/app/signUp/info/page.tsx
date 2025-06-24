@@ -78,12 +78,12 @@ export default function Info() {
                 {blank_allowed ? <p className="text-center">You can leave it blank if you want</p> : ""}
                 <div className="mb-8"></div>
                 {dropIds.map(item => (
-                    <div key={item[0]} className="flex items-center gap-2">
+                    <div key={item[0]} className="flex items-center gap-2 justify-center">
                         <DropDown className="mt-1" curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
                         {(dropIds.length != 1 || blank_allowed) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
                     </div>
                 ))}
-                <button className="mt-1 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>
+                <button className="mt-4 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>
                 <button className="mt-1 text-center w-full bg-dark-green text-light-green rounded-sm py-1 cursor-pointer hover:bg-dark-green/95 active:bg-[#204044] duration-300 ease-in" onClick={handleNext}>Next</button>
                 {message && <p className="text-red-500 mt-1">{message}</p>}
             </div>

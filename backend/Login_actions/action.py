@@ -1,8 +1,8 @@
 from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major, Minor, Specialization
+from backend.Schema import Major, Minor, Specialization, Users
 from backend.Auth import verify as verify_jwt
-from ..School_info import enrol_to_major, enrol_to_minor
+from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec
 
 from collections import defaultdict
 
@@ -92,12 +92,51 @@ def add_minor() -> tuple[str,int]:
 
 @update_info.route("/specializations", methods=["GET"])
 def get_specializations() -> tuple[str,int]:
-    # try:
-    ss = Specialization.query.all()
-    res = defaultdict(list)
+    try:
+        ss = Specialization.query.all()
+        username = g.username
+        user = Users.query.filter_by(username=username).first()
+        majors = []
+        if user:
+            majors = [m.name for m in user.majors] or []
+        res = defaultdict(list)
+        for s in ss:
+            res[s.field].append([s.name, s.id])
+        laterData = []
+        data = []
+        for field in res.keys():
+            if field in majors:
+                data.append([field, res[field]])
+            else:
+                laterData.append([field, res[field]])
+        return jsonify({"data": data+laterData}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "error in backend", "error": str(e)}), 500
+
+@update_info.route("/specializations", methods=["POST"])
+def add_specializations() -> tuple[str, int]:
+    username = g.username
+    data = request.get_json()
+    ss = data.get("selected")
+    if not username:
+        return jsonify({"message": "Please sign in first"}), 401
+    if not ss or len(ss) == 0:
+        return "", 204
+    
+    #Checking for duplicates:
+    visited = set()
     for s in ss:
-        res[s.field].append([s.name, s.id])
-    return jsonify({"data": [[f,res[f]] for f in res.keys()]}), 200
-    # except Exception as e:
-    #     print(e)
-    #     return jsonify({"message": "error in backend", "error": str(e)}), 500
+        if s in visited:
+            return jsonify({"message": "You have duplicate specializations."}), 400
+        visited.add(s)
+    
+    
+    for s in visited:
+        status,message = enrol_to_spec(s, username)
+        if status == 500:
+            print(message)
+            return jsonify({"message": "error in backend", "error": message}), status
+        if status >= 400 and status <= 500:
+            return jsonify({"message": message}), status
+    return jsonify({"message": "user enroled!"}), 200

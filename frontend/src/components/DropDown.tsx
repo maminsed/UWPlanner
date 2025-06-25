@@ -5,6 +5,7 @@ import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import HoverEffect from "./HoverEffect";
 
+
 interface DropDownType {
     selectedValue:string|undefined;
     setSelectedValue: (value:string)=>void;
@@ -19,6 +20,7 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
     const [options, setOptions] = useState<[string,[string,number][]][]>([])
     const search = useRef<HTMLInputElement>(null);
     const backend = api();
+    const seqVersion = curr == "sequence";
 
     useEffect(()=> {
         async function gettingData() {
@@ -56,7 +58,10 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                 >
                     {selectedValue === undefined ? 
                         <div>Choose your option</div>
-                    : <HoverEffect text={selectedValue} maxWidth="260px"/>}
+                    : !seqVersion ? 
+                        <HoverEffect text={selectedValue} maxWidth="264px"/>
+                    : <HoverEffect text={selectedValue[0]} hover={selectedValue[1]} maxWidth="264px" hoverStyle={{right:"0px", transform: "translateX(50%)", width: "264px"}}/>
+                    }
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
                         <svg
                             className="w-6 h-6 text-dark-green"
@@ -86,7 +91,7 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                     {options.map(item => {
                         const santizedList : [string,number][] = []
                         item[1].forEach(option => {
-                            const check = curr == "sequence" ? option[0] : option
+                            const check = seqVersion ? option[0] : option;
                             if (check[0].toLowerCase().includes(searchValue.toLowerCase())) santizedList.push(check as string);
                         })
                         if (santizedList.length == 0) return ;
@@ -97,7 +102,7 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                                 return (<ul
                                         key={option[1]}
                                         className={`truncate ${option[1] == selectedId ? "bg-dark-green/30" : ""}`}
-                                        onClick={()=>{setSelectedId(option[1]); setIsSelectorOpen(false); setSelectedValue(option[0])}}
+                                        onClick={()=>{setSelectedId(option[1]); setIsSelectorOpen(false); setSelectedValue(!seqVersion ? option[0] : option)}}
                                         >
                                             {option[0]}
                                         </ul>)

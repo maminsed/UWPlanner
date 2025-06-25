@@ -1,6 +1,6 @@
 from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major, Minor, Specialization, Users, Sequence
+from backend.Schema import Major, Minor, Specialization, Users, Sequence, db
 from backend.Auth import verify as verify_jwt
 from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec
 
@@ -156,7 +156,9 @@ def add_coop() -> tuple[str, int]:
         return jsonify({"message":"Please select an option"}), 400
     try:
         user = Users.query.filter_by(username=username).first()
-        user.coop = coop == "yes"
+        user.coop = True if coop[0] == "yes" else False
+        db.session.add(user)
+        db.session.commit()
         return jsonify({"message": "coop option set"}), 204
     except Exception as e:
         print(e)
@@ -174,7 +176,7 @@ def get_sequence():
             return jsonify({"You need to have a major first"}), 403
         if not user.coop:
             default = Sequence.query.filter_by(name="default").first().plan
-            return jsonify({"data": [["_",[["Default", default]]]]})
+            return jsonify({"data": [["_",[[["Default",replaceWords(default)], 0]]]]})
 
         #id: name, plan
         res = {}
@@ -182,8 +184,13 @@ def get_sequence():
             for seq in m.sequences:
                 if seq.id not in res:
                     name = (seq.name).capitalize()
-                    res[seq.id] = (name, seq.plan)
+                    res[seq.id] = (name, replaceWords(seq.plan))
         return jsonify({"data": [["_", [[res[f],f] for f in res.keys()]]]})
     except Exception as e:
         print(e)
         return jsonify({"message": "sign in and come back to this again", "error": str(e)}), 400
+
+def replaceWords(s:str):
+    news = s.replace("-","")
+    news = news.replace(",","-")
+    return news

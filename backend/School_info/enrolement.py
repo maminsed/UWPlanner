@@ -5,7 +5,7 @@ def enrol_to_major(major_name: str, username: str) -> tuple[int, str]:
     major = Major.query.filter_by(name=major_name).first()
     user = Users.query.filter_by(username=username).first()
     if not major:
-        return (403, "Minor does not exist")
+        return (403, "Major does not exist")
     if not user:
         return (403, "Username does not exist")
 

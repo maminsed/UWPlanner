@@ -1,6 +1,6 @@
 from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major, Minor, Specialization, Users
+from backend.Schema import Major, Minor, Specialization, Users, Sequence
 from backend.Auth import verify as verify_jwt
 from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec
 
@@ -145,7 +145,7 @@ def add_specializations() -> tuple[str, int]:
 def get_coop() -> tuple[str, int]:
     return jsonify({"data": [["_", [["yes", 1], ["no",2]]]]}), 200
 
-@update_info.route("/coop", methods=["GET"])
+@update_info.route("/coop", methods=["POST"])
 def add_coop() -> tuple[str, int]:
     username = g.username
     data = request.get_json()
@@ -153,8 +153,37 @@ def add_coop() -> tuple[str, int]:
     if not username:
         return jsonify({"message": "Please sign in first"}), 401
     if not coop or len(coop) != 1 or coop[0] not in ["yes", "no"]:
-        return "Please select an option", 400
+        return jsonify({"message":"Please select an option"}), 400
+    try:
+        user = Users.query.filter_by(username=username).first()
+        user.coop = coop == "yes"
+        return jsonify({"message": "coop option set"}), 204
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "error in backend", "error": e}), 500
 
-    username.coop = coop == "yes"
-    return jsonify({"message": "coop option set"}), 204
 
+@update_info.route("/sequence", methods=["GET"])
+def get_sequence():
+    username = g.username
+    if not username:
+        return jsonify({"please sign in first"})
+    try:
+        user = Users.query.filter_by(username=username).first()
+        if not user.majors:
+            return jsonify({"You need to have a major first"}), 403
+        if not user.coop:
+            default = Sequence.query.filter_by(name="default").first().plan
+            return jsonify({"data": [["_",[["Default", default]]]]})
+
+        #id: name, plan
+        res = {}
+        for m in user.majors:
+            for seq in m.sequences:
+                if seq.id not in res:
+                    name = (seq.name).capitalize()
+                    res[seq.id] = (name, seq.plan)
+        return jsonify({"data": [["_", [[res[f],f] for f in res.keys()]]]})
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "sign in and come back to this again", "error": str(e)}), 400

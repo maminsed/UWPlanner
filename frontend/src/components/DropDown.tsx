@@ -86,7 +86,8 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                     {options.map(item => {
                         const santizedList : [string,number][] = []
                         item[1].forEach(option => {
-                            if (option[0].toLowerCase().includes(searchValue.toLowerCase())) santizedList.push(option);
+                            const check = curr == "sequence" ? option[0] : option
+                            if (check[0].toLowerCase().includes(searchValue.toLowerCase())) santizedList.push(check as string);
                         })
                         if (santizedList.length == 0) return ;
                         return (

@@ -4,7 +4,7 @@ import DropDown from "@/components/DropDown";
 import { useState } from "react";
 import { api } from "@/lib/useApi";
 
-const ordering = ["majors", "minors", "specializations", "co-op", "sequence"]
+const ordering = ["majors", "minors", "specializations", "coop", "sequence"]
 const heading = ["What's your Major(s)?", "What's your Minor(s)?", "What's your Specialization(s)?", "Are you in Co-op?", "What's your Sequence?"]
 
 export default function Info() {
@@ -15,8 +15,8 @@ export default function Info() {
     const backend = api();
 
     const curr = ordering[order];
-    const multiple = order < 3;
     const blank_allowed = order == 1 || order == 2;
+    const onlyOne = order >= 3;
     
     async function handleNext() {
         setMessage("loading...")
@@ -81,10 +81,10 @@ export default function Info() {
                 {dropIds.map(item => (
                     <div key={item[0]} className="flex items-center gap-2 justify-center">
                         <DropDown className="mt-1" curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
-                        {(dropIds.length != 1 || blank_allowed) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
+                        {((dropIds.length != 1 || blank_allowed) && !onlyOne) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
                     </div>
                 ))}
-                <button className="mt-4 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>
+                {onlyOne ? <div className="mt-4"></div> : <button className="mt-4 cursor-pointer" onClick={handleAdd}><LuCirclePlus /></button>}
                 <button className="mt-1 text-center w-full bg-dark-green text-light-green rounded-sm py-1 cursor-pointer hover:bg-dark-green/95 active:bg-[#204044] duration-300 ease-in" onClick={handleNext}>Next</button>
                 {message && <p className="text-red-500 mt-1">{message}</p>}
             </div>

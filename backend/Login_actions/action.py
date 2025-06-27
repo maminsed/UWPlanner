@@ -2,7 +2,7 @@ from typing import Optional
 from flask import Blueprint, jsonify, make_response, g, request
 from backend.Schema import Major, Minor, Specialization, Users, Sequence, db
 from backend.Auth import verify as verify_jwt
-from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec
+from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec, enrol_to_seq
 
 from collections import defaultdict
 
@@ -162,7 +162,7 @@ def add_coop() -> tuple[str, int]:
         return jsonify({"message": "coop option set"}), 204
     except Exception as e:
         print(e)
-        return jsonify({"message": "error in backend", "error": e}), 500
+        return jsonify({"message": "error in backend", "error": str(e)}), 500
 
 
 @update_info.route("/sequence", methods=["GET"])
@@ -184,13 +184,26 @@ def get_sequence():
             for seq in m.sequences:
                 if seq.id not in res:
                     name = (seq.name).capitalize()
-                    res[seq.id] = (name, replaceWords(seq.plan))
+                    print(name)
+                    res[seq.id] = (name, replaceWords(seq.plan), seq.id)
         return jsonify({"data": [["_", [[res[f],f] for f in res.keys()]]]})
     except Exception as e:
         print(e)
         return jsonify({"message": "sign in and come back to this again", "error": str(e)}), 400
 
+@update_info.route("/sequence", methods=["POST"])
+def add_sequence() -> tuple[str,int]:
+    username = g.username
+    seq = (request.get_json()).get("selected")
+    if not seq:
+        return jsonify({"message": "please select an option first"}), 401
+    if not username:
+        return jsonify({"message": "please log in first"}), 403
+    print(seq)
+    enrol_to_seq(seq[0][0], seq[0][1], username)
+    return "",204
+
 def replaceWords(s:str):
-    news = s.replace("-","")
+    news = s.replace("Co-op","Coop")
     news = news.replace(",","-")
     return news

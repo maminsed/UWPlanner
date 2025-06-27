@@ -1,4 +1,4 @@
-from ..Schema import Major, Users, db, Minor, Specialization
+from ..Schema import Major, Users, db, Minor, Specialization, Sequence
 
 def enrol_to_major(major_name: str, username: str) -> tuple[int, str]:
     """Function to enrol a student in a major. Not Complete"""
@@ -23,7 +23,7 @@ def enrol_to_minor(minor_name: str, username: str) -> tuple[int, str]:
     minor = Minor.query.filter_by(name=minor_name).first()
     user = Users.query.filter_by(username=username).first()
     if not minor:
-        return (403, "Major does not exist")
+        return (403, "Minor does not exist")
     if not user:
         return (403, "Username does not exist")
     
@@ -56,3 +56,18 @@ def enrol_to_spec(spec_name: str, username: str) -> tuple[int, str]:
         return (201, f"{user.username} is enroled in {spec.name}")
     except Exception as e:
         return (500, str(e))
+
+def enrol_to_seq(seq_name: str, seq_plan:str, username:str):
+    print(seq_name)
+    seq_plan = seq_plan.replace("-",",")
+    seq_plan = seq_plan.replace("Coop", "Co-op")
+    seq_name = seq_name[0].lower() + seq_name[1:]
+    print(seq_plan)
+    print(seq_name)
+    sequence = Sequence.query.filter_by(name=seq_name).first()
+    if not sequence:
+        print("couldn't find")
+        return 401,"selected sequence does not exist"
+    print(f"Sequence found!: name={sequence.name}")
+    print(sequence.plan)
+    print(seq_plan)

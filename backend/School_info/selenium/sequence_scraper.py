@@ -1,4 +1,4 @@
-"""This script scrapes academic sequence information from the University of Waterloo's website.
+"""The following script scrapes academic sequence information from the University of Waterloo's website.
 
 It connects to the application's database, iterates through all the majors listed,
 visits the URL associated with each major, and scrapes the course sequence tables.
@@ -25,8 +25,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 from backend.Schema import Major, Sequence, db
 
 
-def scrape_sequences():
+def scrape_sequences()->tuple[list[str]]:
     """Scrapes academic sequence information from Waterloo major pages.
+
     - Connects to the database via the Flask app context.
     - Iterates through all majors.
     - For each major, scrapes its URL to find sequence tables.

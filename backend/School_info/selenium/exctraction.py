@@ -6,7 +6,17 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 
 
-def extract_spec_page(web_path:str):
+def extract_spec_page(web_path:str) -> list[tuple[str]]:
+    """Function to find all the sequences on the webpath given.
+
+    Requires:
+        web_path (str):
+            The Path to the page you want.
+    
+    Returns:
+        the result of name,link,field for every seqeunce on that page.
+
+    """
     file_path = os.path.abspath(os.path.join(__file__, "..", "chromedriver.exe"))
     service = Service(executable_path=file_path)
     driver = webdriver.Chrome(service=service)

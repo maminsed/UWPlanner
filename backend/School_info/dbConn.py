@@ -83,7 +83,21 @@ def add_minor(name: str, theme: str | None = None, url: str | None = None) -> tu
 
 
 def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=False) -> tuple[bool, str]:
-    """Function to add whether a major has a coop a regular or is enrolable as a minor."""
+    """Function to add whether a major has a coop a regular or is enrolable as a minor.
+
+    Requires:
+        - major (str):
+            the major you want to update.
+        - coop (bool):
+            whether it has a coop or not.
+        - regular (bool):
+            whether it has regular option or not.
+        - minor (bool):
+            whether it has a minor or not.
+    
+    Returns:
+        The Success status. For now there is no failure unless it crashes.
+    """
     major.coop = coop
     major.regular = regular
 
@@ -95,6 +109,9 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
     return True, "Major updated"
 
 def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
+    """Function to add a specialization.
+    
+    """
     res = Specialization.query.filter_by(name=name, field=field).first()
 
     if res:

@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from ..Schema import Major
-from .majors import (
+from .dbConn import (
     add_major,
     add_minor,
     add_option,

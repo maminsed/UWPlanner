@@ -11,8 +11,8 @@ The script is designed to be run from the command line.
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 # This is a crucial step to ensure that the script can find and import the necessary
@@ -20,15 +20,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Because this script is nested deeper, it needs to go up three levels to find the root.
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 #Again im pretty sure because you are running __init__.py it already has this added. 
-
 #This causes looping imports im pretty sure, because backend also imports School_info
 # from backend import create_app
 from backend.Schema import Major, Sequence, db
 
 
 def scrape_sequences():
-    """
-    Scrapes academic sequence information from Waterloo major pages.
+    """Scrapes academic sequence information from Waterloo major pages.
     - Connects to the database via the Flask app context.
     - Iterates through all majors.
     - For each major, scrapes its URL to find sequence tables.

@@ -1,4 +1,5 @@
-from ..Schema import Major, Users, db, Minor, Specialization, Sequence
+from ..Schema import Major, Minor, Sequence, Specialization, Users, db
+
 
 def enrol_to_major(major_name: str, username: str) -> tuple[int, str]:
     """Function to enrol a student in a major. Not Complete"""
@@ -29,7 +30,7 @@ def enrol_to_minor(minor_name: str, username: str) -> tuple[int, str]:
     
     try:
         if minor in user.majors:
-            return (403, f"Can't choose your major as your minor.")
+            return (403, "Can't choose your major as your minor.")
         if minor in user.minors:
             return (202, f"{user.username} is already in {minor.name}")
         user.minors.append(minor)

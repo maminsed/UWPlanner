@@ -123,7 +123,7 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     return True,"Connection created"
 
 def add_option(name:str, link:str, field:str):
-    """Function to add Options to the database. """
+    """Function to add Options to the database."""
     res = Specialization.query.filter_by(name=name, field=field, is_option=True).first()
     if res:
         res.link = link

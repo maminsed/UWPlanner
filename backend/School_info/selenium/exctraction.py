@@ -1,8 +1,10 @@
+import os
+import time
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-import time
-import os
+
 
 def extract_spec_page(web_path:str):
     file_path = os.path.abspath(os.path.join(__file__, "..", "chromedriver.exe"))

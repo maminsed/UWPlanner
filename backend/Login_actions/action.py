@@ -1,11 +1,12 @@
-from typing import Optional
-from flask import Blueprint, jsonify, make_response, g, request
-from backend.Schema import Major, Minor, Specialization, Users, Sequence, db
-from backend.Auth import verify as verify_jwt
-from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_spec, enrol_to_seq
-
 from collections import defaultdict
+from typing import Optional
 
+from flask import Blueprint, g, jsonify, make_response, request
+
+from backend.Auth import verify as verify_jwt
+from backend.Schema import Major, Minor, Sequence, Specialization, Users, db
+
+from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_seq, enrol_to_spec
 
 update_info = Blueprint("UpdateInfo", __name__)
 

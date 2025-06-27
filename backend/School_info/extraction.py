@@ -2,7 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from ..Schema import Major
-from .majors import add_major, add_minor, update_coop_info, add_specialization, add_option
+from .majors import (
+    add_major,
+    add_minor,
+    add_option,
+    add_specialization,
+    update_coop_info,
+)
 from .selenium.exctraction import extract_spec_page
 
 

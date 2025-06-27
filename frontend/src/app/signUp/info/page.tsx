@@ -9,7 +9,7 @@ const heading = ["What's your Major(s)?", "What's your Minor(s)?", "What's your 
 
 export default function Info() {
     const [nextId, setNextId] = useState<number>(1)
-    const [dropIds, setDropIds] = useState<[number, string|undefined][]>([[0,undefined]])
+    const [dropIds, setDropIds] = useState<[number, [string,string,number]|undefined][]>([[0,undefined]])
     const [message, setMessage] = useState<undefined|string>(undefined)
     const [order, setOrder] = useState<number>(0)
     const backend = api();
@@ -61,7 +61,7 @@ export default function Info() {
         setDropIds((ids)=>ids.filter(x=>x[0] !== id))
     }
 
-    function handleUpdate(id:number, value:string) {
+    function handleUpdate(id:number, value:[string,string,number]) {
         setDropIds((ids)=>ids.map(item=> {
             if(item[0] == id) {
                 return [id, value]

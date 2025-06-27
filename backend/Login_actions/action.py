@@ -175,16 +175,16 @@ def get_sequence():
         user = Users.query.filter_by(username=username).first()
         if not user.majors:
             return jsonify({"You need to have a major first"}), 403
-        if not user.coop:
-            default = Sequence.query.filter_by(name="Default").first()
-            return jsonify({"data": [["_",[["Default",default.plan, default.id]]]]})
+        res = {}
+        default = Sequence.query.filter_by(name="Default").first()
+        res[default.id] = ["Default",default.plan, default.id]
 
         #id: name, plan
-        res = {}
-        for m in user.majors:
-            for seq in m.sequences:
-                if seq.id not in res:
-                    res[seq.id] = (seq.name, seq.plan, seq.id)
+        if user.coop:
+            for m in user.majors:
+                for seq in m.sequences:
+                    if seq.id not in res:
+                        res[seq.id] = (seq.name, seq.plan, seq.id)
         return jsonify({"data": [["_", [res[f] for f in res.keys()]]]})
     except Exception as e:
         print(e)

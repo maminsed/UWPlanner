@@ -53,4 +53,3 @@ def extract_options_ep()->tuple[str,int]:
     """Endpoint to extract Options."""
     extract_options()
     return "", 204
-

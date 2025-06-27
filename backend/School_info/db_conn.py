@@ -1,5 +1,5 @@
 from ..Schema import db
-from ..Schema.db import Major, Minor, Specialization
+from ..Schema.db import Major, Minor, Specialization, Sequence
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
@@ -97,6 +97,7 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
     
     Returns:
         The Success status. For now there is no failure unless it crashes.
+
     """
     major.coop = coop
     major.regular = regular
@@ -110,7 +111,18 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
 
 def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
     """Function to add a specialization.
+
+    Requires:
+        - name (str):
+            The name of the specialization.
+        - link (str):
+            The link to the undergrad page.
+        - field (str):
+            The field the specializations belongs to (e.g. major I think so).
     
+    Returns:
+        - The response status of the event and the message.
+
     """
     res = Specialization.query.filter_by(name=name, field=field).first()
 
@@ -129,7 +141,18 @@ def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
     
     
 def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
-    """Finds the major for the specialization with the field."""
+    """Finds the major for the specialization with the field.
+    
+    Requires:
+        - sepcialization (Specialization object):
+            the object
+        - field:
+            the field you want to add to it. 
+
+    Returns:
+        The status of the response and the message.
+
+    """
     major =  Major.query.filter_by(name=field).first()
     if not major:
         return False,f"{field} is not a major"
@@ -139,8 +162,21 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     db.session.commit()
     return True,"Connection created"
 
-def add_option(name:str, link:str, field:str):
-    """Function to add Options to the database."""
+def add_option(name:str, link:str, field:str) ->tuple[bool,str]:
+    """Function to add Options to the database.
+    
+    Requires:
+        - name (str):
+            the name of the option
+        - link (str):
+            The link to the page.
+        - field (str):
+            The field the option belongs to.
+
+    Returns:
+        The status and the message of the response.
+
+    """
     res = Specialization.query.filter_by(name=name, field=field, is_option=True).first()
     if res:
         res.link = link

@@ -3,16 +3,18 @@ import { LuCircleMinus, LuCirclePlus } from "react-icons/lu"
 import DropDown from "@/components/DropDown";
 import { useState } from "react";
 import { api } from "@/lib/useApi";
+import { useRouter } from "next/navigation";
 
 const ordering = ["majors", "minors", "specializations", "coop", "sequence"]
 const heading = ["What's your Major(s)?", "What's your Minor(s)?", "What's your Specialization(s)?", "Are you in Co-op?", "What's your Sequence?"]
 
 export default function Info() {
-    const [nextId, setNextId] = useState<number>(1)
-    const [dropIds, setDropIds] = useState<[number, [string,string,number]|undefined][]>([[0,undefined]])
-    const [message, setMessage] = useState<undefined|string>(undefined)
-    const [order, setOrder] = useState<number>(0)
+    const [nextId, setNextId] = useState<number>(1);
+    const [dropIds, setDropIds] = useState<[number, [string,string,number]|undefined][]>([[0,undefined]]);
+    const [message, setMessage] = useState<undefined|string>(undefined);
+    const [order, setOrder] = useState<number>(0);
     const backend = api();
+    const router = useRouter();
 
     const curr = ordering[order];
     const blank_allowed = order == 1 || order == 2;
@@ -33,6 +35,7 @@ export default function Info() {
         const response = await (res as Response).json().catch(()=>{})
         if (res.ok) {
             if (order == ordering.length - 1) {
+                router.push("/test")
                 console.log("ended")
                 return
             }

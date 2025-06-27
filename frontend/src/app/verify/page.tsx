@@ -78,7 +78,7 @@ export default function Verify() {
                 })
             } else {
                 console.log("Congrats: "+res.message)
-                router.push('/test')
+                router.push('/signUp/info')
             }   
         } catch (err) {
             setError("code", {

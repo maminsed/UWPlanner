@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle, XCircle } from "lucide-react";
+import { PlusCircle, XCircle, Camera, User } from "lucide-react";
+import { useAuth } from "@/app/AuthProvider";
 
 // Re-creating basic UI components with styling inspired by the image
 // We'll use these directly in the form for now.
@@ -40,6 +41,7 @@ const Select = ({ children, ...props }: any) => (
 );
 
 export function PublicProfileForm() {
+    const { profilePicture, setProfilePicture } = useAuth();
     const [socials, setSocials] = useState([""]);
     const [majors, setMajors] = useState([""]);
     const [minors, setMinors] = useState([""]);
@@ -49,6 +51,32 @@ export function PublicProfileForm() {
     const removeField = (setter: any, fields: any, index: any) => () => {
         if (fields.length > 1) {
             setter(fields.filter((_: any, i: any) => i !== index));
+        }
+    };
+
+    const handleProfilePictureChange = (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const acceptedImageTypes = [
+                "image/jpeg",
+                "image/png",
+                "image/gif",
+                "image/webp",
+            ];
+            if (!acceptedImageTypes.includes(file.type)) {
+                alert(
+                    "Please upload a valid image file (JPEG, PNG, GIF, or WEBP)."
+                );
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfilePicture(reader.result as string);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -103,19 +131,33 @@ export function PublicProfileForm() {
                             </div>
                         </div>
 
-                        <div className="md:col-span-1 flex flex-col items-center justify-start space-y-4">
-                            <div className="h-32 w-32 bg-gray-200 rounded-full flex items-center justify-center">
-                                {/* Placeholder for Avatar */}
-                                <img
-                                    className="rounded-full h-32 w-32 object-cover"
-                                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1160&q=80"
-                                    alt="Profile"
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button className="bg-gray-200 text-black hover:bg-gray-300 text-sm">
-                                    Edit photo
-                                </Button>
+                        <div className="md:col-span-1 flex flex-col justify-center items-center space-y-4">
+                            <div className="relative">
+                                {profilePicture ? (
+                                    <img
+                                        className="rounded-full h-32 w-32 object-cover"
+                                        src={profilePicture}
+                                        alt="Profile"
+                                    />
+                                ) : (
+                                    <div className="h-32 w-32 rounded-full bg-gray-700 flex items-center justify-center">
+                                        <User className="h-16 w-16 text-white" />
+                                    </div>
+                                )}
+                                <label
+                                    htmlFor="profile-picture-upload"
+                                    className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-white p-2 shadow-md hover:bg-gray-200"
+                                >
+                                    <Camera className="h-5 w-5 text-gray-800" />
+                                    <input
+                                        id="profile-picture-upload"
+                                        name="profile-picture-upload"
+                                        type="file"
+                                        className="sr-only"
+                                        onChange={handleProfilePictureChange}
+                                        accept="image/png, image/jpeg, image/gif, image/webp"
+                                    />
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -193,9 +235,9 @@ export function PublicProfileForm() {
                                         }}
                                     >
                                         {/* These would be populated from an API */}
+                                        <option>Select a Major</option>
                                         <option>Computer Science</option>
                                         <option>Software Engineering</option>
-                                        <option>Another Major</option>
                                     </Select>
                                     {majors.length > 1 && (
                                         <button
@@ -235,11 +277,13 @@ export function PublicProfileForm() {
                                             setMinors(newMinors);
                                         }}
                                     >
+                                        <option>Select a Minor</option>
+                                        <option>None</option>
+                                        {/* TODO: Add minors from DB */}
                                         <option>
                                             Combinatorics and Optimization
                                         </option>
                                         <option>Statistics</option>
-                                        <option>Another Minor</option>
                                     </Select>
                                     {minors.length > 1 && (
                                         <button
@@ -267,6 +311,9 @@ export function PublicProfileForm() {
                                 Specialization
                             </label>
                             <Select>
+                                <option>Select a Specialization</option>
+                                <option>None</option>
+                                {/* TODO: Add specializations from DB */}
                                 <option>Artificial Intelligence</option>
                                 <option>Human-Computer Interaction</option>
                             </Select>

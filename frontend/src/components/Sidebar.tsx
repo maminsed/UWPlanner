@@ -24,7 +24,8 @@ const navItems = [
 
 export function Sidebar() {
     const pathname = usePathname();
-    const { username, setAccess, setExp, setUsername } = useAuth();
+    const { username, setAccess, setExp, setUsername, profilePicture } =
+        useAuth();
 
     async function logOut() {
         // Logout logic from old Navbar.tsx
@@ -80,9 +81,17 @@ export function Sidebar() {
             </nav>
             <div className="border-t border-gray-700 p-4">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-700">
-                        <User className="h-6 w-6" />
-                    </div>
+                    {profilePicture ? (
+                        <img
+                            src={profilePicture}
+                            alt="Profile"
+                            className="h-10 w-10 rounded-full object-cover"
+                        />
+                    ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-700">
+                            <User className="h-6 w-6" />
+                        </div>
+                    )}
                     <div>
                         <p className="text-sm font-semibold">{username}</p>
                         <p className="text-xs text-gray-400">Student</p>
@@ -90,7 +99,6 @@ export function Sidebar() {
                 </div>
                 <button
                     onClick={logOut}
-                    
                     className="mt-4 flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-red-400 hover:bg-gray-700/50"
                 >
                     <LogOut className="mr-3 h-5 w-5" />

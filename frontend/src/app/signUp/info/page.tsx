@@ -64,7 +64,7 @@ export default function Info() {
         setDropIds((ids)=>ids.filter(x=>x[0] !== id))
     }
 
-    function handleUpdate(id:number, value:[string,string,number]) {
+    function handleUpdate(id:number, value:[string,string,number]|undefined) {
         setDropIds((ids)=>ids.map(item=> {
             if(item[0] == id) {
                 return [id, value]

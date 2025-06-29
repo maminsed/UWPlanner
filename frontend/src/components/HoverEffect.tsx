@@ -9,8 +9,7 @@ interface HoverEffectProps extends HTMLAttributes<HTMLSpanElement> {
     hover?: string;
 }
 
-export default function HoverEffect({ outerClass="", pClass="", hoverStyle={},text, maxWidth="100px", hover="", ...props}: HoverEffectProps) {
-    if (hover == "") hover = text;
+export default function HoverEffect({ outerClass="", pClass="", hoverStyle={},text, maxWidth="100px", hover=text, ...props}: HoverEffectProps) {
     return (
         <div className={"group relative w-fit "+outerClass} {...props}>
             <p className={"truncate w-fit "+pClass} style={{maxWidth:maxWidth}}>

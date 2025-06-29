@@ -17,7 +17,7 @@ Format:
 
 interface DropDownType {
     selectedValue:[string,string,number]|undefined;
-    setSelectedValue: (value:[string,string,number])=>void;
+    setSelectedValue: (value:[string,string,number]|undefined)=>void;
     className?: string;
     curr: string;
 }
@@ -25,7 +25,6 @@ interface DropDownType {
 export default function DropDown({className, curr, selectedValue, setSelectedValue}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
-    const [selectedId, setSelectedId] = useState<number>(-1)
     const [options, setOptions] = useState<[string,[string,string,number][]][]>([])
     const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>([])
     const search = useRef<HTMLInputElement>(null);
@@ -46,6 +45,7 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                 }
                 setOptions(response.data)
                 setSearchResult(response.data)
+                setSelectedValue(undefined)
             } catch (err) {
                 console.log("Error: ")
                 console.log(err)
@@ -71,9 +71,51 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
         setSearchResult(res)
     }, [searchValue])
 
+    function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        if (e.key == 'ArrowDown' || e.key == 'ArrowUp' && searchResult.length > 0) {
+            let option_index = -1;
+            let field_index = -1;
+            if (selectedValue) {
+                searchResult.forEach((item,fi) => {
+                    item[1].forEach((item,oi) => {
+                        if (item[2] == selectedValue[2]) {
+                            option_index = oi;
+                            field_index = fi;
+                        }
+                    }) 
+                })
+            }
+
+            if (e.key == 'ArrowDown') {
+                if (field_index == -1) {
+                    field_index = 0;
+                }
+                if (option_index + 1 < searchResult[field_index][1].length) {
+                    setSelectedValue(searchResult[field_index][1][option_index+1]);
+                } else if (field_index + 1 < searchResult.length) {
+                    setSelectedValue(searchResult[field_index+1][1][0]);
+                } else {
+                    setSelectedValue(searchResult[0][1][0])
+                }
+            } else {
+                const lastfi = searchResult.length - 1;
+                if (option_index - 1 >= 0) {
+                    setSelectedValue(searchResult[field_index][1][option_index-1]);
+                } else if (field_index - 1 >= 0 || field_index == -1) {
+                    if (field_index == -1) field_index = lastfi + 1;
+                    setSelectedValue(searchResult[field_index-1][1][searchResult[field_index-1][1].length - 1]);
+                } else {
+                    const lastoi = searchResult[lastfi][1].length - 1;
+                    setSelectedValue(searchResult[lastfi][1][lastoi]);
+                }
+            }
+
+        }
+    }
+
 
     return (
-        <div className={className}>
+        <div className={className} onKeyDown={handleKeyDown}>
             <div>
                 <div
                     onClick={() => {
@@ -119,8 +161,8 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                             {item[1].map(option => {
                                 return (<ul
                                         key={option[1]}
-                                        className={`truncate ${option[2] == selectedId ? "bg-dark-green/30" : ""}`}
-                                        onClick={()=>{setSelectedId(option[2]); setIsSelectorOpen(false); setSelectedValue(option)}}
+                                        className={`truncate ${selectedValue && option[2] == selectedValue[2] ? "bg-dark-green/30" : ""}`}
+                                        onClick={()=>{setIsSelectorOpen(false); setSelectedValue(option)}}
                                         >
                                             {option[0]}
                                         </ul>)

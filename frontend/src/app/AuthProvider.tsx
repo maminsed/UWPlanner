@@ -1,31 +1,21 @@
-"use client";
-import { useState, createContext, useEffect, useContext } from "react";
+'use client'
+import { useState, createContext, useEffect, useContext } from "react"
 
 type AuthCtx = {
     access?: string;
-    setAccess: (t?: string) => void;
-    exp?: string;
-    setExp: (t?: string) => void;
-    username?: string;
-    setUsername: (t?: string) => void;
-    profilePicture?: string;
-    setProfilePicture: (url?: string) => void;
-};
+    setAccess: (t?:string) => void;
+    exp?:string;
+    setExp: (t?:string) => void;
+    username?:string;
+    setUsername: (t?:string) => void;
+}
 
-const AuthContext = createContext<AuthCtx>({
-    setAccess: () => {},
-    setExp: () => {},
-    setUsername: () => {},
-    setProfilePicture: () => {},
-});
+const AuthContext = createContext<AuthCtx>({ setAccess:()=>{}, setExp:()=>{}, setUsername:()=>{} })
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [access, setAccess] = useState<string | undefined>(undefined);
-    const [exp, setExp] = useState<string | undefined>(undefined);
-    const [username, setUsername] = useState<string | undefined>(undefined);
-    const [profilePicture, setProfilePicture] = useState<string | undefined>(
-        undefined
-    );
+export function AuthProvider({children}:{children: React.ReactNode}) {
+    const [access, setAccess] = useState<string|undefined>(undefined)
+    const [exp, setExp] = useState<string|undefined>(undefined)
+    const [username, setUsername] = useState<string|undefined>(undefined)
 
     // useEffect(()=>{
     //     async function handleInitial() {
@@ -54,22 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // }, [])
 
     return (
-        <AuthContext.Provider
-            value={{
-                access,
-                setAccess,
-                exp,
-                setExp,
-                username,
-                setUsername,
-                profilePicture,
-                setProfilePicture,
-            }}
-        >
+        <AuthContext.Provider value={{ access, setAccess, exp, setExp, username, setUsername }} >
             {children}
         </AuthContext.Provider>
-    );
+    )
 }
 
 export const useAuth = () => useContext(AuthContext);
-export { AuthContext };
+export { AuthContext }

@@ -96,21 +96,21 @@ export function PublicProfileForm() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div>
                                     <label
-                                        htmlFor="name"
+                                        htmlFor="firstName"
                                         className="block text-sm font-medium mb-1"
                                     >
-                                        Name
+                                        First Name
                                     </label>
-                                    <Input id="name" placeholder="John" />
+                                    <Input id="firstName" placeholder="John" />
                                 </div>
                                 <div>
                                     <label
-                                        htmlFor="surname"
+                                        htmlFor="lastName"
                                         className="block text-sm font-medium mb-1"
                                     >
-                                        Surname
+                                        Last Name
                                     </label>
-                                    <Input id="surname" placeholder="Doe" />
+                                    <Input id="lastName" placeholder="Doe" />
                                 </div>
                             </div>
                             <div>

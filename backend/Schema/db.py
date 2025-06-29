@@ -71,6 +71,8 @@ class Users(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(db.String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(db.String(80), unique=True, nullable=False)
+    first_name: Mapped[str] = mapped_column(db.String(50), nullable=False)
+    last_name: Mapped[str] = mapped_column(db.String(50), nullable=False)
     # Authorization - Authentication Information
     pass_hash: Mapped[str] = mapped_column(db.String(), nullable=False)
     login_method: Mapped[LoginMethod] = mapped_column(

@@ -26,6 +26,10 @@ def add_user() -> Response | tuple[str, int]:
             User's e-mail address (must be unique).
         password : str
             Plain-text password; will be Argon2-hashed before storage.
+        first_name : str
+            User's first name.
+        last_name : str
+            User's last name.
 
     Returns:
     The response
@@ -35,8 +39,11 @@ def add_user() -> Response | tuple[str, int]:
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
-    if not email or not password:
-        return jsonify({"message": "missing email or password"}), 400
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+
+    if not email or not password or not first_name or not last_name:
+        return jsonify({"message": "missing required fields"}), 400
 
     # check for duplicates
     res = Users.query.filter_by(email=email).first()
@@ -52,6 +59,8 @@ def add_user() -> Response | tuple[str, int]:
         user = Users(
             email=email,
             username=username,
+            first_name=first_name,
+            last_name=last_name,
             pass_hash=hashpass,
             login_method=LoginMethod.email,
         )

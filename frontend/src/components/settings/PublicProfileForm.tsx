@@ -125,9 +125,6 @@ export function PublicProfileForm() {
                                     type="email"
                                     placeholder="example@gmail.com"
                                 />
-                                <p className="text-xs text-gray-400 mt-1">
-                                    Email cannot be changed.
-                                </p>
                             </div>
                         </div>
 
@@ -319,6 +316,24 @@ export function PublicProfileForm() {
                             </Select>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Delete Account Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-8">
+                <div className="md:col-span-1">
+                    <h3 className="text-lg font-bold text-settings-text">
+                        Delete Account
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Permanently remove your account and all of your content.
+                        This action is not reversible.
+                    </p>
+                </div>
+                <div className="md:col-span-2">
+                    <Button className="bg-red-500 text-white border rounded-4xl text-sm border-settings-text text-settings-text hover:bg-red-100 hover:cursor-pointer px-4 py-2.5 font-semibold">
+                        Delete Account
+                    </Button>
                 </div>
             </div>
 

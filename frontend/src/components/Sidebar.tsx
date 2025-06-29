@@ -102,7 +102,7 @@ export function Sidebar() {
                     className="mt-4 flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-red-400 hover:bg-gray-700/50"
                 >
                     <LogOut className="mr-3 h-5 w-5" />
-                    <a href="/">Logout</a>
+                    <span>Logout</span>
                 </button>
             </div>
         </div>

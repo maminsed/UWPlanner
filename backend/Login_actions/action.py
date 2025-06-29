@@ -194,7 +194,7 @@ def get_sequence():
 def add_sequence() -> tuple[str,int]:
     username = g.username
     seq = (request.get_json()).get("selected")
-    if not seq:
+    if not seq or len(seq) == 0:
         return jsonify({"message": "please select an option first"}), 401
     if not username:
         return jsonify({"message": "please log in first"}), 403

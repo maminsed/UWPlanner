@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, React } from "react";
 import { PlusCircle, XCircle, Camera, User } from "lucide-react";
 import { useAuth } from "@/app/AuthProvider";
 
 // Re-creating basic UI components with styling inspired by the image
 // We'll use these directly in the form for now.
 
-const Input = (props: any) => (
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input
         {...props}
         className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none"
     />
 );
 
-const Textarea = (props: any) => (
+const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
     <textarea
         {...props}
         className="w-full p-2 border rounded-md bg-transparent text-settings-text focus:ring-2 focus:ring-blue-500 outline-none"

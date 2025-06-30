@@ -14,7 +14,7 @@ def extract_spec_page(web_path:str) -> list[tuple[str]]:
             The Path to the page you want.
     
     Returns:
-        the result of name,link,field for every seqeunce on that page.
+        the result of name,link,field for every sequence on that page.
 
     """
     file_path = os.path.abspath(os.path.join(__file__, "..", "chromedriver.exe"))

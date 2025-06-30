@@ -72,7 +72,7 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
     }, [searchValue])
 
     function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-        if (e.key == 'ArrowDown' || e.key == 'ArrowUp' && searchResult.length > 0) {
+        if ((e.key == 'ArrowDown' || e.key == 'ArrowUp') && searchResult.length > 0) {
             let option_index = -1;
             let field_index = -1;
             if (selectedValue) {

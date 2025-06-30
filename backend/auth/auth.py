@@ -144,7 +144,7 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
         httponly=True,
         secure=True,
         samesite="None",
-    ) # PRODUCTION set: , secure=True, samesite=None
+    )  # PRODUCTION set: , secure=True, samesite=None
     return resp
 
 
@@ -306,14 +306,18 @@ def log_out() -> Response:
             resp = make_response(
                 jsonify({"message": "refresh token not in database"}), 200
             )
-            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None") # PRODUCTION set: , secure=True, samesite=None
+            resp.delete_cookie(
+                "jwt", httponly=True, secure=True, samesite="None"
+            )  # PRODUCTION set: , secure=True, samesite=None
 
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None") # PRODUCTION set: , secure=True, samesite=None
+        resp.delete_cookie(
+            "jwt", httponly=True, secure=True, samesite="None"
+        )  # PRODUCTION set: , secure=True, samesite=None
         return resp
     except Exception as e:
         return make_response(

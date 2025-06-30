@@ -33,7 +33,11 @@ def create_app() -> Flask:
     app.register_blueprint(update_info, url_prefix="/update_info")
     app.register_blueprint(school_info_bp, url_prefix="/school_info")
 
-    CORS(app, origins=["http://localhost:3000", "http://10.200.13.243:3000"], supports_credentials=True)
+    CORS(
+        app,
+        origins=["http://localhost:3000"],
+        supports_credentials=True,
+    )
     return app
 
 

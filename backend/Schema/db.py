@@ -55,6 +55,7 @@ major_sequence = Table(
     Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
 )
 
+
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
 
@@ -143,6 +144,7 @@ class JwtToken(db.Model):
 
     user: Mapped["Users"] = relationship("Users", back_populates="refresh_tokens")
 
+
 class Major(db.Model):
     """Database for the majors."""
 
@@ -196,7 +198,9 @@ class Specialization(db.Model):
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
     field: Mapped[str] = mapped_column(db.String())
     link: Mapped[Optional[str]] = mapped_column(db.String())
-    major_id: Mapped[Optional[int]] = mapped_column(db.Integer(), ForeignKey("major.id"))
+    major_id: Mapped[Optional[int]] = mapped_column(
+        db.Integer(), ForeignKey("major.id")
+    )
     major: Mapped[Optional["Major"]] = relationship(
         "Major", back_populates="specializations"
     )
@@ -216,4 +220,6 @@ class Sequence(db.Model):
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )
     plan: Mapped[str] = mapped_column(db.String(), nullable=False)
-    majors: Mapped[list["Major"]] = relationship("Major", back_populates="sequences", secondary=major_sequence)
+    majors: Mapped[list["Major"]] = relationship(
+        "Major", back_populates="sequences", secondary=major_sequence
+    )

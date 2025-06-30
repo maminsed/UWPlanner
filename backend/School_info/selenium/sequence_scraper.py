@@ -19,13 +19,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 # modules from your backend application, such as the Flask app instance and the db models.
 # Because this script is nested deeper, it needs to go up three levels to find the root.
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-#Again im pretty sure because you are running __init__.py it already has this added. 
-#This causes looping imports im pretty sure, because backend also imports School_info
+# Again im pretty sure because you are running __init__.py it already has this added.
+# This causes looping imports im pretty sure, because backend also imports School_info
 # from backend import create_app
 from backend.Schema import Major, Sequence, db
 
 
-def scrape_sequences()->tuple[list[str]]:
+def scrape_sequences() -> tuple[list[str]]:
     """Scrapes academic sequence information from Waterloo major pages.
 
     - Connects to the database via the Flask app context.
@@ -37,11 +37,11 @@ def scrape_sequences()->tuple[list[str]]:
     """
     # app = create_app()
     # with app.app_context():
-        # A dictionary to track the sequence number for each faculty.
-        # e.g., {'Arts': 1, 'Engineering': 4}
+    # A dictionary to track the sequence number for each faculty.
+    # e.g., {'Arts': 1, 'Engineering': 4}
     faculty_sequence_counters = {}
     driver = None  # Initialize driver to None before the try block
-    success, errors = [],[]
+    success, errors = [], []
     try:
         # 1. Initialize Selenium WebDriver
         print("Initializing WebDriver...")
@@ -79,7 +79,7 @@ def scrape_sequences()->tuple[list[str]]:
 
             try:
                 driver.get(major.url)
-                
+
                 # Find all tables on the page, then filter them using an XPath selector
                 # to get only those containing a header (th) with the word "Year".
                 sequence_tables = driver.find_elements(
@@ -88,7 +88,9 @@ def scrape_sequences()->tuple[list[str]]:
 
                 if not sequence_tables:
                     errors.append(major.name)
-                    print(f"  -> No sequence tables containing 'Year' in the header found for {major.name}.")
+                    print(
+                        f"  -> No sequence tables containing 'Year' in the header found for {major.name}."
+                    )
                     continue
 
                 for table in sequence_tables:
@@ -100,43 +102,60 @@ def scrape_sequences()->tuple[list[str]]:
                         terms = row.find_elements(By.TAG_NAME, "td")
                         for term in terms:
                             plan_parts.append(term.text.strip() or "-")
-                    
+
                     plan_string = ",".join(plan_parts)
-                    
+
                     if not plan_string:
                         # Skip empty tables or tables that only contain headers
                         errors.append(major.name)
-                        print(f"  -> Could not extract a plan from a table for {major.name}.")
+                        print(
+                            f"  -> Could not extract a plan from a table for {major.name}."
+                        )
                         continue
 
                     # Find-or-Create Logic: Check if a sequence with an identical plan
                     # is already associated with any major from the SAME faculty.
-                    sequence_obj = Sequence.query.join(Sequence.majors).filter(
-                        Sequence.plan == plan_string,
-                        Major.faculty == major.faculty
-                    ).first()
+                    sequence_obj = (
+                        Sequence.query.join(Sequence.majors)
+                        .filter(
+                            Sequence.plan == plan_string, Major.faculty == major.faculty
+                        )
+                        .first()
+                    )
 
                     if not sequence_obj:
                         # This is a new, unique sequence plan for this faculty.
                         # Increment the counter for this specific faculty.
                         faculty_sequence_counters[major.faculty] += 1
-                        current_sequence_number = faculty_sequence_counters[major.faculty]
-                        
+                        current_sequence_number = faculty_sequence_counters[
+                            major.faculty
+                        ]
+
                         # Create the new name based on the faculty and the new number.
-                        new_sequence_name = f"stream{current_sequence_number}_{major.faculty}"
-                        
-                        print(f"  -> Found new unique plan. Creating '{new_sequence_name}' in database.")
-                        sequence_obj = Sequence(name=new_sequence_name, plan=plan_string)
+                        new_sequence_name = (
+                            f"stream{current_sequence_number}_{major.faculty}"
+                        )
+
+                        print(
+                            f"  -> Found new unique plan. Creating '{new_sequence_name}' in database."
+                        )
+                        sequence_obj = Sequence(
+                            name=new_sequence_name, plan=plan_string
+                        )
                         db.session.add(sequence_obj)
                         # We need to flush to ensure the object gets an ID before we try to append it.
                         db.session.flush()
 
                     # Associate the sequence (found or new) with the major
                     if sequence_obj not in major.sequences:
-                        print(f"  -> Associating '{sequence_obj.name}' with {major.name}.")
+                        print(
+                            f"  -> Associating '{sequence_obj.name}' with {major.name}."
+                        )
                         major.sequences.append(sequence_obj)
                     else:
-                        print(f"  -> '{sequence_obj.name}' is already associated with {major.name}.")
+                        print(
+                            f"  -> '{sequence_obj.name}' is already associated with {major.name}."
+                        )
 
                 # Commit changes after each major is successfully processed.
                 print(f"  -> Committing changes for {major.name}...")
@@ -145,7 +164,9 @@ def scrape_sequences()->tuple[list[str]]:
 
             except NoSuchElementException:
                 errors.append(major.name)
-                print(f"  -> Could not find the expected content structure on {major.url}")
+                print(
+                    f"  -> Could not find the expected content structure on {major.url}"
+                )
             except Exception as e:
                 errors.append(major.name)
                 print(f"  -> An error occurred while processing {major.name}: {e}")
@@ -155,7 +176,6 @@ def scrape_sequences()->tuple[list[str]]:
         if driver:
             print("\nClosing WebDriver...")
             driver.quit()
-    
-    print("\nScraping complete.")
-    return success,errors
 
+    print("\nScraping complete.")
+    return success, errors

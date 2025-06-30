@@ -1,5 +1,5 @@
 from ..Schema import db
-from ..Schema.db import Major, Minor, Users, Specialization
+from ..Schema.db import Major, Minor, Specialization, Sequence
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:
@@ -80,22 +80,25 @@ def add_minor(name: str, theme: str | None = None, url: str | None = None) -> tu
         return (False, "Error in Backend", str(e))
 
 
-def enrol_to_major(major_name: str, username: str) -> tuple[bool, str]:
-    """Function to enrol a student in a major. Not Completed."""
-    major = Major.query.filter_by(name=major_name).first()
-    user = Users.query.filter_by(username=username).first()
-    if not major or not user:
-        return (False, "User or Major does not exist")
-
-    user.major = major
-    user.major_id = major.id
-    db.session.add(user)
-    db.session.commit()
-    return (True, f"{user.username} is enroled in {major.name}")
 
 
 def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=False) -> tuple[bool, str]:
-    """Function to add whether a major has a coop a regular or is enrolable as a minor."""
+    """Function to add whether a major has a coop a regular or is enrolable as a minor.
+
+    Requires:
+        - major (str):
+            the major you want to update.
+        - coop (bool):
+            whether it has a coop or not.
+        - regular (bool):
+            whether it has regular option or not.
+        - minor (bool):
+            whether it has a minor or not.
+    
+    Returns:
+        The Success status. For now there is no failure unless it crashes.
+
+    """
     major.coop = coop
     major.regular = regular
 
@@ -107,6 +110,20 @@ def update_coop_info(major:str, coop:bool=False, regular:bool=True, minor:bool=F
     return True, "Major updated"
 
 def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
+    """Function to add a specialization.
+
+    Requires:
+        - name (str):
+            The name of the specialization.
+        - link (str):
+            The link to the undergrad page.
+        - field (str):
+            The field the specializations belongs to (e.g. major I think so).
+    
+    Returns:
+        - The response status of the event and the message.
+
+    """
     res = Specialization.query.filter_by(name=name, field=field).first()
 
     if res:
@@ -124,7 +141,18 @@ def add_specialization(name:str, link:str, field:str)->tuple[bool,str]:
     
     
 def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
-    """Finds the major for the specialization with the field."""
+    """Finds the major for the specialization with the field.
+    
+    Requires:
+        - sepcialization (Specialization object):
+            the object
+        - field:
+            the field you want to add to it. 
+
+    Returns:
+        The status of the response and the message.
+
+    """
     major =  Major.query.filter_by(name=field).first()
     if not major:
         return False,f"{field} is not a major"
@@ -134,8 +162,21 @@ def add_relation(specialization:Specialization, field:str)->tuple[bool,str]:
     db.session.commit()
     return True,"Connection created"
 
-def add_option(name:str, link:str, field:str):
-    """Function to add Options to the database. """
+def add_option(name:str, link:str, field:str) ->tuple[bool,str]:
+    """Function to add Options to the database.
+    
+    Requires:
+        - name (str):
+            the name of the option
+        - link (str):
+            The link to the page.
+        - field (str):
+            The field the option belongs to.
+
+    Returns:
+        The status and the message of the response.
+
+    """
     res = Specialization.query.filter_by(name=name, field=field, is_option=True).first()
     if res:
         res.link = link

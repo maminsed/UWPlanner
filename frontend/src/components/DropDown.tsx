@@ -5,24 +5,35 @@ import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import HoverEffect from "./HoverEffect";
 
+/*
+Format:
+    [
+        [field, [ [word,hover,id],[word,hover,id],[word,hover,id] ]]
+        [field, [ [word,hover,id],[word,hover,id],[word,hover,id] ]]
+    ]
+
+*/
+
+
 interface DropDownType {
-    selectedValue:string|undefined;
-    setSelectedValue: (value:string)=>void;
+    selectedValue:[string,string,number]|undefined;
+    setSelectedValue: (value:[string,string,number]|undefined)=>void;
     className?: string;
+    curr: string;
 }
 
-export default function DropDown({className, selectedValue, setSelectedValue}:DropDownType) {
+export default function DropDown({className, curr, selectedValue, setSelectedValue}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
-    const [selectedId, setSelectedId] = useState<number>(-1)
-    const [options, setOptions] = useState<[string,[string,number][]][]>([])
+    const [options, setOptions] = useState<[string,[string,string,number][]][]>([])
+    const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>([])
     const search = useRef<HTMLInputElement>(null);
     const backend = api();
 
     useEffect(()=> {
         async function gettingData() {
             try {
-                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/majors`, {
+                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
                     method: "GET"
                 })
 
@@ -33,6 +44,8 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
                     return 
                 }
                 setOptions(response.data)
+                setSearchResult(response.data)
+                setSelectedValue(undefined)
             } catch (err) {
                 console.log("Error: ")
                 console.log(err)
@@ -40,11 +53,69 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
         }
 
         gettingData()
-    }, [])
+    }, [curr])
+
+    useEffect(()=>{
+        const res:[string,[string,string,number][]][] = []
+        options.forEach(item=>{
+            const match:[string,string,number][] = []
+            item[1].forEach(result=>{
+                if (result[0].toLowerCase().includes(searchValue.toLowerCase())){
+                    match.push(result)
+                }
+            })
+            if (match.length != 0) {
+                res.push([item[0], match])
+            }
+        })
+        setSearchResult(res)
+    }, [searchValue])
+
+    function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        if ((e.key == 'ArrowDown' || e.key == 'ArrowUp') && searchResult.length > 0) {
+            let option_index = -1;
+            let field_index = -1;
+            if (selectedValue) {
+                searchResult.forEach((item,fi) => {
+                    item[1].forEach((item,oi) => {
+                        if (item[2] == selectedValue[2]) {
+                            option_index = oi;
+                            field_index = fi;
+                        }
+                    }) 
+                })
+            }
+
+            if (e.key == 'ArrowDown') {
+                if (field_index == -1) {
+                    field_index = 0;
+                }
+                if (option_index + 1 < searchResult[field_index][1].length) {
+                    setSelectedValue(searchResult[field_index][1][option_index+1]);
+                } else if (field_index + 1 < searchResult.length) {
+                    setSelectedValue(searchResult[field_index+1][1][0]);
+                } else {
+                    setSelectedValue(searchResult[0][1][0])
+                }
+            } else {
+                const lastfi = searchResult.length - 1;
+                if (option_index - 1 >= 0) {
+                    setSelectedValue(searchResult[field_index][1][option_index-1]);
+                } else if (field_index - 1 >= 0 || field_index == -1) {
+                    if (field_index == -1) field_index = lastfi + 1;
+                    setSelectedValue(searchResult[field_index-1][1][searchResult[field_index-1][1].length - 1]);
+                } else {
+                    const lastoi = searchResult[lastfi][1].length - 1;
+                    setSelectedValue(searchResult[lastfi][1][lastoi]);
+                }
+            }
+
+        }
+    }
 
 
     return (
-        <div className={className}>
+        <div className={className} onKeyDown={handleKeyDown}>
             <div>
                 <div
                     onClick={() => {
@@ -55,7 +126,8 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
                 >
                     {selectedValue === undefined ? 
                         <div>Choose your option</div>
-                    : <HoverEffect text={selectedValue} maxWidth="260px"/>}
+                    : <HoverEffect text={selectedValue[0]} hover={selectedValue[1]} maxWidth="264px" hoverStyle={{right:"50%", transform: "translateX(50%)", maxWidth:"264px", width: "max-content"}}/>
+                    }
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
                         <svg
                             className="w-6 h-6 text-dark-green"
@@ -82,20 +154,15 @@ export default function DropDown({className, selectedValue, setSelectedValue}:Dr
                             placeholder="search..."
                             className="ml-1 focus:outline-none"/>
                     </div>
-                    {options.map(item => {
-                        const santizedList : [string,number][] = []
-                        item[1].forEach(option => {
-                            if (option[0].toLowerCase().includes(searchValue.toLowerCase())) santizedList.push(option);
-                        })
-                        if (santizedList.length == 0) return ;
+                    {searchResult.map(item => {
                         return (
                             <Fragment key={item[0]}>
                             <div className="text-dark-green/60">{item[0]}</div>
-                            {santizedList.map(option => {
+                            {item[1].map(option => {
                                 return (<ul
                                         key={option[1]}
-                                        className={`truncate ${option[1] == selectedId ? "bg-dark-green/30" : ""}`}
-                                        onClick={()=>{setSelectedId(option[1]); setIsSelectorOpen(false); setSelectedValue(option[0])}}
+                                        className={`truncate ${selectedValue && option[2] == selectedValue[2] ? "bg-dark-green/30" : ""}`}
+                                        onClick={()=>{setIsSelectorOpen(false); setSelectedValue(option)}}
                                         >
                                             {option[0]}
                                         </ul>)

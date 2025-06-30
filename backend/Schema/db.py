@@ -107,7 +107,7 @@ class Users(db.Model):
         "Minor", back_populates="users", secondary=minor_user
     )
 
-    specialization: Mapped[Optional["Specialization"]] = relationship(
+    specialization: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="students", secondary=specialization_student
     )
 
@@ -125,6 +125,9 @@ class Users(db.Model):
     )
     started_month: Mapped[int] = mapped_column(
         db.Integer, default=9, server_default=text("9")
+    )
+    coop: Mapped[bool] = mapped_column(
+        db.Boolean(), default=True, server_default=text("True")
     )
 
 

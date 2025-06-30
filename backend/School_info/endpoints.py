@@ -1,9 +1,13 @@
 from flask import Blueprint, jsonify
 
-
-from .extraction import extract_majors, extract_minors, update_major_info, extract_specializations, extract_options
+from .extraction import (
+    extract_majors,
+    extract_minors,
+    extract_options,
+    extract_specializations,
+    update_major_info,
+)
 from .selenium.sequence_scraper import scrape_sequences
-
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -49,4 +53,3 @@ def extract_options_ep()->tuple[str,int]:
     """Endpoint to extract Options."""
     extract_options()
     return "", 204
-

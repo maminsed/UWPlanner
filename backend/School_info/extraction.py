@@ -2,14 +2,20 @@ import requests
 from bs4 import BeautifulSoup
 
 from ..Schema import Major
-from .majors import add_major, add_minor, update_coop_info, add_specialization, add_option
+from .db_conn import (
+    add_major,
+    add_minor,
+    add_option,
+    add_specialization,
+    update_coop_info,
+)
 from .selenium.exctraction import extract_spec_page
 
 
 def extract_majors() -> dict[str:list[str]|str]:
     """Function to extract majors from uwaterloo website."""
     # Getting the url and setting up beautiful soup
-    URL = "https://uwaterloo.ca/future-students/programs/by-faculty"
+    URL = "https://uwaterloo.ca/future-students/programs/by-faculty" # noqa: N806
     try:
         page = requests.get(URL, timeout=10)
     except Exception:
@@ -96,7 +102,7 @@ def update_major_info() -> None:
 
 def extract_minors() -> None:
     """Function to extract minors from uwaterloo website."""
-    URL = "https://uwaterloo.ca/future-students/programs/minors"
+    URL = "https://uwaterloo.ca/future-students/programs/minors" # noqa: N806
     page = requests.get(URL, timeout=10)
     soup = BeautifulSoup(page.content, "html.parser")
 

@@ -8,7 +8,7 @@ from .extraction import (
     update_major_info,
 )
 from .selenium.sequence_scraper import scrape_sequences
-from .selenium.exctraction import extract_majors_spec
+from .selenium.major_scrapper import major_checking
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -56,7 +56,8 @@ def extract_options_ep() -> tuple[str, int]:
     extract_options()
     return "", 204
 
-@school_info_bp.route("/extract_spec_major_one", methods=["POST"])
-def extract_spec_major_one():
-    status,msg = extract_majors_spec()
-    return jsonify(msg), status
+@school_info_bp.route("/count_majors", methods=["GET"])
+def count_majors():
+    exists,dne = major_checking()
+    return jsonify({"exists": exists, "dne": dne}), 200
+

@@ -139,31 +139,7 @@ def add_specialization(name: str, link: str, field: str) -> tuple[bool, str]:
     s = Specialization(name=name, link=link, field=field)
     db.session.add(s)
     db.session.commit()
-    add_relation_res = add_relation(s, field)
-    return add_relation_res[0], add_relation_res[1] + " " + "Specialization Created"
-
-
-def add_relation(specialization: Specialization, field: str) -> tuple[bool, str]:
-    """Finds the major for the specialization with the field.
-
-    Requires:
-        - sepcialization (Specialization object):
-            the object
-        - field:
-            the field you want to add to it.
-
-    Returns:
-        The status of the response and the message.
-
-    """
-    major = Major.query.filter_by(name=field).first()
-    if not major:
-        return False, f"{field} is not a major"
-
-    specialization.major = major
-    db.session.add(specialization)
-    db.session.commit()
-    return True, "Connection created"
+    return True, "Specialization Created"
 
 
 def add_option(name: str, link: str, field: str) -> tuple[bool, str]:

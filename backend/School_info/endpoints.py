@@ -8,6 +8,7 @@ from .extraction import (
     update_major_info,
 )
 from .selenium.sequence_scraper import scrape_sequences
+from .selenium.exctraction import extract_majors_spec
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -54,3 +55,8 @@ def extract_options_ep() -> tuple[str, int]:
     """Endpoint to extract Options."""
     extract_options()
     return "", 204
+
+@school_info_bp.route("/extract_spec_major_one", methods=["POST"])
+def extract_spec_major_one():
+    status,msg = extract_majors_spec()
+    return jsonify(msg), status

@@ -55,6 +55,13 @@ major_sequence = Table(
     Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
 )
 
+major_spec = Table(
+    "major_spec",
+    Base.metadata,
+    Column("spec_id", db.Integer, ForeignKey("specializations.id"), primary_key=True),
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -167,7 +174,7 @@ class Major(db.Model):
         "Users", back_populates="majors", secondary=major_student
     )
     specializations: Mapped[list["Specialization"]] = relationship(
-        "Specialization", back_populates="major"
+        "Specialization", back_populates="majors", secondary=major_spec
     )
     sequences: Mapped[list["Sequence"]] = relationship(
         "Sequence", back_populates="majors", secondary=major_sequence
@@ -198,11 +205,8 @@ class Specialization(db.Model):
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
     field: Mapped[str] = mapped_column(db.String())
     link: Mapped[Optional[str]] = mapped_column(db.String())
-    major_id: Mapped[Optional[int]] = mapped_column(
-        db.Integer(), ForeignKey("major.id")
-    )
-    major: Mapped[Optional["Major"]] = relationship(
-        "Major", back_populates="specializations"
+    majors: Mapped[list["Major"]] = relationship(
+        "Major", back_populates="specializations", secondary=major_spec
     )
     is_option: Mapped[bool] = mapped_column(server_default=text("FALSE"))
     students: Mapped[list["Users"]] = relationship(

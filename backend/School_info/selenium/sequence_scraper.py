@@ -179,3 +179,96 @@ def scrape_sequences() -> tuple[list[str]]:
 
     print("\nScraping complete.")
     return success, errors
+
+def scrape_math() -> tuple[list[str], list[str]]:
+    """Scrapes sequence charts for Mathematics majors from a specific URL.
+
+    Returns:
+        tuple: A tuple containing two lists:
+            - success: List of successfully processed sequence names.
+            - errors: List of errors encountered during processing.
+
+    Returns:
+        The Success and the failure ones
+    """
+    success, errors = [], []  # Initialize lists to track success and errors
+    driver = None  # Initialize driver to None before the try block
+
+    try:
+        print("Initializing WebDriver...")
+        # Set up Selenium WebDriver
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service)
+
+        # Navigate to the sequence charts page
+        driver.get("https://uwaterloo.ca/new-math-students/co-op/sequence-charts")
+
+        # Find all tables on the page
+        tables = driver.find_elements(By.TAG_NAME, "table")
+
+        # Predefined options for filtering majors
+        options = [[], [64, 65], [78]]
+
+        # Iterate through each table
+        for i in range(len(tables)):
+            # Extract rows from the table body
+            rows = tables[i].find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
+
+            for r in rows:
+                # Extract sequence name
+                try:
+                    name = r.find_element(By.TAG_NAME, "th").text
+                except Exception:
+                    name = r.find_elements(By.TAG_NAME, "td")[0].text
+
+                # Extract sequence plan
+                plan = ""
+                blocks = r.find_elements(By.TAG_NAME, "td")
+                for j in range(1, len(blocks)):
+                    if "WT" in blocks[j].text:
+                        plan += "Coop-"
+                    elif blocks[j].text.strip() == "":
+                        plan += "Off-"
+                    else:
+                        plan += "Study-"
+
+                # Create a new Sequence object
+                seq = Sequence(name=name, plan=plan)
+                db.session.add(seq)
+                db.session.flush()
+
+                # Determine majors to associate with the sequence
+                if i == 0:
+                    majors = Major.query.filter_by(faculty="Mathematics").filter(
+                        Major.id.not_in([64, 65, 78])
+                    ).all()
+                else:
+                    majors = Major.query.filter_by(faculty="Mathematics").filter(
+                        Major.id.in_(options[i])
+                    ).all()
+
+                # Associate the sequence with the majors
+                for m in majors:
+                    m.sequences.append(seq)
+                    db.session.add(m)
+                    db.session.flush()
+
+                # Add the sequence name to the success list
+                success.append(name)
+                print(f"Processed sequence: {name}")
+
+        # Commit all changes to the database
+        db.session.commit()
+
+    except Exception as e:
+        # Handle any errors that occur during processing
+        print("An error occurred during scraping.")
+        print(e)
+        errors.append(str(e))
+    finally:
+        # Ensure the WebDriver is closed properly
+        if driver:
+            print("Closing WebDriver...")
+            driver.quit()
+
+    return success, errors

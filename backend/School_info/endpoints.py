@@ -7,7 +7,7 @@ from .extraction import (
     extract_specializations,
     update_major_info,
 )
-from .selenium.sequence_scraper import scrape_sequences
+from .selenium.sequence_scraper import scrape_sequences, scrape_math
 from .selenium.major_scrapper import major_checking
 
 school_info_bp = Blueprint("school_info", __name__)
@@ -61,3 +61,7 @@ def count_majors():
     exists,dne = major_checking()
     return jsonify({"exists": exists, "dne": dne}), 200
 
+@school_info_bp.route("/extract_math_sequence", methods=["GET"])
+def extract_math_seq() -> tuple[str,int]:
+    scrape_math()
+    return "", 204

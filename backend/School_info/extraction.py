@@ -156,6 +156,3 @@ def extract_options() -> None:
         if not res[0]:
             errors.append((name, res[1]))
     print("errors: ", errors)
-
-def extract_major_for_spec():
-    pass

@@ -1,6 +1,6 @@
 import { useAuth } from "@/app/AuthProvider";
 
-function isExpired(exp?:string) {
+export function isExpired(exp?:string) {
     if (!exp) { return true }
     const prevTime = (new Date(exp)).getTime();
     const now = Date.now();
@@ -8,11 +8,11 @@ function isExpired(exp?:string) {
 }
 
 export function api() {
-    const { access, setAccess, exp, setExp, setUsername } = useAuth();
+    const { access, setAccess, exp, setExp, setUsername, clearAuth } = useAuth();
 
-    return async (input: RequestInfo, init:RequestInit = {}, check_protectioon:boolean = true) => {
+    return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true) => {
         let token = access;
-        if (check_protectioon) {
+        if (check_protection) {
             console.log(`expiration date: ${exp}`)
             if (isExpired(exp)) {
                 try {
@@ -31,11 +31,11 @@ export function api() {
                         setUsername(response.username);
                         token = response.Access_Token.token;
                     } else {
+                        clearAuth();
                         return res
                     }
                 } catch (err) {
-                    setAccess(undefined)
-                    setExp(undefined)
+                    clearAuth();
                     console.log("error in frontend")
                     return {"ok":false}
                 }

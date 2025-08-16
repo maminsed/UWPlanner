@@ -1,11 +1,11 @@
 import Landing from "@/components/Landing";
-import Navbar from "@/components/Navabar";
+import PublicNavbar from "@/components/PublicNavbar";
 
 export default function Home() {
-  return (
-    <section className="overflow-x-hidden">
-      <Navbar />
-      <Landing />
-    </section>
-  );
+    return (
+        <section className="overflow-x-hidden">
+            <PublicNavbar />
+            <Landing />
+        </section>
+    );
 }

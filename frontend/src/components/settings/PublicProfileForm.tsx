@@ -238,7 +238,7 @@ export function PublicProfileForm() {
                                 >
                                     <Select
                                         value={major}
-                                        onChange={(e: any) => {
+                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newMajors = [...majors];
                                             newMajors[index] = e.target.value;
                                             setMajors(newMajors);
@@ -281,7 +281,7 @@ export function PublicProfileForm() {
                                 >
                                     <Select
                                         value={minor}
-                                        onChange={(e: any) => {
+                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newMinors = [...minors];
                                             newMinors[index] = e.target.value;
                                             setMinors(newMinors);
@@ -327,7 +327,7 @@ export function PublicProfileForm() {
                                 >
                                     <Select
                                         value={spec}
-                                        onChange={(e: any) => {
+                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newSpec = [...specs];
                                             newSpec[index] = e.target.value;
                                             setSpecs(newSpec);

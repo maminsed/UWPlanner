@@ -59,7 +59,7 @@ export function PublicProfileForm() {
         setter([...fields, ""]);
     const removeField = (setter: React.Dispatch<React.SetStateAction<string[]>>, fields: string[], index: number) => () => {
         if (fields.length > 1) {
-            setter(fields.filter((_: any, i: any) => i !== index));
+            setter(fields.filter((_, i) => i !== index));
         }
     };
 
@@ -136,7 +136,7 @@ export function PublicProfileForm() {
                             </label>
                             <Textarea
                                 id="bio"
-                                placeholder="Mybio is wet"
+                                placeholder="Tell me about yourself..."
                             />
                         </div>
                     </div>
@@ -188,7 +188,7 @@ export function PublicProfileForm() {
                                 type="url"
                                 placeholder="https://example.com"
                                 value={social}
-                                onChange={(e: any) => {
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                     const newSocials = [...socials];
                                     newSocials[index] = e.target.value;
                                     setSocials(newSocials);
@@ -339,7 +339,7 @@ export function PublicProfileForm() {
                                         <option>
                                             Artificial Intelligence
                                         </option>
-                                        <option>Susi baka</option>
+                                        <option>Data Science</option>
                                     </Select>
                                     {specs.length > 1 && (
                                         <button

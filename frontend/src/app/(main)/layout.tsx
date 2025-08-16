@@ -5,7 +5,7 @@ import { useAuth } from "@/app/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { isExpired } from "@/lib/useApi";
-import PublicNavbar from "@/components/PublicNavbar";
+import LogedInNav from "@/components/LogedInNav";
 
 export default function MainLayout({
     children,
@@ -50,8 +50,8 @@ export default function MainLayout({
 
     return (
         <div>
-            <PublicNavbar />
-            <main>
+            <LogedInNav />
+            <main className="mt-20">
                 {children}
             </main>
         </div>

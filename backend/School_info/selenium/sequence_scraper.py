@@ -271,6 +271,7 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
     return success, errors
 
+#just ignore this one
 def scrape_eng():
     driver = None
     errors = []
@@ -332,7 +333,7 @@ def scrape_eng():
                     prevSeq.majors.append(major_obj)
                     db.session.add(prevSeq)
                     db.session.flush()
-                    existed.append((major_name, plan, prevSeq.name))
+                    existed.append((major_name, p, prevSeq.name))
                     print("updated")
                     continue
                 #if not create one
@@ -340,7 +341,7 @@ def scrape_eng():
                 newSeq.majors.append(major_obj)
                 db.session.add(newSeq)
                 db.session.flush()
-                created.append((major_name, plan, prevSeq))
+                created.append((major_name, p, newSeq))
                 print("created")
 
         db.session.commit()

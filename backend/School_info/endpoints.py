@@ -9,6 +9,7 @@ from .extraction import (
 )
 from .selenium.sequence_scraper import scrape_sequences, scrape_math
 from .selenium.major_scrapper import major_checking
+from .db_conn import update_sequence
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -42,6 +43,10 @@ def extract_specs_ep() -> tuple[str, int]:
     extract_specializations()
     return "", 204
 
+@school_info_bp.route("/update_seqs", methods=["GET"])
+def update_seqs() -> tuple[str, int]:
+    res = update_sequence()
+    return jsonify({"udpated": res}), 200
 
 @school_info_bp.route("/extract_sequences", methods=["GET"])
 def extract_sequences_ep() -> tuple[str, int]:

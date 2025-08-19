@@ -168,3 +168,26 @@ def add_option(name: str, link: str, field: str) -> tuple[bool, str]:
     db.session.add(option)
     db.session.commit()
     return True, f"{name}-Option added"
+
+def update_sequence() -> list[str]:
+    """Update eng sequence names."""
+    seqs = Sequence.query.all()
+    updated = []
+    for s in seqs:
+        if "engineering" in s.name.lower():
+            plan = s.plan.lower().split("-")
+            changed = False
+            if plan[1] == "coop":
+                s.name = "Stream_4_Eng"
+                updated.append(s.id)
+                changed = True
+            elif plan[1] == "study" and plan[2] == "coop":
+                s.name = "Stream_8_Eng"
+                updated.append(s.id)
+                changed = True
+            
+            if changed:
+                db.session.add(s)
+                db.session.flush()
+    db.session.commit()
+    return updated

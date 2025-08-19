@@ -52,7 +52,9 @@ def gmail_send_message(to: str, body: str, subject: str) -> Optional[dict]:
     """
     try:
         client_service = os.path.relpath(
-            os.path.abspath(os.path.join(__file__,"..", "..", "..", "client_secret.json"))
+            os.path.abspath(
+                os.path.join(__file__, "..", "..", "..", "client_secret.json")
+            )
         )
         print(
             f"Client Secret Path: {os.path.abspath(os.path.join(__file__, '..', '..', '..', 'client_secret.json'))}"

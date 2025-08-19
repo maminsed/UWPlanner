@@ -12,10 +12,10 @@ from .db_conn import (
 from .selenium.exctraction import extract_spec_page
 
 
-def extract_majors() -> dict[str:list[str]|str]:
+def extract_majors() -> dict[str : list[str] | str]:
     """Function to extract majors from uwaterloo website."""
     # Getting the url and setting up beautiful soup
-    URL = "https://uwaterloo.ca/future-students/programs/by-faculty" # noqa: N806
+    URL = "https://uwaterloo.ca/future-students/programs/by-faculty"  # noqa: N806
     try:
         page = requests.get(URL, timeout=10)
     except Exception:
@@ -55,15 +55,15 @@ def extract_majors() -> dict[str:list[str]|str]:
                     if not res[0]:
                         return False
 
-    return {"status": "True", "added":added}
+    return {"status": "True", "added": added}
 
 
 def update_major_info() -> None:
     """Function to update whether a major has a coop program or regular program."""
     errors = []
-    #Going through each major added
+    # Going through each major added
     for m in Major.query.all():
-        #Downloading the page and finding the coop info section.
+        # Downloading the page and finding the coop info section.
         try:
             page = requests.get(m.url, timeout=10)
         except Exception:
@@ -75,13 +75,13 @@ def update_major_info() -> None:
         ]
         soup = BeautifulSoup(page.content, "html.parser")
 
-        #If there is no coop section add it to the errors
+        # If there is no coop section add it to the errors
         coop_section = soup.find("section", class_=coop_section_class)
         if not coop_section:
             errors.append(m.name)
             continue
-        
-        #Gettting program information and updating it accordingly
+
+        # Gettting program information and updating it accordingly
         program_info_class = "uw-copy-text__wrapper"
         program_info = coop_section.find_all("div", class_=program_info_class)
         if not program_info:
@@ -92,24 +92,24 @@ def update_major_info() -> None:
         regular = (program_info[1].find("strong")).text.strip().lower() != "no"
         minor = (program_info[2].find("strong")).text.strip().lower() != "no"
 
-        #Updating coop information and printing the result
+        # Updating coop information and printing the result
         update_coop_info(m, coop, regular, minor)
         print(m.name, " is successful")
         print(coop, regular, minor)
-    #Printing the errors
+    # Printing the errors
     print("No coop section in: ", errors)
 
 
 def extract_minors() -> None:
     """Function to extract minors from uwaterloo website."""
-    URL = "https://uwaterloo.ca/future-students/programs/minors" # noqa: N806
+    URL = "https://uwaterloo.ca/future-students/programs/minors"  # noqa: N806
     page = requests.get(URL, timeout=10)
     soup = BeautifulSoup(page.content, "html.parser")
 
     minors_class = "block block-uw-custom-blocks block-uw-cbl-expand-collapse"
     all_minors = soup.find("div", class_=minors_class)
     errors = []
-    #Going through each minor and adding it to the database. If it causes and issue adding it to errors.
+    # Going through each minor and adding it to the database. If it causes and issue adding it to errors.
     for section in all_minors.find_all("details", class_="uw-details"):
         theme = section.find("h3").text
         for minor in section.find_all("a"):
@@ -117,34 +117,40 @@ def extract_minors() -> None:
             name = minor.text
             res = add_minor(name, theme, link)
 
-            #Printing the results for logging purposes.
+            # Printing the results for logging purposes.
             print(res)
             if not res[0]:
                 errors.append(name)
-    #Printing errors if any.
+    # Printing errors if any.
     print("errors: ", errors)
+
 
 def extract_specializations() -> None:
     """Function to extract Specializations. Uses the Selenium Version."""
-    specs = extract_spec_page("https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Specialization")
+    specs = extract_spec_page(
+        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Specialization"
+    )
 
     errors = []
-    for name,link,field in specs:
-        res = add_specialization(name,link,field)
+    for name, link, field in specs:
+        res = add_specialization(name, link, field)
         print(res)
         if not res[0]:
             errors.append((name, res[1]))
     print("errors: ", errors)
 
+
 def extract_options() -> None:
     """Function to extract Options. Uses the Selenium Version."""
-    options = extract_spec_page("https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Option")
+    options = extract_spec_page(
+        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs?searchTerm=Option"
+    )
 
-    errors= []
-    for name,link,field  in options:
+    errors = []
+    for name, link, field in options:
         if field.lower().find("faculty of") != -1:
             field = field.removeprefix("Options: Faculty of ")
-        res = add_option(name,link,field)
+        res = add_option(name, link, field)
         print(res)
 
         if not res[0]:

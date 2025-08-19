@@ -5,9 +5,7 @@ visits the URL associated with each major, and scrapes the course sequence table
 
 The script is designed to be run from the command line.
 """
-
-# import os
-# import sys
+import time
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -272,3 +270,89 @@ def scrape_math() -> tuple[list[str], list[str]]:
             driver.quit()
 
     return success, errors
+
+def scrape_eng():
+    driver = None
+    errors = []
+    existed = []
+    created = []
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service)
+        driver.get("https://uwaterloo.ca/engineering/undergraduate-students/co-op-experience/co-op-study-sequences")
+
+        time.sleep(1)
+        major_table = driver.find_element(By.CSS_SELECTOR, "section.uw-contained-width uw-section-spacing--default uw-section-separator--bottom uw-column-separator--between uw-section-alignment--top-align-content layout layout--uw-3-col even-split".replace(" ", "."))
+        #getting majors
+        for li in major_table.find_elements(By.TAG_NAME, "li"):
+            major = li.find_element(By.TAG_NAME, "a")
+            id = major.get_attribute("href").split("#")[1]
+            major_name = major.text.strip()
+            print(id, major_name)
+            tables = driver.find_element(By.ID, id).find_elements(By.TAG_NAME, "table")
+            #Getting plans 
+            plans = []
+            for table in tables:
+                plan = ""
+                cells = table.find_elements(By.TAG_NAME, "td")
+                #making sure theres 5 years of stuff
+                if (len(cells) != 15):
+                    errors.append(("cell count not match", major_name))
+                    continue
+                #creating the plan
+                for cell in cells:
+                    text = cell.text.lower()
+                    if "study" in text:
+                        plan+="Study-"
+                    elif "co-op" in text:
+                        plan+="Coop-"
+                    elif "-" in text:
+                        plan+="Off-"
+                    else:
+                        print("error occured! - No option?!")
+                        errors.append(("option not found", major_name))
+                print(plan[:-1])
+                plans.append(plan[:-1])
+            print(" ")
+
+            #adding it to major
+            major_obj = Major.query.filter_by(name=major_name).first()
+            if not major_obj:
+                errors.append(("major not found!", major_name))
+                continue
+            #deleting existing stuff
+            major_obj.sequences = []
+            db.session.add(major_obj)
+            db.session.flush()
+
+            for p in plans:
+                #finding if a seq with that plan exists:
+                prevSeq = Sequence.query.filter_by(plan=p).first()
+                if prevSeq:
+                    prevSeq.majors.append(major_obj)
+                    db.session.add(prevSeq)
+                    db.session.flush()
+                    existed.append((major_name, plan, prevSeq.name))
+                    print("updated")
+                    continue
+                #if not create one
+                newSeq = Sequence(name="nStream_Engineering", plan=p)
+                newSeq.majors.append(major_obj)
+                db.session.add(newSeq)
+                db.session.flush()
+                created.append((major_name, plan, prevSeq))
+                print("created")
+
+        db.session.commit()
+    except Exception as e:
+        print("Error occured!!", str(e))
+    finally:
+        print("errors: ", errors)
+        print("existed: ", existed)
+        print("created: ", created)
+        print(len(existed))
+        print(len(created))
+
+        if driver: driver.quit()
+        return errors, existed, created
+    

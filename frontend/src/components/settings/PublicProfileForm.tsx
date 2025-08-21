@@ -6,6 +6,8 @@ import { useAuth } from "@/app/AuthProvider";
 import { FiPlusCircle, FiXCircle } from "react-icons/fi";
 import { LuCamera, LuUser } from "react-icons/lu";
 
+import { api } from "@/lib/useApi";
+
 const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (
     <input
         {...props}
@@ -29,7 +31,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = ({ children, className, ...props }: ButtonProps) => (
     <button
         {...props}
-        className={`p-1 rounded-md font-medium ${className}`}
+        className={`p-1 rounded-md font-medium cursor-pointer ${className}`}
     >
         {children}
     </button>
@@ -50,18 +52,60 @@ const Select = ({ children, ...props }: SelectProps) => (
 
 export function PublicProfileForm() {
     const { profilePicture, setProfilePicture } = useAuth();
-    const [socials, setSocials] = useState([""]);
-    const [majors, setMajors] = useState([""]);
-    const [minors, setMinors] = useState([""]);
-    const [specs, setSpecs] = useState([""]);
+    const [username, setUsername] = useState<string>("hero");
+    const [email, setEmail] = useState<string>("");
+    const [bio, setBio] = useState<string>("");
+    const [socials, setSocials] = useState<string[]>([""]);
+    const [majors, setMajors] = useState<string[]>([""]);
+    const [minors, setMinors] = useState<string[]>([""]);
+    const [specs, setSpecs] = useState<string[]>([""]);
+    const backend = api();
+
+    const [loadingState, setLoadingState] = useState<string>("No Changes");
 
     const addField = (setter: React.Dispatch<React.SetStateAction<string[]>>, fields: string[]) => () =>
         setter([...fields, ""]);
     const removeField = (setter: React.Dispatch<React.SetStateAction<string[]>>, fields: string[], index: number) => () => {
         if (fields.length > 1) {
+            setLoadingState("Save Changes");
             setter(fields.filter((_, i) => i !== index));
         }
     };
+
+    async function handleSubmit() {
+        try {
+            if (loadingState == "Save Changes") {
+                setLoadingState("Loading...")
+                const res = await backend(
+                    `${process.env.NEXT_PUBLIC_API_URL}/update_info/update_all`,
+                    {
+                        method: "POST",
+                        body: JSON.stringify({
+                            "username": username,
+                            "email": email,
+                            "bio": bio,
+                            "profilePicture": profilePicture,
+                            "socials": socials,
+                            "majors": majors,
+                            "minors": minors,
+                            "specializations": specs,
+                        }),
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+
+                if (!res.ok) {
+                    alert("error occured, please check your information and try again")
+                } else {
+                    setLoadingState("Chagnes Saved")
+                }
+            }
+        } catch (err) { 
+            console.error(err)
+        }
+    }
 
     const handleProfilePictureChange = (
         e: React.ChangeEvent<HTMLInputElement>
@@ -85,9 +129,15 @@ export function PublicProfileForm() {
             reader.onloadend = () => {
                 setProfilePicture(reader.result as string);
             };
+            setLoadingState("Save Changes");
             reader.readAsDataURL(file);
         }
     };
+
+    function handleChange(e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>, setVal:(newval:string)=>void) {
+        setLoadingState("Save Changes");
+        setVal(e.target.value);
+    }
 
     return (
         <div className="space-y-8 md:ml-6" id="public_profile">
@@ -110,6 +160,8 @@ export function PublicProfileForm() {
                                 id="username"
                                 type="text"
                                 placeholder="example-name"
+                                onChange={(e)=>handleChange(e, setUsername)}
+                                value={username}
                             />
                         </div>
 
@@ -124,6 +176,8 @@ export function PublicProfileForm() {
                                 id="email"
                                 type="email"
                                 placeholder="example@gmail.com"
+                                onChange={(e)=>handleChange(e, setEmail)}
+                                value={email}
                             />
                         </div>
 
@@ -137,6 +191,8 @@ export function PublicProfileForm() {
                             <Textarea
                                 id="bio"
                                 placeholder="Tell me about yourself..."
+                                onChange={(e)=>handleChange(e, setBio)}
+                                value={bio}
                             />
                         </div>
                     </div>
@@ -191,6 +247,7 @@ export function PublicProfileForm() {
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                     const newSocials = [...socials];
                                     newSocials[index] = e.target.value;
+                                    setLoadingState("Save Changes");
                                     setSocials(newSocials);
                                 }}
                             />
@@ -241,6 +298,7 @@ export function PublicProfileForm() {
                                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newMajors = [...majors];
                                             newMajors[index] = e.target.value;
+                                            setLoadingState("Save Changes");
                                             setMajors(newMajors);
                                         }}
                                     >
@@ -284,6 +342,7 @@ export function PublicProfileForm() {
                                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newMinors = [...minors];
                                             newMinors[index] = e.target.value;
+                                            setLoadingState("Save Changes");
                                             setMinors(newMinors);
                                         }}
                                     >
@@ -330,6 +389,7 @@ export function PublicProfileForm() {
                                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                             const newSpec = [...specs];
                                             newSpec[index] = e.target.value;
+                                            setLoadingState("Save Changes");
                                             setSpecs(newSpec);
                                         }}
                                     >
@@ -368,11 +428,19 @@ export function PublicProfileForm() {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">
-                <Button className="bg-transparent border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150">
+                <Button style={loadingState == "Save Changes" ? 
+                    {} :  
+                    {backgroundColor:"#aba5a561", color: "oklch(55.2% 0.016 285.938)", borderWidth:"0", cursor:"not-allowed"}} 
+                    className="border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150">
                     Cancel
                 </Button>
-                <Button className="bg-dark-green text-white duration-150 px-3 hover:bg-[#2c464a]">
-                    Save Changes
+                <Button 
+                    onClick={handleSubmit} 
+                    style={loadingState == "Save Changes" ? 
+                    {} :  
+                    {backgroundColor:"#aba5a561", color: "oklch(55.2% 0.016 285.938)", borderColor:"oklch(70.4% 0.04 256.788)", cursor:"not-allowed"}} 
+                    className="bg-dark-green text-white duration-150 px-3 hover:bg-[#2c464a]">
+                    {loadingState}
                 </Button>
             </div>
         </div>

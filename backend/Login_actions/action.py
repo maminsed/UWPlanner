@@ -211,6 +211,28 @@ def add_sequence() -> tuple[str, int]:
         return jsonify({"message": "error in backend", "error": message}), 500
     return jsonify({"message": message}), status
 
+@update_info.route("/update_all", methods=["POST"])
+def update_all() -> tuple[str, int]:
+    return "", 204
+
+@update_info.route("/get_user_info", methods=["GET"])
+def get_all() -> tuple[str, int]:
+    print(g.username)
+    return jsonify({"username": g.username, 
+                    "email": "susi_back@gmail.com", 
+                    "bio": "this wet\n\nahh"}), 200
+
+"""
+     username,
+     email,
+     bio,
+     profilePicture,
+     socials,
+
+     majors,
+     minors,
+     specs,
+"""
 
 """
 Format:

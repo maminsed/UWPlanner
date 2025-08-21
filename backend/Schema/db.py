@@ -137,6 +137,9 @@ class Users(db.Model):
     coop: Mapped[bool] = mapped_column(
         db.Boolean(), default=True, server_default=text("True")
     )
+    bio: Mapped[str] = mapped_column(
+        db.String(), default="", nullable=False
+    )
 
 
 class JwtToken(db.Model):

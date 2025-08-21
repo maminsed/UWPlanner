@@ -115,7 +115,7 @@ class Users(db.Model):
         "Minor", back_populates="users", secondary=minor_user
     )
 
-    specialization: Mapped[list["Specialization"]] = relationship(
+    specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="students", secondary=specialization_student
     )
 
@@ -222,7 +222,7 @@ class Specialization(db.Model):
     )
     is_option: Mapped[bool] = mapped_column(server_default=text("FALSE"))
     students: Mapped[list["Users"]] = relationship(
-        "Users", back_populates="specialization", secondary=specialization_student
+        "Users", back_populates="specializations", secondary=specialization_student
     )
 
 

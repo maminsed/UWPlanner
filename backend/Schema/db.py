@@ -140,7 +140,16 @@ class Users(db.Model):
     bio: Mapped[str] = mapped_column(
         db.String(), default="", nullable=False
     )
+    links: Mapped[list["Link"]] = relationship("Link", back_populates="user", cascade="all, delete-orphan, save-update")
 
+class Link(db.Model):
+    __tablename__ = "link"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(db.String(), nullable=True)
+    user_id: Mapped[int] = mapped_column(
+        db.Integer, ForeignKey("users.id"), nullable=False
+    )
+    user: Mapped["Users"] = relationship("Users", back_populates="links")
 
 class JwtToken(db.Model):
     """The JwtToken table."""

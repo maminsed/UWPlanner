@@ -144,7 +144,7 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
         httponly=True,
         secure=True,
         samesite="None",
-    )  # PRODUCTION set: , secure=True, samesite=None
+    )  # TODO set: , secure=True, samesite=None
     return resp
 
 
@@ -308,7 +308,7 @@ def log_out() -> Response:
             )
             resp.delete_cookie(
                 "jwt", httponly=True, secure=True, samesite="None"
-            )  # PRODUCTION set: , secure=True, samesite=None
+            )  # TODO set: , secure=True, samesite=None
 
             return resp
         clean_up_jwt(jwt_db.user.username)
@@ -317,7 +317,7 @@ def log_out() -> Response:
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
         resp.delete_cookie(
             "jwt", httponly=True, secure=True, samesite="None"
-        )  # PRODUCTION set: , secure=True, samesite=None
+        )  # TODO set: , secure=True, samesite=None
         return resp
     except Exception as e:
         return make_response(

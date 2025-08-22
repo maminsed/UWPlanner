@@ -9,6 +9,7 @@ from .db import (
     Specialization,
     Users,
     db,
+    Link,
     migrate,
 )
 
@@ -20,6 +21,7 @@ __all__ = [
     "JwtToken",
     "Major",
     "Minor",
+    "Link",
     "Sequence",
     "Specialization",
 ]

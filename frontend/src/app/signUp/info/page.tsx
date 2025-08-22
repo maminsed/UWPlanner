@@ -83,7 +83,7 @@ export default function Info() {
                 <div className="mb-8"></div>
                 {dropIds.map(item => (
                     <div key={item[0]} className="flex items-center gap-2 justify-center">
-                        <DropDown className="mt-1" curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
+                        <DropDown classes={{mainDiv: "mt-1"}} curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
                         {((dropIds.length != 1 || blank_allowed) && !onlyOne) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
                     </div>
                 ))}

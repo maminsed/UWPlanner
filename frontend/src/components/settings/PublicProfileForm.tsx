@@ -79,28 +79,29 @@ export function PublicProfileForm() {
         }
     };
 
-    useEffect(()=>{
-        async function initialSetup() {
-            try {
-                const res = await backend(
-                    `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_info`,
-                )
+    async function initialSetup() {
+        try {
+            const res = await backend(
+                `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_info`,
+            )
 
-                if (!res.ok) {
-                    console.error("Error Occured - reload the page")
-                } else {
-                    const response = await (res as Response).json();
-                    setUsername(response.username);
-                    setEmail(response.email);
-                    setBio(response.bio);
-                    setMajors(response.majors);
-                    setMinors(response.minors);
-                    setSpecs(response.specializations);
-                }
-            } catch (err) {
-                console.error(err);
+            if (!res.ok) {
+                console.error("Error Occured - reload the page")
+            } else {
+                const response = await (res as Response).json();
+                setUsername(response.username);
+                setEmail(response.email);
+                setBio(response.bio);
+                setMajors(response.majors);
+                setMinors(response.minors);
+                setSpecs(response.specializations);
             }
+        } catch (err) {
+            console.error(err);
         }
+    }
+
+    useEffect(()=>{
 
         initialSetup();
     }, [])
@@ -461,11 +462,15 @@ export function PublicProfileForm() {
                 <Button style={loadingState == "Save Changes" ? 
                     {} :  
                     {backgroundColor:"#aba5a561", color: "oklch(55.2% 0.016 285.938)", borderWidth:"0", cursor:"not-allowed"}} 
-                    className="border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150">
+                    className="border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150"
+                    disabled={loadingState != "Save Changes"}
+                    onClick={()=>{if (loadingState == "Save Changes") initialSetup(); setLoadingState("No Changes")}}
+                >
                     Cancel
                 </Button>
                 <Button 
                     onClick={handleSubmit} 
+                    disabled={loadingState != "Save Changes"}
                     style={loadingState == "Save Changes" ? 
                     {} :  
                     {backgroundColor:"#aba5a561", color: "oklch(55.2% 0.016 285.938)", borderColor:"oklch(70.4% 0.04 256.788)", cursor:"not-allowed"}} 

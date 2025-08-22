@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from "react";
 import { FiSearch } from "react-icons/fi";
-import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import HoverEffect from "./HoverEffect";
 import { clsx } from "clsx";
@@ -31,43 +30,19 @@ interface DropDownType {
     setSelectedValue: (value:[string,string,number]|undefined)=>void;
     // classes
     classes?: DropDownClasses;
-    // The endpoint for update_info
-    curr: string;
+    // The List ordered by: [groupName, selectedValues]
+    options: [string,[string,string,number][]][];
 }
 
-export default function DropDown({classes = {}, curr, selectedValue, setSelectedValue}:DropDownType) {
+export default function DropDown({classes = {}, selectedValue, setSelectedValue, options}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
-    const [options, setOptions] = useState<[string,[string,string,number][]][]>([])
-    const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>([])
+    const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>(options)
     const search = useRef<HTMLInputElement>(null);
-    const backend = api();
     if (!classes?.dropDownColor) { 
         classes.dropDownColor = "bg-light-green";
     }
-    useEffect(()=> {
-        async function gettingData() {
-            try {
-                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
-                    method: "GET"
-                })
-
-                const response = await (res as Response).json().catch(()=>{})
-                if (!res.ok) {
-                    console.log("Error in Resposne")
-                    console.log(response)
-                    return 
-                }
-                setOptions(response.data)
-                setSearchResult(response.data)
-            } catch (err) {
-                console.log("Error: ")
-                console.log(err)
-            }
-        }
-
-        gettingData()
-    }, [curr])
+    useEffect(()=>{setSearchResult(options)}, [options])
 
     useEffect(()=>{
         const res:[string,[string,string,number][]][] = []

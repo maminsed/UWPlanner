@@ -38,18 +38,7 @@ const Button = ({ children, className, ...props }: ButtonProps) => (
     </button>
 );
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-    children: React.ReactNode;
-}
-
-const Select = ({ children, ...props }: SelectProps) => (
-    <select
-        {...props}
-        className="w-full p-2 max-w-80 border border-gray-300 rounded-md bg-transparent text-settings-text focus:ring-2 focus:ring-dark-green outline-none truncate"
-    >
-        {children}
-    </select>
-);
+type OptionType = [string,[string,string,number][]][];
 
 export function PublicProfileForm() {
     //user data
@@ -66,8 +55,10 @@ export function PublicProfileForm() {
     const backend = api();
     const [loadingState, setLoadingState] = useState<string>("No Changes");
     const [errorMessage, setErrorMessage] = useState<string|undefined>(undefined);
+    const [majorOptions, setMajorOptions] = useState<OptionType>([])
+    const [minorOptions, setMinorOptions] = useState<OptionType>([])
+    const [specOptions, setSpecOptions] = useState<OptionType>([])
     const {username: oldUserName, setUsername: setOldUserName, setAccess, setExp} = useAuth();
-    // Improve DropDown Efficiency
     // Add Start date and shi to settings
 
     const addField = (
@@ -81,6 +72,30 @@ export function PublicProfileForm() {
         setLoadingState("Save Changes");
         setter(fields.filter((_:any, i:number) => i !== index));
     };
+
+    async function initializeOptions() {
+        const lists = ["majors", "minors", "specializations"];
+        for (let i = 0; i < 3; ++i) {
+            try {
+                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${lists[i]}`, {
+                    method: "GET"
+                })
+    
+                const response = await res.json().catch(()=>{})
+                if (!res.ok) {
+                    console.log("Error in Resposne")
+                    console.log(response)
+                    return 
+                }
+                if (i == 0) setMajorOptions(response.data);
+                else if (i == 1) setMinorOptions(response.data);
+                else setSpecOptions(response.data);
+            } catch (err) {
+                console.log("Error: ")
+                console.log(err)
+            }
+        }
+    }
 
     async function initialSetup() {
         try {
@@ -98,6 +113,7 @@ export function PublicProfileForm() {
                 setMajors(response.majors);
                 setMinors(response.minors);
                 setSpecs(response.specializations);
+                initializeOptions();
             }
         } catch (err) {
             console.error(err);
@@ -342,7 +358,7 @@ export function PublicProfileForm() {
                                     className="flex items-center gap-2"
                                 >
                                     <DropDown 
-                                        curr="majors" 
+                                        options={majorOptions}
                                         classes={{
                                             mainDiv: "flex-1 min-w-0",
                                             searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 
@@ -387,7 +403,7 @@ export function PublicProfileForm() {
                                     className="flex items-center gap-2 max-w-80 w-full"
                                 >
                                     <DropDown 
-                                        curr="minors" 
+                                        options={minorOptions}
                                         classes={{
                                             mainDiv: "flex-1 min-w-0",
                                             searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 
@@ -430,7 +446,7 @@ export function PublicProfileForm() {
                                     className="flex items-center gap-2"
                                 >
                                     <DropDown 
-                                        curr="specializations" 
+                                        options={specOptions}
                                         classes={{
                                             mainDiv: "flex-1 min-w-0",
                                             searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 

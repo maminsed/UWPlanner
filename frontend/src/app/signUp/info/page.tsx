@@ -1,7 +1,7 @@
 'use client';
 import { LuCircleMinus, LuCirclePlus } from "react-icons/lu"
 import DropDown from "@/components/DropDown";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/useApi";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,7 @@ export default function Info() {
     const [nextId, setNextId] = useState<number>(1);
     const [dropIds, setDropIds] = useState<[number, [string,string,number]|undefined][]>([[0,undefined]]);
     const [message, setMessage] = useState<undefined|string>(undefined);
+    const [options, setOptions] = useState<[string,[string,string,number][]][]>([])
     const [order, setOrder] = useState<number>(0);
     const backend = api();
     const router = useRouter();
@@ -19,6 +20,29 @@ export default function Info() {
     const curr = ordering[order];
     const blank_allowed = order == 1 || order == 2;
     const onlyOne = order >= 3;
+
+    useEffect(()=>{
+        async function gettingData() {
+            try {
+                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
+                    method: "GET"
+                })
+
+                const response = await (res as Response).json().catch(()=>{})
+                if (!res.ok) {
+                    console.log("Error in Resposne")
+                    console.log(response)
+                    return 
+                }
+                setOptions(response.data)
+            } catch (err) {
+                console.log("Error: ")
+                console.log(err)
+            }
+        }
+
+        gettingData()
+    },[curr])
     
     async function handleNext() {
         setMessage("loading...")
@@ -83,7 +107,7 @@ export default function Info() {
                 <div className="mb-8"></div>
                 {dropIds.map(item => (
                     <div key={item[0]} className="flex items-center gap-2 justify-center">
-                        <DropDown classes={{mainDiv: "mt-1"}} curr={curr} selectedValue={item[1]} setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
+                        <DropDown classes={{mainDiv: "mt-1"}} selectedValue={item[1]} options={options}  setSelectedValue={(value)=>handleUpdate(item[0], value)}/>
                         {((dropIds.length != 1 || blank_allowed) && !onlyOne) && <LuCircleMinus className="cursor-pointer" onClick={()=>handleRemove(item[0])}/>}
                     </div>
                 ))}

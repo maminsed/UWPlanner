@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { InputHTMLAttributes } from "react";
 import { useAuth } from "@/app/AuthProvider";
 import { FiPlusCircle, FiXCircle } from "react-icons/fi";
 import { LuCamera, LuUser } from "react-icons/lu";
 
 import { api } from "@/lib/useApi";
+import DropDown from "../DropDown";
 
 const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (
     <input
@@ -44,34 +45,66 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 const Select = ({ children, ...props }: SelectProps) => (
     <select
         {...props}
-        className="w-full p-2 border border-gray-300 rounded-md bg-transparent text-settings-text focus:ring-2 focus:ring-dark-green outline-none"
+        className="w-full p-2 max-w-80 border border-gray-300 rounded-md bg-transparent text-settings-text focus:ring-2 focus:ring-dark-green outline-none truncate"
     >
         {children}
     </select>
 );
 
 export function PublicProfileForm() {
+    //user data
     const { profilePicture, setProfilePicture } = useAuth();
-    const [username, setUsername] = useState<string>("hero");
+    const [username, setUsername] = useState<string>("");
     const [email, setEmail] = useState<string>("");
     const [bio, setBio] = useState<string>("");
-    const [socials, setSocials] = useState<string[]>([""]);
-    const [majors, setMajors] = useState<string[]>([""]);
-    const [minors, setMinors] = useState<string[]>([""]);
-    const [specs, setSpecs] = useState<string[]>([""]);
+    const [links, setLinks] = useState<string[]>([""]);
+    const [majors, setMajors] = useState<([string,string,number]|undefined)[]>([]);
+    const [minors, setMinors] = useState<([string,string,number]|undefined)[]>([]);
+    const [specs, setSpecs] = useState<([string,string,number]|undefined)[]>([]);
+
+
     const backend = api();
 
     const [loadingState, setLoadingState] = useState<string>("No Changes");
 
-    const addField = (setter: React.Dispatch<React.SetStateAction<string[]>>, fields: string[]) => () =>
-        setter([...fields, ""]);
-    const removeField = (setter: React.Dispatch<React.SetStateAction<string[]>>, fields: string[], index: number) => () => {
+    const addField = (
+        setter: React.Dispatch<React.SetStateAction<any>>, 
+        fields: any, 
+        added:string|undefined=undefined) => () =>
+        setter([...fields, added]);
+    const removeField = (setter: React.Dispatch<React.SetStateAction<any>>, fields: any, index: number) => () => {
         if (fields.length > 1) {
             setLoadingState("Save Changes");
-            setter(fields.filter((_, i) => i !== index));
+            setter(fields.filter((_:any, i:number) => i !== index));
         }
     };
 
+    useEffect(()=>{
+        async function initialSetup() {
+            try {
+                const res = await backend(
+                    `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_info`,
+                )
+
+                if (!res.ok) {
+                    console.error("Error Occured - reload the page")
+                } else {
+                    const response = await (res as Response).json();
+                    setUsername(response.username);
+                    setEmail(response.email);
+                    setBio(response.bio);
+                    setMajors(response.majors);
+                    setMinors(response.minors);
+                    setSpecs(response.specializations);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        initialSetup();
+    }, [])
+    
     async function handleSubmit() {
         try {
             if (loadingState == "Save Changes") {
@@ -85,7 +118,7 @@ export function PublicProfileForm() {
                             "email": email,
                             "bio": bio,
                             "profilePicture": profilePicture,
-                            "socials": socials,
+                            "links": links,
                             "majors": majors,
                             "minors": minors,
                             "specializations": specs,
@@ -148,11 +181,11 @@ export function PublicProfileForm() {
             <div className="grid grid-cols-1 gap-2 py-4">
                 <div className="flex flex-col-reverse xs:flex-row xs:gap-8 sm:gap-20 lg:gap-30">
 
-                    <div className="gap-4 flex flex-col">
+                    <div className="gap-4 flex flex-col max-w-80">
                         <div>
                             <label
                                 htmlFor="username"
-                                className="block text-sm font-medium mb-1 sm:w-60 md:w-80"
+                                className="block text-sm font-medium mb-1 sm:max-w-80 sm:min-w-70"
                             >
                                 Username
                             </label>
@@ -229,33 +262,33 @@ export function PublicProfileForm() {
                 </div>
             </div>
 
-            {/* Socials Section */}
+            {/* links Section */}
             <div className="grid grid-cols-1 gap-2 py-8">
-                <div className="md:col-span-1">
-                    <h3 className="text-lg font-medium">Socials</h3>
+                <div className="sm:col-span-1">
+                    <h3 className="text-lg font-medium">links</h3>
                     {/* <p className="mt-1 text-sm text-gray-500">
-                        Add your social media links.
+                        Add your link media links.
                     </p> */}
                 </div>
                 <div className="md:col-span-2 space-y-3 mt-2">
-                    {socials.map((social, index) => (
+                    {links.map((link, index) => (
                         <div key={index} className="flex items-center gap-2 max-w-80">
                             <Input
                                 type="url"
                                 placeholder="https://example.com"
-                                value={social}
+                                value={link}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    const newSocials = [...socials];
-                                    newSocials[index] = e.target.value;
+                                    const newlinks = [...links];
+                                    newlinks[index] = e.target.value;
                                     setLoadingState("Save Changes");
-                                    setSocials(newSocials);
+                                    setLinks(newlinks);
                                 }}
                             />
-                            {socials.length > 1 && (
+                            {links.length > 1 && (
                                 <button
                                     onClick={removeField(
-                                        setSocials,
-                                        socials,
+                                        setLinks,
+                                        links,
                                         index
                                     )}
                                     className="text-red-500 hover:text-red-700"
@@ -266,10 +299,10 @@ export function PublicProfileForm() {
                         </div>
                     ))}
                     <Button
-                        onClick={addField(setSocials, socials)}
+                        onClick={addField(setLinks, links, "")}
                         className="text-dark-green hover:text-blue-500 duration-150 flex py-3 items-center gap-2"
                     >
-                        <FiPlusCircle size={20} /> Add Social
+                        <FiPlusCircle size={20} /> Add Link
                     </Button>
                 </div>
             </div>
@@ -293,20 +326,21 @@ export function PublicProfileForm() {
                                     key={index}
                                     className="flex items-center gap-2"
                                 >
-                                    <Select
-                                        value={major}
-                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                            const newMajors = [...majors];
-                                            newMajors[index] = e.target.value;
+                                    <DropDown 
+                                        curr="majors" 
+                                        classes={{
+                                            mainDiv: "flex-1 min-w-0",
+                                            searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 
+                                            optionBox:"w-full border-1 border-dark-green",
+                                        }}
+                                        selectedValue={major}
+                                        setSelectedValue={(e) => {
                                             setLoadingState("Save Changes");
+                                            const newMajors = [...majors];
+                                            newMajors[index] = e;
                                             setMajors(newMajors);
                                         }}
-                                    >
-                                        {/* These would be populated from an API */}
-                                        <option>Select a Major</option>
-                                        <option>Computer Science</option>
-                                        <option>Software Engineering</option>
-                                    </Select>
+                                    />
                                     {majors.length > 1 && (
                                         <button
                                             onClick={removeField(
@@ -322,38 +356,36 @@ export function PublicProfileForm() {
                                 </div>
                             ))}
                             <Button
-                                onClick={addField(setMajors, majors)}
+                                onClick={addField(setMajors, majors, undefined)}
                                 className="text-dark-green flex items-center gap-2"
                             >
                                 <FiPlusCircle size={20} />
                             </Button>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 max-w-80">
                             <label className="block text-sm font-medium">
                                 Minor
                             </label>
                             {minors.map((minor, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-center gap-2"
+                                    className="flex items-center gap-2 max-w-80 w-full"
                                 >
-                                    <Select
-                                        value={minor}
-                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                            const newMinors = [...minors];
-                                            newMinors[index] = e.target.value;
+                                    <DropDown 
+                                        curr="minors" 
+                                        classes={{
+                                            mainDiv: "flex-1 min-w-0",
+                                            searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 
+                                            optionBox:"w-full border-1 border-dark-green",
+                                        }}
+                                        selectedValue={minor}
+                                        setSelectedValue={(e) => {
                                             setLoadingState("Save Changes");
+                                            const newMinors = [...minors];
+                                            newMinors[index] = e;
                                             setMinors(newMinors);
                                         }}
-                                    >
-                                        <option>Select a Minor</option>
-                                        <option>None</option>
-                                        {/* TODO: Add minors from DB */}
-                                        <option>
-                                            Combinatorics and Optimization
-                                        </option>
-                                        <option>Statistics</option>
-                                    </Select>
+                                    />
                                     {minors.length > 1 && (
                                         <button
                                             onClick={removeField(
@@ -384,23 +416,21 @@ export function PublicProfileForm() {
                                     key={index}
                                     className="flex items-center gap-2"
                                 >
-                                    <Select
-                                        value={spec}
-                                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                                            const newSpec = [...specs];
-                                            newSpec[index] = e.target.value;
-                                            setLoadingState("Save Changes");
-                                            setSpecs(newSpec);
+                                    <DropDown 
+                                        curr="specializations" 
+                                        classes={{
+                                            mainDiv: "flex-1 min-w-0",
+                                            searchBar:"w-full border-1 py-2 pl-2 border-gray-300", 
+                                            optionBox:"w-full border-1 border-dark-green",
                                         }}
-                                    >
-                                        <option>Select a Specialization</option>
-                                        <option>None</option>
-                                        {/* TODO: Add minors from DB */}
-                                        <option>
-                                            Artificial Intelligence
-                                        </option>
-                                        <option>Data Science</option>
-                                    </Select>
+                                        selectedValue={spec}
+                                        setSelectedValue={(e) => {
+                                            setLoadingState("Save Changes");
+                                            const newSpecs = [...specs];
+                                            newSpecs[index] = e;
+                                            setSpecs(newSpecs);
+                                        }}
+                                    />
                                     {specs.length > 1 && (
                                         <button
                                             onClick={removeField(

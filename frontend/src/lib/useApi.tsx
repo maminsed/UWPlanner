@@ -10,7 +10,7 @@ export function isExpired(exp?:string) {
 export function api() {
     const { access, setAccess, exp, setExp, setUsername, clearAuth } = useAuth();
 
-    return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true) => {
+    return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true): Promise<Response> => {
         let token = access;
         if (check_protection) {
             console.log(`expiration date: ${exp}`)
@@ -37,7 +37,12 @@ export function api() {
                 } catch (err) {
                     clearAuth();
                     console.log("error in frontend")
-                    return {"ok":false}
+                    return new Response(
+                        JSON.stringify({ ok: false }),
+                    {
+                        headers: { "Content-Type": "application/json" }
+                    }
+                    );
                 }
             }
 

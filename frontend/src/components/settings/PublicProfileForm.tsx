@@ -73,8 +73,9 @@ export function PublicProfileForm() {
     const addField = (
         setter: React.Dispatch<React.SetStateAction<any>>, 
         fields: any, 
-        added:string|undefined=undefined) => () =>
-        setter([...fields, added]);
+        added:string|undefined=undefined) => () =>{
+            setLoadingState("Save Changes")
+        setter([...fields, added]);}
     
     const removeField = (setter: React.Dispatch<React.SetStateAction<any>>, fields: any, index: number) => () => {
         setLoadingState("Save Changes");
@@ -109,6 +110,7 @@ export function PublicProfileForm() {
     }, [])
     
     async function handleSubmit() {
+        setErrorMessage(undefined)
         try {
             if (loadingState == "Save Changes") {
                 setLoadingState("Loading...")
@@ -464,9 +466,9 @@ export function PublicProfileForm() {
                     </div>
                 </div>
             </div>
-
+            <p className="mt-4 mb-3 text-red-600">{errorMessage}</p>
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4 pt-8">
+            <div className="flex justify-end gap-4">
                 <Button style={loadingState == "Save Changes" ? 
                     {} :  
                     {backgroundColor:"#aba5a561", color: "oklch(55.2% 0.016 285.938)", borderWidth:"0", cursor:"not-allowed"}} 

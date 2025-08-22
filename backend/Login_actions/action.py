@@ -246,6 +246,7 @@ def get_all() -> tuple[str, int]:
     return jsonify({"username": g.username, 
                     "email": user.email, 
                     "bio": user.bio,
+                    "links": [l.url for l in user.links],
                     "socials": socials,
                     "majors": majors,
                     "minors": minors,

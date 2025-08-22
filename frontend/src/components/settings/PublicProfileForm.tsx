@@ -59,7 +59,6 @@ export function PublicProfileForm() {
     const [minorOptions, setMinorOptions] = useState<OptionType>([])
     const [specOptions, setSpecOptions] = useState<OptionType>([])
     const {username: oldUserName, setUsername: setOldUserName, setAccess, setExp} = useAuth();
-    // Add Start date and shi to settings
 
     const addField = (
         setter: React.Dispatch<React.SetStateAction<any>>, 
@@ -113,6 +112,7 @@ export function PublicProfileForm() {
                 setMajors(response.majors);
                 setMinors(response.minors);
                 setSpecs(response.specializations);
+                setLinks(response.links);
                 initializeOptions();
             }
         } catch (err) {
@@ -341,7 +341,7 @@ export function PublicProfileForm() {
             {/* Academics Section */}
             <div className="grid grid-cols-1 gap-6 py-4">
                 <div className="md:col-span-1">
-                    <h3 className="text-lg font-medium">Academics</h3>
+                    <h3 id="academics" className="text-lg font-medium">Academics</h3>
                     {/* <p className="mt-1 text-sm text-gray-500">
                         Specify your academic details.
                     </p> */}

@@ -58,25 +58,27 @@ export function PublicProfileForm() {
     const [email, setEmail] = useState<string>("");
     const [bio, setBio] = useState<string>("");
     const [links, setLinks] = useState<string[]>([""]);
+
     const [majors, setMajors] = useState<([string,string,number]|undefined)[]>([]);
     const [minors, setMinors] = useState<([string,string,number]|undefined)[]>([]);
     const [specs, setSpecs] = useState<([string,string,number]|undefined)[]>([]);
 
-
     const backend = api();
-
     const [loadingState, setLoadingState] = useState<string>("No Changes");
+    const [errorMessage, setErrorMessage] = useState<string|undefined>(undefined);
+    const {username: oldUserName, setUsername: setOldUserName, setAccess, setExp} = useAuth();
+    // Improve DropDown Efficiency
+    // Add Start date and shi to settings
 
     const addField = (
         setter: React.Dispatch<React.SetStateAction<any>>, 
         fields: any, 
         added:string|undefined=undefined) => () =>
         setter([...fields, added]);
+    
     const removeField = (setter: React.Dispatch<React.SetStateAction<any>>, fields: any, index: number) => () => {
-        if (fields.length > 1) {
-            setLoadingState("Save Changes");
-            setter(fields.filter((_:any, i:number) => i !== index));
-        }
+        setLoadingState("Save Changes");
+        setter(fields.filter((_:any, i:number) => i !== index));
     };
 
     async function initialSetup() {
@@ -129,11 +131,21 @@ export function PublicProfileForm() {
                         },
                     }
                 );
-
+                const response = await res.json().catch(()=>{})
                 if (!res.ok) {
-                    alert("error occured, please check your information and try again")
+                    if (response.message) {
+                        setErrorMessage(response.message);
+                    } else {
+                        alert("error occured, please check your information and try again")
+                    }
                 } else {
-                    setLoadingState("Chagnes Saved")
+                    setLoadingState("Chagnes Saved");
+                    // Checking if the username changed:
+                    if (oldUserName != username) {
+                        setAccess(response.Access_Token.token);
+                        setExp(response.Access_Token.exp);
+                        setOldUserName(response.username);
+                    }
                 }
             }
         } catch (err) { 
@@ -387,18 +399,16 @@ export function PublicProfileForm() {
                                             setMinors(newMinors);
                                         }}
                                     />
-                                    {minors.length > 1 && (
-                                        <button
-                                            onClick={removeField(
-                                                setMinors,
-                                                minors,
-                                                index
-                                            )}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <FiXCircle size={20} />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={removeField(
+                                            setMinors,
+                                            minors,
+                                            index
+                                        )}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        <FiXCircle size={20} />
+                                    </button>
                                 </div>
                             ))}
                             <Button
@@ -432,18 +442,16 @@ export function PublicProfileForm() {
                                             setSpecs(newSpecs);
                                         }}
                                     />
-                                    {specs.length > 1 && (
-                                        <button
-                                            onClick={removeField(
-                                                setSpecs,
-                                                specs,
-                                                index
-                                            )}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <FiXCircle size={20} />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={removeField(
+                                            setSpecs,
+                                            specs,
+                                            index
+                                        )}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        <FiXCircle size={20} />
+                                    </button>
                                 </div>
                             ))}
                             <Button

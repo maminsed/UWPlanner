@@ -2,7 +2,7 @@
 import { PublicProfileForm } from "@/components/settings/PublicProfileForm";
 import { SecuritySettings } from "@/components/settings/SecuritySettings";
 import { DiscussionsSettings } from "@/components/settings/DiscussionsSettings";
-import { CoursesSettings } from "@/components/settings/CoursesSettings";
+import { SequenceSettings } from "@/components/settings/SequenceSettings";
 import { ReportingSettings } from "@/components/settings/ReportingSettings";
 import Link from "next/link";
 
@@ -25,7 +25,7 @@ export default function SettingsPage() {
             case "Discussions":
                 return <DiscussionsSettings key={key}/>;
             case "Courses":
-                return <CoursesSettings key={key}/>;
+                return <SequenceSettings key={key}/>;
             case "Reporting":
                 return <ReportingSettings key={key}/>;
             default:
@@ -35,12 +35,13 @@ export default function SettingsPage() {
 
     return (
         <div className="px-2 flex gap-3">
-            <section className="hidden sm:block shrink-0 text-[15px] box-content py-3 md:px-6 lg:pl-8 border-r-dark-green border-r-2">
+            <section className="hidden sm:block shrink-0 text-[15px] box-content mb-30 py-3 pr-4 md:px-6 lg:pl-8 border-r-dark-green border-r-2">
                 <div className="flex flex-col gap-1 sticky top-0 pt-2">
                     <Link href="#public_profile" >Public Profile</Link>
+                    <Link href="#academics" >Academics</Link>
                     <Link href="#security" >Security</Link>
                     <Link href="#discussions" >My Discussions</Link>
-                    <Link href="#courses" >Courses</Link>
+                    <Link href="#sequence" >Sequence</Link>
                     <Link href="#report" >Report an Issue</Link>
                 </div>
             </section>

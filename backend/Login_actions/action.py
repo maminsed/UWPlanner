@@ -6,7 +6,7 @@ from flask import Blueprint, g, jsonify, make_response, request
 from backend.Auth import verify as verify_jwt
 from backend.Schema import Major, Minor, Sequence, Specialization, Users, db
 
-from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_seq, enrol_to_spec
+from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
 update_info = Blueprint("UpdateInfo", __name__)
 
@@ -47,12 +47,12 @@ def add_majors() -> tuple[str, int]:
             return jsonify({"message": "You have duplicate majors."}), 400
         visited.add(m[2])
 
-    for id in visited:
-        status, message = enrol_to_major(id, username)
-        if status == 500:
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
+    status, message = enrol_to_majors(visited, username)
+    print(message)
+    if status == 500:
+        return jsonify({"message": "error in backend", "error": message}), status
+    if status >= 400 and status <= 500:
+        return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
 
 
@@ -85,12 +85,13 @@ def add_minor() -> tuple[str, int]:
             return jsonify({"message": "You have duplicate minors."}), 400
         visited.add(m[2])
 
-    for id in visited:
-        status, message = enrol_to_minor(id, username)
-        if status == 500:
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
+    
+    status, message = enrol_to_minors(visited, username)
+    print(message)
+    if status == 500:
+        return jsonify({"message": "error in backend", "error": message}), status
+    if status >= 400 and status <= 500:
+        return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
 
 
@@ -136,13 +137,15 @@ def add_specializations() -> tuple[str, int]:
             return jsonify({"message": "You have duplicate specializations."}), 400
         visited.add(s[2])
 
-    for id in visited:
-        status, message = enrol_to_spec(id, username)
-        if status == 500:
-            print(message)
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
+
+    
+    status, message = enrol_to_specs(visited, username)
+    print(message)
+    if status == 500:
+        print(message)
+        return jsonify({"message": "error in backend", "error": message}), status
+    if status >= 400 and status <= 500:
+        return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
 
 
@@ -213,25 +216,39 @@ def add_sequence() -> tuple[str, int]:
 
 @update_info.route("/update_all", methods=["POST"])
 def update_all() -> tuple[str, int]:
+    data = request.get_json()
+    print(data)
+    user = Users.query.filter_by(username=g.username).first()
+
     return "", 204
 
 @update_info.route("/get_user_info", methods=["GET"])
 def get_all() -> tuple[str, int]:
-    print(g.username)
+    user = Users.query.filter_by(username=g.username).first()
+    socials = [l.url for l in user.links]
+    majors = [[m.name,m.name, m.id] for m in user.majors]
+    minors = [[m.name,m.name, m.id] for m in user.minors]
+    specs = [[m.name, m.name, m.id] for m in user.specializations]
     return jsonify({"username": g.username, 
-                    "email": "susi_back@gmail.com", 
-                    "bio": "this wet\n\nahh"}), 200
+                    "email": user.email, 
+                    "bio": user.bio,
+                    "socials": socials,
+                    "majors": majors,
+                    "minors": minors,
+                    "specializations": specs}), 200
+
+
 
 """
      username,
      email,
      bio,
      profilePicture,
+     
      socials,
-
      majors,
      minors,
-     specs,
+     specializations,
 """
 
 """

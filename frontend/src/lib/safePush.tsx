@@ -9,12 +9,12 @@ export default function useSafeRouter() {
     const lastPushed = useRef<string|null>(null);
 
 
-    const current = pathName + (searchParams?.toString() ? `${searchParams}` : "")
+    const current = pathName + (searchParams?.toString() ? `?${searchParams}` : "")
     return useCallback(
     (url:string) => {
         if (lastPushed.current === current) return;
         if (lastPushed.current === url) return;
         lastPushed.current = url;
         router.push(url);
-    }, [router])
+    }, [router, current])
 }

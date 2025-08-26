@@ -125,9 +125,18 @@ export function PublicProfileForm() {
     }
 
     useEffect(()=>{
-
         initialSetup();
     }, [])
+
+    useEffect(()=>{
+        function handleBeforeUnload(e: BeforeUnloadEvent) {
+            if (loadingState == "Save Changes") {
+                e.preventDefault()
+            }
+        }
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    },[loadingState])
     
     async function handleSubmit() {
         setErrorMessage(undefined)

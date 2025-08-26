@@ -8,6 +8,7 @@ import { LuCamera, LuUser } from "react-icons/lu";
 
 import { api } from "@/lib/useApi";
 import DropDown from "../DropDown";
+import { useRouter } from "next/navigation";
 
 const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (
     <input
@@ -44,6 +45,7 @@ export function PublicProfileForm() {
     //user data
     const { profilePicture, setProfilePicture } = useAuth();
     const [username, setUsername] = useState<string>("");
+    const [prevEmail, setPrevEmail] = useState<string>("");
     const [email, setEmail] = useState<string>("");
     const [bio, setBio] = useState<string>("");
     const [links, setLinks] = useState<string[]>([""]);
@@ -53,6 +55,7 @@ export function PublicProfileForm() {
     const [specs, setSpecs] = useState<([string,string,number]|undefined)[]>([]);
 
     const backend = api();
+    const router = useRouter();
     const [loadingState, setLoadingState] = useState<string>("No Changes");
     const [errorMessage, setErrorMessage] = useState<string|undefined>(undefined);
     const [majorOptions, setMajorOptions] = useState<OptionType>([])
@@ -108,6 +111,7 @@ export function PublicProfileForm() {
                 const response = await (res as Response).json();
                 setUsername(response.username);
                 setEmail(response.email);
+                setPrevEmail(response.email);
                 setBio(response.bio);
                 setMajors(response.majors);
                 setMinors(response.minors);
@@ -163,6 +167,9 @@ export function PublicProfileForm() {
                         setAccess(response.Access_Token.token);
                         setExp(response.Access_Token.exp);
                         setOldUserName(response.username);
+                    }
+                    if (prevEmail != email) {
+                        router.push("/verify");
                     }
                 }
             }

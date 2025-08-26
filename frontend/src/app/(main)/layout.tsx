@@ -14,7 +14,6 @@ export default function MainLayout({
 }) {
     const router = useRouter();
     const { setAccess, exp, setExp, setUsername, clearAuth } = useAuth();
-
     useEffect(() => {
         // Checking if backend allows you to move, if not remove
         async function verify_jwt() {
@@ -29,7 +28,7 @@ export default function MainLayout({
                     })
 
                     if (res.ok) {
-                        const response = await res.json();
+                        const response = await res.json().catch(()=>{});
                         setAccess(response.Access_Token.token);
                         setExp(response.Access_Token.exp);
                         setUsername(response.username);

@@ -86,6 +86,8 @@ export default function Verify() {
                 setError("code", {
                     message: res.message || "error",
                 });
+            } else if (res.action) {
+                router.push("/test")
             } else {
                 console.log("Congrats: "+res.message)
                 router.push('/signUp/info')

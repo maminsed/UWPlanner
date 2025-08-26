@@ -132,13 +132,16 @@ class Users(db.Model):
         db.Integer, default=datetime.now().year, server_default=text("2024")
     )
     started_month: Mapped[int] = mapped_column(
-        db.Integer, default=9, server_default=text("9")
+        db.Integer, default=1
     )
     coop: Mapped[bool] = mapped_column(
-        db.Boolean(), default=True, server_default=text("True")
+        db.Boolean(), default=True
     )
     bio: Mapped[str] = mapped_column(
         db.String(), default="", nullable=False
+    )
+    path: Mapped[str] = mapped_column(
+        db.String(), default="", server_default=""
     )
     links: Mapped[list["Link"]] = relationship("Link", back_populates="user", cascade="all, delete-orphan, save-update")
 

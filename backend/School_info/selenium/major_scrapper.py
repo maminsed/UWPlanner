@@ -9,6 +9,7 @@ from backend.Schema import Major
 
 
 def major_checking():
+    """Function that checks if all the majors have valid urls"""
     print("initializing webdriver...")
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)

@@ -284,7 +284,8 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
 
 # just ignore this one
-def scrape_eng():
+def scrape_eng() -> tuple[list[tuple[str,str]],list,list]:
+    """Function to scrape engineering sequences."""
     driver = None
     errors = []
     existed = []
@@ -347,20 +348,20 @@ def scrape_eng():
 
             for p in plans:
                 # finding if a seq with that plan exists:
-                prevSeq = Sequence.query.filter_by(plan=p).first()
-                if prevSeq:
-                    prevSeq.majors.append(major_obj)
-                    db.session.add(prevSeq)
+                prev_seq = Sequence.query.filter_by(plan=p).first()
+                if prev_seq:
+                    prev_seq.majors.append(major_obj)
+                    db.session.add(prev_seq)
                     db.session.flush()
-                    existed.append((major_name, p, prevSeq.name))
+                    existed.append((major_name, p, prev_seq.name))
                     print("updated")
                     continue
                 # if not create one
-                newSeq = Sequence(name="nStream_Engineering", plan=p)
-                newSeq.majors.append(major_obj)
-                db.session.add(newSeq)
+                new_seq = Sequence(name="nStream_Engineering", plan=p)
+                new_seq.majors.append(major_obj)
+                db.session.add(new_seq)
                 db.session.flush()
-                created.append((major_name, p, newSeq))
+                created.append((major_name, p, new_seq))
                 print("created")
 
         db.session.commit()
@@ -375,4 +376,4 @@ def scrape_eng():
 
         if driver:
             driver.quit()
-        return errors, existed, created
+    return errors, existed, created

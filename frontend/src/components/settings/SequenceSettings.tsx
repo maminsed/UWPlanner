@@ -1,6 +1,52 @@
+'use client';
 import { MdArrowBackIosNew } from "react-icons/md";
+import { Fragment, useEffect, useState } from "react";
+import { api } from "@/lib/useApi";
+import clsx from "clsx";
+
+function groupK<T>(path: T[], k: number = 3): T[][] {
+    const res: T[][] = []
+    for (let j = 0; j < path.length; ++j) {
+        if (j % k == 0) {
+            res.push([])
+        }
+        res[res.length-1].push(path[j]);
+    }
+    return res;
+}
 
 export function SequenceSettings() {
+    const backend = api();
+    const [currentSem, setCurrentSem] = useState<number>(0);
+    const [seq, setSeq] = useState<string>("");
+    const [startedYear, setStartedYear] = useState<string>("");
+    const [startedSem, setStartedSem] = useState<string>("");
+    const [gradYear, setGradYear] = useState<string>("");
+    const [coop, setCoop] = useState<boolean>(false);
+    const [path, setPath] = useState<string[]>([]);
+
+    useEffect(()=>{
+        async function handleInitial() {
+            const res = await backend(
+                `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_seq`
+            )
+            const response = await res.json().catch(()=>{});
+            if (!res.ok) {
+                console.error("error occured - please reload");
+            } else {
+                setCurrentSem(response.current_sem);
+                setSeq(response.sequence);
+                setStartedYear(response.started_year);
+                setStartedSem(response.started_sem);
+                setGradYear(response.grad_year);
+                setCoop(response.coop);
+                setPath(response.path);
+            }
+        }
+
+        handleInitial();
+    },[])
+
     return (
         <div id="courses">
             <h2 className="text-xl font-medium text-palette-rich-teal mt-10">
@@ -12,12 +58,13 @@ export function SequenceSettings() {
                     <p className="text-lg">
                         Current Semester
                     </p>
-                    <select className="border-1 rounded-md min-w-20">
+                    <select className="border-1 rounded-md min-w-20" onChange={(e)=>{setCurrentSem(parseInt(e.target.value))}} value={currentSem}>
                     {/* TODO: ADD API */}
-                        <option>1A</option>
-                        <option>1B</option>
-                        <option>WT1</option>
-                        <option>2A</option>
+                        {path.map((sem,i) => (
+                            <option key={i} value={i}>
+                                {sem}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
@@ -25,12 +72,13 @@ export function SequenceSettings() {
                     <p className="text-lg">
                         Sequence
                     </p>
-                    <select className="border-1 rounded-md min-w-20">
+                    <select className="border-1 rounded-md min-w-20" value={seq} onChange={(e)=>{setSeq(e.target.value)}}>
                     {/* TODO: ADD API */}
-                        <option>SEQ1</option>
-                        <option>SEQ2</option>
-                        <option>SEQ3</option>
-                        <option>SEQ4</option>
+                        <option>SEQ 1</option>
+                        <option>SEQ 2</option>
+                        <option>SEQ 3</option>
+                        <option>SEQ 4</option>
+                        <option>Stream1_Arts</option>
                     </select>
                 </div>
                 
@@ -38,49 +86,53 @@ export function SequenceSettings() {
                     <p className="text-lg">
                         Started Year
                     </p>
-                    <p>2024</p>
+                    <p>{startedYear}</p>
                 </div>
 
                 <div className="flex flex-row justify-between">
                     <p className="text-lg">
                         Started Semester
                     </p>
-                    <p>Fall</p>
+                    <p>{startedSem}</p>
                 </div>
             
                 <div className="flex flex-row justify-between">
                     <p className="text-lg">
                         Graduation Year
                     </p>
-                    <p>2029</p>
+                    <p>{gradYear}</p>
                 </div>
 
                 <div className="flex flex-row justify-between">
                     <p className="text-lg">
                         Coop?
                     </p>
-                    <input type="checkbox" className="w-4 rounded-full accent-dark-green "/>
+                    <input 
+                        type="checkbox" 
+                        className="w-4 rounded-full accent-dark-green " 
+                        checked={coop} 
+                        onChange={(e)=>{setCoop(e.target.checked)}}/>
                 </div>
 
                 <div>
                     <p className="text-lg">
                         Path
                     </p>
-                    <div className="flex flex-row justify-between align-middle mt-2 max-w-60">
-                        <div className="w-11 aspect-square bg-dark-green rounded-lg text-light-green text-center leading-11 font-semibold">1A</div>
-                        <MdArrowBackIosNew className="w-5 h-auto rotate-180"/>
-                        <div className="w-11 aspect-square bg-dark-green rounded-lg text-light-green text-center leading-11 font-semibold">1B</div>
-                        <MdArrowBackIosNew className="w-5 h-auto rotate-180"/>
-                        <div className="w-11 aspect-square bg-dark-green rounded-lg text-light-green text-center leading-11 font-semibold">2A</div>
+                {groupK<string>(path).map((group, index) => (
+                    <div className="flex flex-row justify-between align-middle mt-2 max-w-60" key={index}>
+                        {group.map((sem, j) => (
+                            <Fragment key={j}>
+                                <div className={clsx("w-11 aspect-square rounded-lg text-light-green text-center leading-11 font-semibold", 
+                                    3*index + j !== currentSem ? "bg-dark-green" : "bg-green-400"
+                                )}>{sem}</div>
+                                {j!= group.length - 1 ? <MdArrowBackIosNew className="w-5 h-auto rotate-180"/> : ""}
+                            </Fragment>
+                        ))}
                     </div>
-                    <div className="flex flex-row justify-between align-middle mt-2 max-w-60">
-                        <div className="w-11 aspect-square bg-dark-green rounded-lg text-light-green text-center leading-11 font-semibold">WT1</div>
-                        <MdArrowBackIosNew className="w-5 h-auto rotate-180"/>
-                        <div className="w-11 aspect-square bg-green-500 rounded-lg text-light-green text-center leading-11 font-semibold">2B</div>
-                        <MdArrowBackIosNew className="w-5 h-auto rotate-180"/>
-                        <div className="w-11 aspect-square bg-dark-green rounded-lg text-light-green text-center leading-11 font-semibold">Off</div>
-                    </div>
+                ))}
                 </div>
+
+                
             </div>
 
             {/* Action Buttons */}

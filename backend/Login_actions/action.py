@@ -259,18 +259,40 @@ def get_all() -> tuple[str, int]:
                     "minors": minors,
                     "specializations": specs}), 200
 
+@update_info.route("/get_user_seq", methods=["GET"])
+def get_user_seq() -> tuple[str, int]:
+    user = Users.query.filter_by(username=g.username).first()
+    path = translate_path(user.path)
+    sem_dic = ["Summer", "Fall", "Winter"]
+    return jsonify({"current_sem": user.current_term,
+                    "sequence": user.sequence.name,
+                    "started_year": user.started_year,
+                    "started_sem": sem_dic[user.started_month],
+                    "grad_year": user.started_year + (len(path) + user.started_month) // 3,
+                    "coop": user.coop,
+                    "path": path}), 200
+
+def translate_path(path:str):
+    res = path.split("-")
+    yearCount = 1
+    semCount = 0
+    wtCount = 1
+    for i in range(len(res)):
+        if res[i] == "Study":
+            res[i] = f"{yearCount}{'B' if semCount else 'A'}"
+            yearCount+=semCount
+            semCount = (semCount + 1) % 2
+        elif res[i] == "Coop":
+            res[i] = f"WT{wtCount}"
+            wtCount+=1
+    if res[-1] == "": res.pop()
+    return res
+        
+
 
 
 """
-     username,
-     email,
-     bio,
      profilePicture,
-     
-     socials,
-     majors,
-     minors,
-     specializations,
 """
 
 """

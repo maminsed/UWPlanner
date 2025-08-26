@@ -127,6 +127,7 @@ def enrol_to_seq(seq_id: str, username: str) -> tuple[int, str]:
         return 401, "selected sequence does not exist"
     try:
         user.sequence = sequence
+        user.path = sequence.plan
         db.session.add(user)
         db.session.commit()
         return 200, "Sequence Updated"

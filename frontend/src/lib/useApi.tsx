@@ -69,7 +69,7 @@ export function api() {
         if (!res.ok) {
             const cloned = res.clone();
             const response = await cloned.json().catch(()=>{});
-            if (response.action) {
+            if (response?.action) {
                  if (response.action == "verify_code") {
                     router("/verify");
                 } if (response.action == "logout") {

@@ -35,7 +35,7 @@ def add_field(
 ) -> tuple[str, int]:
     """Function to add fields for a sepcific one of majors, minors, specializations"""
     username = g.username
-    values = g.selected or []
+    values = getattr(g, "selected", [])
     if not username:
         return jsonify({"message": "Please sign in first"}), 401
     if len(values) < threshold:

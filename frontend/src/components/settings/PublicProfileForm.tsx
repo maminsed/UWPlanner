@@ -170,7 +170,7 @@ export function PublicProfileForm() {
                         alert("error occured, please check your information and try again")
                     }
                 } else {
-                    setLoadingState("Chagnes Saved");
+                    setLoadingState("Changes Saved");
                     // Checking if the username changed:
                     if (oldUserName != username) {
                         setAccess(response.Access_Token.token);

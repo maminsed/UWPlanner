@@ -36,7 +36,7 @@ export function api() {
                         if (response.action) {
                             if (response.action == "verify_code") {
                                 router("/verify");
-                            } if (response.action == "logout") {
+                            } else if (response.action == "logout") {
                                 router("/")
                             }
                         }
@@ -72,9 +72,9 @@ export function api() {
             if (response?.action) {
                  if (response.action == "verify_code") {
                     router("/verify");
-                } if (response.action == "logout") {
+                } else if (response.action == "logout") {
                     router("/")
-                } if (response.action == "main_page") {
+                } else if (response.action == "main_page") {
                     router("/test")
                 }
             }

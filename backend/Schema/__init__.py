@@ -2,6 +2,7 @@
 
 from .db import (
     JwtToken,
+    Link,
     LoginMethod,
     Major,
     Minor,
@@ -9,7 +10,6 @@ from .db import (
     Specialization,
     Users,
     db,
-    Link,
     migrate,
 )
 

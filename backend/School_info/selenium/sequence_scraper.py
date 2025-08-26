@@ -190,6 +190,7 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
     Returns:
         The Success and the failure ones
+
     """
     success, errors = [], []  # Initialize lists to track success and errors
     driver = None  # Initialize driver to None before the try block

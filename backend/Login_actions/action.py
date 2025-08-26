@@ -1,10 +1,11 @@
 from collections import defaultdict
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
 
-from backend.Auth import verify as verify_jwt, add_tokens, send_verification_mail
-from backend.Schema import Major, Minor, Sequence, Specialization, Users, db, Link
+from backend.Auth import add_tokens, send_verification_mail
+from backend.Auth import verify as verify_jwt
+from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 

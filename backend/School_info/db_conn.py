@@ -1,5 +1,5 @@
 from ..Schema import db
-from ..Schema.db import Major, Minor, Specialization, Sequence
+from ..Schema.db import Major, Minor, Sequence, Specialization
 
 
 def add_major(major_name: str, faculty: str, url: str) -> tuple[bool, str]:

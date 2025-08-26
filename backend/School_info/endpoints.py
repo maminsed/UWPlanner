@@ -7,8 +7,8 @@ from .extraction import (
     extract_specializations,
     update_major_info,
 )
-from .selenium.sequence_scraper import scrape_sequences, scrape_math, scrape_eng
 from .selenium.major_scrapper import major_checking
+from .selenium.sequence_scraper import scrape_eng, scrape_math, scrape_sequences
 
 school_info_bp = Blueprint("school_info", __name__)
 

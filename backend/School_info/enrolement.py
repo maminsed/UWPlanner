@@ -127,8 +127,10 @@ def enrol_to_seq(seq_id: str, username: str) -> tuple[int, str]:
     Requires:
         - seq_name (str):
             The name of the sequence, prone to change.
+
     Returns:
         the status and the message.
+
     """
     sequence = Sequence.query.filter_by(id=seq_id).first()
     user = Users.query.filter_by(username=username).first()

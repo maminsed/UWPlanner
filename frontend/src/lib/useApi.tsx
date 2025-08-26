@@ -1,4 +1,5 @@
 import { useAuth } from "@/app/AuthProvider";
+import useSafeRouter from "./safePush";
 
 export function isExpired(exp?:string) {
     if (!exp) { return true }
@@ -9,6 +10,7 @@ export function isExpired(exp?:string) {
 
 export function api() {
     const { access, setAccess, exp, setExp, setUsername, clearAuth } = useAuth();
+    const router = useSafeRouter();
 
     return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true): Promise<Response> => {
         let token = access;
@@ -23,14 +25,21 @@ export function api() {
                             "Content-Type": "application/json",
                         },
                     })
-
+                    
+                    const response = await res.json().catch(()=>{});
                     if (res.ok) {
-                        const response = await res.json()
                         setAccess(response.Access_Token.token);
                         setExp(response.Access_Token.exp);
                         setUsername(response.username);
                         token = response.Access_Token.token;
                     } else {
+                        if (response.action) {
+                            if (response.action == "verify_code") {
+                                router("/verify");
+                            } if (response.action == "logout") {
+                                router("/")
+                            }
+                        }
                         clearAuth();
                         return res
                     }
@@ -48,7 +57,7 @@ export function api() {
 
         }
         
-        return fetch(input,{
+        const res = await fetch(input,{
             ...init,
             credentials: "include",
             headers: {
@@ -56,5 +65,21 @@ export function api() {
                 'Authorization': `Bearer ${token}`,
             }
         })
+
+        if (!res.ok) {
+            const cloned = res.clone();
+            const response = await cloned.json().catch(()=>{});
+            if (response.action) {
+                 if (response.action == "verify_code") {
+                    router("/verify");
+                } if (response.action == "logout") {
+                    router("/")
+                } if (response.action == "main_page") {
+                    router("/test")
+                }
+            }
+        }
+
+        return res;
     }
 }

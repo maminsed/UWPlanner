@@ -2,6 +2,7 @@
 
 from .db import (
     JwtToken,
+    Link,
     LoginMethod,
     Major,
     Minor,
@@ -20,6 +21,7 @@ __all__ = [
     "JwtToken",
     "Major",
     "Minor",
+    "Link",
     "Sequence",
     "Specialization",
 ]

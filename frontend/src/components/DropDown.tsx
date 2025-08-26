@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from "react";
 import { FiSearch } from "react-icons/fi";
-import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import HoverEffect from "./HoverEffect";
+import { clsx } from "clsx";
 
 /*
 Format:
@@ -14,46 +14,35 @@ Format:
 
 */
 
-
-interface DropDownType {
-    selectedValue:[string,string,number]|undefined;
-    setSelectedValue: (value:[string,string,number]|undefined)=>void;
-    className?: string;
-    curr: string;
+type DropDownClasses = {
+    mainDiv?: string;
+    searchBar?: string;
+    options?: string;
+    optionBox?: string;
+    dropDownColor?:string;
 }
 
-export default function DropDown({className, curr, selectedValue, setSelectedValue}:DropDownType) {
+interface DropDownType {
+    // The value that is currently in display
+    //    text, hover text, id
+    selectedValue:[string,string,number]|undefined;
+    //A function thats sets the value that is currently in display
+    setSelectedValue: (value:[string,string,number]|undefined)=>void;
+    // classes
+    classes?: DropDownClasses;
+    // The List ordered by: [groupName, selectedValues]
+    options: [string,[string,string,number][]][];
+}
+
+export default function DropDown({classes = {}, selectedValue, setSelectedValue, options}:DropDownType) {
     const [isSelectorOpen, setIsSelectorOpen] = useState<boolean>(false)
     const [searchValue, setSearchValue] = useState<string>("")
-    const [options, setOptions] = useState<[string,[string,string,number][]][]>([])
-    const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>([])
+    const [searchResult, setSearchResult] = useState<[string, [string,string,number][]][]>(options)
     const search = useRef<HTMLInputElement>(null);
-    const backend = api();
-
-    useEffect(()=> {
-        async function gettingData() {
-            try {
-                const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
-                    method: "GET"
-                })
-
-                const response = await (res as Response).json().catch(()=>{})
-                if (!res.ok) {
-                    console.log("Error in Resposne")
-                    console.log(response)
-                    return 
-                }
-                setOptions(response.data)
-                setSearchResult(response.data)
-                setSelectedValue(undefined)
-            } catch (err) {
-                console.log("Error: ")
-                console.log(err)
-            }
-        }
-
-        gettingData()
-    }, [curr])
+    if (!classes?.dropDownColor) { 
+        classes.dropDownColor = "bg-light-green";
+    }
+    useEffect(()=>{setSearchResult(options)}, [options])
 
     useEffect(()=>{
         const res:[string,[string,string,number][]][] = []
@@ -72,6 +61,9 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
     }, [searchValue])
 
     function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        if ((e.key == "Enter" && searchResult.length > 0)) {
+            setIsSelectorOpen(!isSelectorOpen)
+        }
         if ((e.key == 'ArrowDown' || e.key == 'ArrowUp') && searchResult.length > 0) {
             let option_index = -1;
             let field_index = -1;
@@ -115,18 +107,18 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
 
 
     return (
-        <div className={className} onKeyDown={handleKeyDown}>
+        <div className={clsx(classes?.mainDiv)} onKeyDown={handleKeyDown}>
             <div>
                 <div
                     onClick={() => {
                         if (!isSelectorOpen && search.current) search.current.focus();
                         setIsSelectorOpen(!isSelectorOpen)
                     }}
-                    className="w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative"
+                    className={clsx(classes?.searchBar, "w-70 bg-light-green px-1 pr-6 py-1 rounded-md appearance-none focus:outline-none relative")}
                 >
                     {selectedValue === undefined ? 
                         <div>Choose your option</div>
-                    : <HoverEffect text={selectedValue[0]} hover={selectedValue[1]} maxWidth="264px" hoverStyle={{right:"50%", transform: "translateX(50%)", maxWidth:"264px", width: "max-content"}}/>
+                    : <HoverEffect text={selectedValue[0]} hover={selectedValue[1]} pClass="max-w-[59vw] xs:max-w-[264px]" hoverStyle={{right:"50%", transform: "translateX(50%)", maxWidth:"264px", width: "max-content"}}/>
                     }
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
                         <svg
@@ -143,8 +135,13 @@ export default function DropDown({className, curr, selectedValue, setSelectedVal
                     </span>
                 </div>
                 
-                <ul className={`relative scroller overflow-y-auto mt-1 rounded-md w-70 bg-light-green ${isSelectorOpen ? "max-h-25 px-1" : "max-h-0 py-0"}`}>
-                    <div className="flex py-2 items-center sticky top-0 bg-light-green">
+                <ul className={clsx(
+                    "relative scroller overflow-y-auto mt-1 rounded-md w-70",
+                    classes.dropDownColor,
+                    classes.optionBox, 
+                    isSelectorOpen ? "max-h-25 px-1" : "max-h-0 py-0 !border-0")}
+                >
+                    <div className={clsx("flex py-2 items-center sticky top-0", classes.dropDownColor)}>
                         <FiSearch />
                         <input 
                             type="text" 

@@ -7,10 +7,14 @@ import Image from "next/image";
 import { MdAccountCircle, MdExitToApp } from "react-icons/md";
 import HoverEffect from "./HoverEffect";
 import { IoMdSettings } from "react-icons/io";
+import {clsx} from "clsx";
+import { LuMenu } from "react-icons/lu";
 
 
 export default function LogedInNav() {
     const [panelOn, setPanelOn] = useState<boolean>(false);
+    const [dropOn, setDropOn] = useState<boolean>(false);
+    const [isXs, setIsXs] = useState<boolean>(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
     const { setAccess, setExp, setUsername, username } = useAuth();
@@ -50,8 +54,14 @@ export default function LogedInNav() {
             setPanelOn(false);
         }
 
+        function handleResize() {
+            setIsXs(window.innerWidth < 480);
+        }
+
+        handleResize();
         window.addEventListener("click", handleClick, true);
-        return () => window.removeEventListener("click", handleClick, true);
+        window.addEventListener("resize", handleResize);
+        return () => {window.removeEventListener("click", handleClick, true); window.removeEventListener("resize", handleResize)}
     }, []);
     
         return (
@@ -67,29 +77,34 @@ export default function LogedInNav() {
                     />
                 </Link>
             </div>
-            <div className="flex flex-row justify-center gap-2 xs:gap-4 items-center">
-                
-                <div>
-                    <Link href="/discussions" className="text-[1.2rem]">
-                        Discussions
-                    </Link>
+            <div className="flex flex-row justify-center gap-1 xs:gap-4 items-center">
+                <LuMenu className="cursor-pointer w-auto h-[2rem] xs:h-0" onClick={()=>setDropOn(!dropOn)}/>  
+                <div className={clsx(
+                    "xs:overflow-hidden xs:w-auto xs:flex xs:flex-row gap-2 xs:gap-4",
+                    isXs && "absolute top-18 bg-dark-green/40 text-emerald-900 backdrop-blur-xs px-3 py-3 rounded contain-content duration-300",
+                    isXs && (dropOn ? "max-h-30" : "max-h-0 !py-0")
+                )}>
+                    <div>
+                        <Link href="/discussions" className="text-md sm:text-[1.2rem]">
+                            Discussions
+                        </Link>
+                    </div>
+                    <div>
+                        <Link href="/courses" className="text-md sm:text-[1.2rem]">
+                            Courses
+                        </Link>
+                    </div>
+                    <div>
+                        <Link href="/graph" className="text-md sm:text-[1.2rem]">
+                            Graph
+                        </Link>
+                    </div>
+                    <div>
+                        <Link href="/semester" className="text-md sm:text-[1.2rem]">
+                            Semester
+                        </Link>
+                    </div>
                 </div>
-                <div>
-                    <Link href="/courses" className="text-[1.2rem]">
-                        Courses
-                    </Link>
-                </div>
-                <div>
-                    <Link href="/graph" className="text-[1.2rem]">
-                        Graph
-                    </Link>
-                </div>
-                <div>
-                    <Link href="/semester" className="text-[1.2rem]">
-                        Semester
-                    </Link>
-                </div>
-                    
 
                 <div className="relative">
                     <div
@@ -103,11 +118,11 @@ export default function LogedInNav() {
                     </div>
                     <div
                         ref={panelRef}
-                        className={`absolute backdrop-blur-xs bg-[#4bac7f49] top-full px-3 rounded-lg right-1/2 translate-x-1/2 font-medium overflow-y-clip ${
+                        className={clsx(`absolute backdrop-blur-xs bg-[#4bac7f49] top-full px-3 rounded-lg right-[100%] md:right-1/2 translate-x-1/2 font-medium overflow-y-clip transition-all duration-500`,
                             panelOn ? "max-h-30 py-[0.85rem]" : "max-h-0"
-                        } transition-all duration-500`}
+                        )}
                     >
-                        <HoverEffect text={username || ""}/>
+                        <HoverEffect pClass="max-w-[100px]" text={username || ""}/>
                         <Link
                             href="/settings"
                             className="items-center flex hover:text-[#1a3337] transition-colors duration-300"

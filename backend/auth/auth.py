@@ -8,7 +8,7 @@ from codename import codename
 from flask import Blueprint, Response, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
-from ..Schema import JwtToken, LoginMethod, Users, db
+from ..Schema import JwtToken, LoginMethod, Users, db, Sequence
 from .jwt import clean_up_jwt, encode
 from .send_mail import send_verification_mail
 
@@ -55,6 +55,12 @@ def add_user() -> Response | tuple[str, int]:
             pass_hash=hashpass,
             login_method=LoginMethod.email,
         )
+        #adding default seq
+        default_seq = Sequence.query.filter_by(Sequence.name == 'default').first()
+        if (default_seq): 
+            user.sequence = default_seq
+            user.path = default_seq.plan
+
         # Adding to database
         db.session.add(user)
         db.session.commit()
@@ -144,7 +150,7 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
         httponly=True,
         secure=True,
         samesite="None",
-    )  # PRODUCTION set: , secure=True, samesite=None
+    )  # TODO set: , secure=True, samesite=None
     return resp
 
 
@@ -188,7 +194,7 @@ def confirm_ver_code() -> tuple[str, int]:
     """Function to confirm verification code.
 
     Requires:
-        The request to come with email and code parameters.
+        The request to come with username and code parameters.
 
     Returns:
         The Response.
@@ -229,6 +235,8 @@ def confirm_ver_code() -> tuple[str, int]:
     user.verification_code = 0
     db.session.add(user)
     db.session.commit()
+    if len(user.majors) != 0:
+        return jsonify({"message": "successfull", "action": "main_page"}), 200
     return jsonify({"message": "successfull"}), 200
 
 
@@ -308,7 +316,7 @@ def log_out() -> Response:
             )
             resp.delete_cookie(
                 "jwt", httponly=True, secure=True, samesite="None"
-            )  # PRODUCTION set: , secure=True, samesite=None
+            )  # TODO set: , secure=True, samesite=None
 
             return resp
         clean_up_jwt(jwt_db.user.username)
@@ -317,7 +325,7 @@ def log_out() -> Response:
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
         resp.delete_cookie(
             "jwt", httponly=True, secure=True, samesite="None"
-        )  # PRODUCTION set: , secure=True, samesite=None
+        )  # TODO set: , secure=True, samesite=None
         return resp
     except Exception as e:
         return make_response(

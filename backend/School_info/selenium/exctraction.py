@@ -1,4 +1,5 @@
 """This file is used for extracting data using selinium for Specializations."""
+
 import os
 import time
 
@@ -40,9 +41,10 @@ def extract_spec_page(web_path: str) -> list[tuple[str]]:
     driver.quit()
     return res
 
+
 def extract_majors_spec():
     try:
-        #Connecting to web driver
+        # Connecting to web driver
         print("Connecting to Webdriver...")
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service)
@@ -50,10 +52,10 @@ def extract_majors_spec():
         print(e)
         return 500, {"message": "Error in connecting to webdriver"}
 
-    added, errors = [],[]
+    added, errors = [], []
     specs = Specialization.query.all()
     for spec in specs:
-        #First checking if the field is already a major
+        # First checking if the field is already a major
         possible = Major.query.filter_by(name=spec.field).first()
         if possible:
             if spec not in possible.specializations:
@@ -65,15 +67,17 @@ def extract_majors_spec():
             continue
         driver.get(spec.link)
         time.sleep(2)
-        
+
         sections = driver.find_elements(By.CSS_SELECTOR, ".noBreak")
         loM = []
         for s in sections:
-            #Finding the section that says who can take it. 
+            # Finding the section that says who can take it.
             h3 = s.find_element(By.CSS_SELECTOR, "h3").text
             if "is available for students" in h3:
-                majors = s.find_element(By.CSS_SELECTOR, "div.program-view__pre___1zoJ6")
-                #Getting the links in that section and going through each one
+                majors = s.find_element(
+                    By.CSS_SELECTOR, "div.program-view__pre___1zoJ6"
+                )
+                # Getting the links in that section and going through each one
                 links = majors.find_elements(By.CSS_SELECTOR, "a")
                 if links:
                     # For each link, go to that page and get the name of the major and check if that major exists
@@ -81,7 +85,11 @@ def extract_majors_spec():
                     for link in links:
                         try:
                             driver.get(link.get_property("href"))
-                            name = driver.find_element(By.CSS_SELECTOR, "h2").text.split("(")[0].removeprefix("Bachelor of ")
+                            name = (
+                                driver.find_element(By.CSS_SELECTOR, "h2")
+                                .text.split("(")[0]
+                                .removeprefix("Bachelor of ")
+                            )
                             major = Major.query.filter_by(name=name).first()
                             if major:
                                 loM.append(major)
@@ -89,7 +97,9 @@ def extract_majors_spec():
                                 print(f"No Major for {name} in {spec.name}")
                         except Exception as e:
                             print(e)
-                            print(f"Error in getting majors for {spec.name} at link: {link}")
+                            print(
+                                f"Error in getting majors for {spec.name} at link: {link}"
+                            )
                             continue
                 else:
                     # If there is no link - like some options, we go through the names there manually

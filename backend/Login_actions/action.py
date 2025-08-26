@@ -1,12 +1,13 @@
 from collections import defaultdict
-from typing import Optional
+from typing import Callable, Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
 
+from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
-from backend.Schema import Major, Minor, Sequence, Specialization, Users, db
+from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
 
-from ..School_info import enrol_to_major, enrol_to_minor, enrol_to_seq, enrol_to_spec
+from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
 update_info = Blueprint("UpdateInfo", __name__)
 
@@ -29,31 +30,42 @@ def get_majors() -> tuple[str, int]:
         return jsonify({"message": "error in Backend", "error": str(e)}), 500
 
 
-@update_info.route("/majors", methods=["POST"])
-def add_majors() -> tuple[str, int]:
-    """Endpoint that takes in the user and adds the users choices to it."""
+def add_field(
+    func: Callable[[set[int], str], tuple[str, int]], threshold: int
+) -> tuple[str, int]:
+    """Function to add fields for a sepcific one of majors, minors, specializations"""
     username = g.username
-    data = request.get_json()
-    majors = data.get("selected")
+    values = getattr(g, "selected", [])
     if not username:
         return jsonify({"message": "Please sign in first"}), 401
-    if not majors or len(majors) <= 0:
-        return jsonify({"message": "Select at lease one major"}), 400
+    if len(values) < threshold:
+        return jsonify({"message": "The amount selected is less than required"}), 400
 
     # Checking for duplicates:
     visited = set()
-    for m in majors:
-        if m[2] in visited:
-            return jsonify({"message": "You have duplicate majors."}), 400
-        visited.add(m[2])
+    for v in values:
+        if not v:
+            return jsonify({"message": "You have empty values."}), 400
+        if v[2] in visited:
+            return jsonify({"message": "You have duplicate values."}), 400
+        visited.add(v[2])
 
-    for id in visited:
-        status, message = enrol_to_major(id, username)
-        if status == 500:
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
+    status, message = func(visited, username)
+    print(message)
+    if status == 500:
+        return jsonify({"message": "error in backend", "error": message}), status
+    if status >= 400 and status <= 500:
+        return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
+
+
+@update_info.route("/majors", methods=["POST"])
+def add_majors() -> tuple[str, int]:
+    """Endpoint that takes in the user and adds the users choices to it."""
+    data = request.get_json()
+    majors = data.get("selected")
+    g.selected = majors
+    return add_field(enrol_to_majors, 1)
 
 
 @update_info.route("/minors", methods=["GET"])
@@ -69,29 +81,11 @@ def get_minors() -> tuple[str, int]:
 
 
 @update_info.route("/minors", methods=["POST"])
-def add_minor() -> tuple[str, int]:
-    username = g.username
+def add_minors() -> tuple[str, int]:
     data = request.get_json()
     minors = data.get("selected")
-    if not username:
-        return jsonify({"message": "Please sign in first"}), 401
-    if not minors or len(minors) == 0:
-        return "", 204
-
-    # Checking for duplicates:
-    visited = set()
-    for m in minors:
-        if m[2] in visited:
-            return jsonify({"message": "You have duplicate minors."}), 400
-        visited.add(m[2])
-
-    for id in visited:
-        status, message = enrol_to_minor(id, username)
-        if status == 500:
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
-    return jsonify({"message": "user enroled!"}), 200
+    g.selected = minors
+    return add_field(enrol_to_minors, 0)
 
 
 @update_info.route("/specializations", methods=["GET"])
@@ -121,29 +115,10 @@ def get_specializations() -> tuple[str, int]:
 
 @update_info.route("/specializations", methods=["POST"])
 def add_specializations() -> tuple[str, int]:
-    username = g.username
     data = request.get_json()
     ss = data.get("selected")
-    if not username:
-        return jsonify({"message": "Please sign in first"}), 401
-    if not ss or len(ss) == 0:
-        return "", 204
-
-    # Checking for duplicates:
-    visited = set()
-    for s in ss:
-        if s[2] in visited:
-            return jsonify({"message": "You have duplicate specializations."}), 400
-        visited.add(s[2])
-
-    for id in visited:
-        status, message = enrol_to_spec(id, username)
-        if status == 500:
-            print(message)
-            return jsonify({"message": "error in backend", "error": message}), status
-        if status >= 400 and status <= 500:
-            return jsonify({"message": message}), status
-    return jsonify({"message": "user enroled!"}), 200
+    g.selected = ss
+    return add_field(enrol_to_specs, 0)
 
 
 @update_info.route("/coop", methods=["GET"])
@@ -211,6 +186,140 @@ def add_sequence() -> tuple[str, int]:
         return jsonify({"message": "error in backend", "error": message}), 500
     return jsonify({"message": message}), status
 
+
+@update_info.route("/update_all", methods=["POST"])
+def update_all() -> tuple[str, int]:
+    required_keys = {
+        "username",
+        "email",
+        "bio",
+        "links",
+        "majors",
+        "minors",
+        "specializations",
+    }
+    data = request.get_json()
+    print(data)
+    user = Users.query.filter_by(username=g.username).first()
+    if not user:
+        return jsonify({"message": "user does not exist"}), 400
+    for k in required_keys:
+        if k not in data:
+            return jsonify({"message": f"key {k} not in data!"}), 400
+    # updating user bio
+    user.bio = data.get("bio")
+
+    # updating user links
+    newLink = data.get("links")
+    oldLink = {l.url for l in user.links}
+    added = [l for l in newLink if l not in oldLink]
+    existed = [l for l in user.links if l.url in newLink]
+
+    for url in added:
+        link = Link(url=url, user=user)
+        existed.append(link)
+        db.session.add(link)
+        db.session.flush()
+    user.links = existed
+    # comming the changes for now
+    db.session.add(user)
+    db.session.commit()
+
+    # changing major - minor - specs
+    dic = {
+        "majors": [enrol_to_majors, 1],
+        "minors": [enrol_to_minors, 0],
+        "specializations": [enrol_to_specs, 0],
+    }
+    for key in dic:
+        g.selected = data.get(key)
+        message, status = add_field(dic[key][0], dic[key][1])
+        if status >= 400 or status < 200:
+            return message, status
+
+    # chaning email
+    newMail = data.get("email")
+    if newMail != user.email:
+        user.email = newMail
+        user.is_verified = False
+        db.session.add(user)
+        db.session.commit()
+        send_verification_mail(user)
+
+    # changind username
+    newUserName = data.get("username")
+    if user.username != newUserName:
+        existing = Users.query.filter_by(username=newUserName).first()
+        if existing:
+            return jsonify({"message": "user with that username already exists"}), 400
+        user.username = newUserName
+        db.session.add(user)
+        db.session.flush()
+        return add_tokens("change successfull", 200, user)
+
+    return jsonify({"message": "change successfull"}), 200
+
+
+@update_info.route("/get_user_info", methods=["GET"])
+def get_all() -> tuple[str, int]:
+    user = Users.query.filter_by(username=g.username).first()
+    socials = [l.url for l in user.links]
+    majors = [[m.name, m.name, m.id] for m in user.majors]
+    minors = [[m.name, m.name, m.id] for m in user.minors]
+    specs = [[m.name, m.name, m.id] for m in user.specializations]
+    return jsonify(
+        {
+            "username": g.username,
+            "email": user.email,
+            "bio": user.bio,
+            "links": [l.url for l in user.links],
+            "socials": socials,
+            "majors": majors,
+            "minors": minors,
+            "specializations": specs,
+        }
+    ), 200
+
+
+@update_info.route("/get_user_seq", methods=["GET"])
+def get_user_seq() -> tuple[str, int]:
+    user = Users.query.filter_by(username=g.username).first()
+    path = translate_path(user.path)
+    sem_dic = ["Summer", "Fall", "Winter"]
+    return jsonify(
+        {
+            "current_sem": user.current_term,
+            "sequence": user.sequence.name,
+            "started_year": user.started_year,
+            "started_sem": sem_dic[user.started_month],
+            "grad_year": user.started_year + (len(path) + user.started_month) // 3,
+            "coop": user.coop,
+            "path": path,
+        }
+    ), 200
+
+
+def translate_path(path: str):
+    res = path.split("-")
+    yearCount = 1
+    semCount = 0
+    wtCount = 1
+    for i in range(len(res)):
+        if res[i] == "Study":
+            res[i] = f"{yearCount}{'B' if semCount else 'A'}"
+            yearCount += semCount
+            semCount = (semCount + 1) % 2
+        elif res[i] == "Coop":
+            res[i] = f"WT{wtCount}"
+            wtCount += 1
+    if res[-1] == "":
+        res.pop()
+    return res
+
+
+"""
+     profilePicture,
+"""
 
 """
 Format:

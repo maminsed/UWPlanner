@@ -5,6 +5,7 @@ visits the URL associated with each major, and scrapes the course sequence table
 
 The script is designed to be run from the command line.
 """
+
 import time
 
 from selenium import webdriver
@@ -178,6 +179,7 @@ def scrape_sequences() -> tuple[list[str]]:
     print("\nScraping complete.")
     return success, errors
 
+
 def scrape_math() -> tuple[list[str], list[str]]:
     """Scrapes sequence charts for Mathematics majors from a specific URL.
 
@@ -188,6 +190,7 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
     Returns:
         The Success and the failure ones
+
     """
     success, errors = [], []  # Initialize lists to track success and errors
     driver = None  # Initialize driver to None before the try block
@@ -210,7 +213,11 @@ def scrape_math() -> tuple[list[str], list[str]]:
         # Iterate through each table
         for i in range(len(tables)):
             # Extract rows from the table body
-            rows = tables[i].find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
+            rows = (
+                tables[i]
+                .find_element(By.TAG_NAME, "tbody")
+                .find_elements(By.TAG_NAME, "tr")
+            )
 
             for r in rows:
                 # Extract sequence name
@@ -237,13 +244,17 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
                 # Determine majors to associate with the sequence
                 if i == 0:
-                    majors = Major.query.filter_by(faculty="Mathematics").filter(
-                        Major.id.not_in([64, 65, 78])
-                    ).all()
+                    majors = (
+                        Major.query.filter_by(faculty="Mathematics")
+                        .filter(Major.id.not_in([64, 65, 78]))
+                        .all()
+                    )
                 else:
-                    majors = Major.query.filter_by(faculty="Mathematics").filter(
-                        Major.id.in_(options[i])
-                    ).all()
+                    majors = (
+                        Major.query.filter_by(faculty="Mathematics")
+                        .filter(Major.id.in_(options[i]))
+                        .all()
+                    )
 
                 # Associate the sequence with the majors
                 for m in majors:
@@ -271,8 +282,10 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
     return success, errors
 
-#just ignore this one
-def scrape_eng():
+
+# just ignore this one
+def scrape_eng() -> tuple[list[tuple[str,str]],list,list]:
+    """Function to scrape engineering sequences."""
     driver = None
     errors = []
     existed = []
@@ -280,35 +293,42 @@ def scrape_eng():
     try:
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service)
-        driver.get("https://uwaterloo.ca/engineering/undergraduate-students/co-op-experience/co-op-study-sequences")
+        driver.get(
+            "https://uwaterloo.ca/engineering/undergraduate-students/co-op-experience/co-op-study-sequences"
+        )
 
         time.sleep(1)
-        major_table = driver.find_element(By.CSS_SELECTOR, "section.uw-contained-width uw-section-spacing--default uw-section-separator--bottom uw-column-separator--between uw-section-alignment--top-align-content layout layout--uw-3-col even-split".replace(" ", "."))
-        #getting majors
+        major_table = driver.find_element(
+            By.CSS_SELECTOR,
+            "section.uw-contained-width uw-section-spacing--default uw-section-separator--bottom uw-column-separator--between uw-section-alignment--top-align-content layout layout--uw-3-col even-split".replace(
+                " ", "."
+            ),
+        )
+        # getting majors
         for li in major_table.find_elements(By.TAG_NAME, "li"):
             major = li.find_element(By.TAG_NAME, "a")
             id = major.get_attribute("href").split("#")[1]
             major_name = major.text.strip()
             print(id, major_name)
             tables = driver.find_element(By.ID, id).find_elements(By.TAG_NAME, "table")
-            #Getting plans 
+            # Getting plans
             plans = []
             for table in tables:
                 plan = ""
                 cells = table.find_elements(By.TAG_NAME, "td")
-                #making sure theres 5 years of stuff
-                if (len(cells) != 15):
+                # making sure theres 5 years of stuff
+                if len(cells) != 15:
                     errors.append(("cell count not match", major_name))
                     continue
-                #creating the plan
+                # creating the plan
                 for cell in cells:
                     text = cell.text.lower()
                     if "study" in text:
-                        plan+="Study-"
+                        plan += "Study-"
                     elif "co-op" in text:
-                        plan+="Coop-"
+                        plan += "Coop-"
                     elif "-" in text:
-                        plan+="Off-"
+                        plan += "Off-"
                     else:
                         print("error occured! - No option?!")
                         errors.append(("option not found", major_name))
@@ -316,32 +336,32 @@ def scrape_eng():
                 plans.append(plan[:-1])
             print(" ")
 
-            #adding it to major
+            # adding it to major
             major_obj = Major.query.filter_by(name=major_name).first()
             if not major_obj:
                 errors.append(("major not found!", major_name))
                 continue
-            #deleting existing stuff
+            # deleting existing stuff
             major_obj.sequences = []
             db.session.add(major_obj)
             db.session.flush()
 
             for p in plans:
-                #finding if a seq with that plan exists:
-                prevSeq = Sequence.query.filter_by(plan=p).first()
-                if prevSeq:
-                    prevSeq.majors.append(major_obj)
-                    db.session.add(prevSeq)
+                # finding if a seq with that plan exists:
+                prev_seq = Sequence.query.filter_by(plan=p).first()
+                if prev_seq:
+                    prev_seq.majors.append(major_obj)
+                    db.session.add(prev_seq)
                     db.session.flush()
-                    existed.append((major_name, p, prevSeq.name))
+                    existed.append((major_name, p, prev_seq.name))
                     print("updated")
                     continue
-                #if not create one
-                newSeq = Sequence(name="nStream_Engineering", plan=p)
-                newSeq.majors.append(major_obj)
-                db.session.add(newSeq)
+                # if not create one
+                new_seq = Sequence(name="nStream_Engineering", plan=p)
+                new_seq.majors.append(major_obj)
+                db.session.add(new_seq)
                 db.session.flush()
-                created.append((major_name, p, newSeq))
+                created.append((major_name, p, new_seq))
                 print("created")
 
         db.session.commit()
@@ -354,6 +374,6 @@ def scrape_eng():
         print(len(existed))
         print(len(created))
 
-        if driver: driver.quit()
-        return errors, existed, created
-    
+        if driver:
+            driver.quit()
+    return errors, existed, created

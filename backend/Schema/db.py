@@ -59,7 +59,7 @@ major_spec = Table(
     "major_spec",
     Base.metadata,
     Column("spec_id", db.Integer, ForeignKey("specializations.id"), primary_key=True),
-    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
 )
 
 
@@ -115,7 +115,7 @@ class Users(db.Model):
         "Minor", back_populates="users", secondary=minor_user
     )
 
-    specialization: Mapped[list["Specialization"]] = relationship(
+    specializations: Mapped[list["Specialization"]] = relationship(
         "Specialization", back_populates="students", secondary=specialization_student
     )
 
@@ -131,12 +131,23 @@ class Users(db.Model):
     started_year: Mapped[int] = mapped_column(
         db.Integer, default=datetime.now().year, server_default=text("2024")
     )
-    started_month: Mapped[int] = mapped_column(
-        db.Integer, default=9, server_default=text("9")
+    started_month: Mapped[int] = mapped_column(db.Integer, default=1)
+    coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
+    bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
+    path: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    links: Mapped[list["Link"]] = relationship(
+        "Link", back_populates="user", cascade="all, delete-orphan, save-update"
     )
-    coop: Mapped[bool] = mapped_column(
-        db.Boolean(), default=True, server_default=text("True")
+
+
+class Link(db.Model):
+    __tablename__ = "link"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url: Mapped[str] = mapped_column(db.String(), nullable=True)
+    user_id: Mapped[int] = mapped_column(
+        db.Integer, ForeignKey("users.id"), nullable=False
     )
+    user: Mapped["Users"] = relationship("Users", back_populates="links")
 
 
 class JwtToken(db.Model):
@@ -210,7 +221,7 @@ class Specialization(db.Model):
     )
     is_option: Mapped[bool] = mapped_column(server_default=text("FALSE"))
     students: Mapped[list["Users"]] = relationship(
-        "Users", back_populates="specialization", secondary=specialization_student
+        "Users", back_populates="specializations", secondary=specialization_student
     )
 
 

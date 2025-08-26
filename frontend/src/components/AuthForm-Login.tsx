@@ -3,15 +3,15 @@ import Link from "next/link";
 import { useContext, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form"
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AuthContext } from "@/app/AuthProvider";
+import { useRouter } from "next/navigation";
 
 //Logos
 import { FaGoogle } from "react-icons/fa";
 import { FaApple } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthContext } from "@/app/AuthProvider";
-import { useRouter } from "next/navigation";
 
 
 const schema = z.object({

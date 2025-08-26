@@ -1,4 +1,5 @@
 import { useAuth } from "@/app/AuthProvider";
+import useSafeRouter from "./safePush";
 
 export function isExpired(exp?:string) {
     if (!exp) { return true }
@@ -9,8 +10,9 @@ export function isExpired(exp?:string) {
 
 export function api() {
     const { access, setAccess, exp, setExp, setUsername, clearAuth } = useAuth();
+    const router = useSafeRouter();
 
-    return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true) => {
+    return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true): Promise<Response> => {
         let token = access;
         if (check_protection) {
             console.log(`expiration date: ${exp}`)
@@ -23,27 +25,39 @@ export function api() {
                             "Content-Type": "application/json",
                         },
                     })
-
+                    
+                    const response = await res.json().catch(()=>{});
                     if (res.ok) {
-                        const response = await res.json()
                         setAccess(response.Access_Token.token);
                         setExp(response.Access_Token.exp);
                         setUsername(response.username);
                         token = response.Access_Token.token;
                     } else {
+                        if (response.action) {
+                            if (response.action == "verify_code") {
+                                router("/verify");
+                            } else if (response.action == "logout") {
+                                router("/")
+                            }
+                        }
                         clearAuth();
                         return res
                     }
                 } catch (err) {
                     clearAuth();
                     console.log("error in frontend")
-                    return {"ok":false}
+                    return new Response(
+                        JSON.stringify({ ok: false }),
+                    {
+                        headers: { "Content-Type": "application/json" }
+                    }
+                    );
                 }
             }
 
         }
         
-        return fetch(input,{
+        const res = await fetch(input,{
             ...init,
             credentials: "include",
             headers: {
@@ -51,5 +65,21 @@ export function api() {
                 'Authorization': `Bearer ${token}`,
             }
         })
+
+        if (!res.ok) {
+            const cloned = res.clone();
+            const response = await cloned.json().catch(()=>{});
+            if (response?.action) {
+                 if (response.action == "verify_code") {
+                    router("/verify");
+                } else if (response.action == "logout") {
+                    router("/")
+                } else if (response.action == "main_page") {
+                    router("/test")
+                }
+            }
+        }
+
+        return res;
     }
 }

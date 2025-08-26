@@ -188,7 +188,7 @@ def confirm_ver_code() -> tuple[str, int]:
     """Function to confirm verification code.
 
     Requires:
-        The request to come with email and code parameters.
+        The request to come with username and code parameters.
 
     Returns:
         The Response.
@@ -229,6 +229,8 @@ def confirm_ver_code() -> tuple[str, int]:
     user.verification_code = 0
     db.session.add(user)
     db.session.commit()
+    if len(user.majors) != 0:
+        return jsonify({"message": "successfull", "action": "main_page"}), 200
     return jsonify({"message": "successfull"}), 200
 
 

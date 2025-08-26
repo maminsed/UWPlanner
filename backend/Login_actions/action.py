@@ -3,7 +3,7 @@ from typing import Optional, Callable
 
 from flask import Blueprint, g, jsonify, make_response, request
 
-from backend.Auth import verify as verify_jwt, add_tokens
+from backend.Auth import verify as verify_jwt, add_tokens, send_verification_mail
 from backend.Schema import Major, Minor, Sequence, Specialization, Users, db, Link
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
@@ -194,8 +194,7 @@ def update_all() -> tuple[str, int]:
     for k in required_keys:
         if k not in data:
             return jsonify({"message": f"key {k} not in data!"}), 400
-    #updating basic user changes
-    user.email = data.get("email")
+    #updating user bio
     user.bio = data.get("bio")
     
     #updating user links
@@ -221,11 +220,19 @@ def update_all() -> tuple[str, int]:
         message, status = add_field(dic[key][0], dic[key][1])
         if status >= 400 or status < 200:
             return message, status
+        
+    #chaning email
+    newMail = data.get("email")
+    if newMail != user.email:
+        user.email = newMail
+        user.is_verified = False
+        db.session.add(user)
+        db.session.commit()
+        send_verification_mail(user)
     
     # changind username
     newUserName = data.get("username")
     if user.username != newUserName:
-        db.session.commit()
         existing = Users.query.filter_by(username=newUserName).first()
         if existing:
             return jsonify({"message": "user with that username already exists"}), 400

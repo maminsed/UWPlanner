@@ -169,6 +169,7 @@ def add_option(name: str, link: str, field: str) -> tuple[bool, str]:
     db.session.commit()
     return True, f"{name}-Option added"
 
+
 def update_sequence() -> list[str]:
     """Update eng sequence names."""
     seqs = Sequence.query.all()
@@ -185,7 +186,7 @@ def update_sequence() -> list[str]:
                 s.name = "Stream_8_Eng"
                 updated.append(s.id)
                 changed = True
-            
+
             if changed:
                 db.session.add(s)
                 db.session.flush()

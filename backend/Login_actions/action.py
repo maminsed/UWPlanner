@@ -27,8 +27,11 @@ def get_majors() -> tuple[str, int]:
         return jsonify({"data": [[f, res[f]] for f in res.keys()]}), 200
     except Exception as e:
         return jsonify({"message": "error in Backend", "error": str(e)}), 500
-    
-def add_field(func: Callable[[set[int], str], tuple[str,int]], threshold: int) -> tuple[str,int]:
+
+
+def add_field(
+    func: Callable[[set[int], str], tuple[str, int]], threshold: int
+) -> tuple[str, int]:
     """Function to add fields for a sepcific one of majors, minors, specializations"""
     username = g.username
     values = g.selected or []
@@ -53,7 +56,6 @@ def add_field(func: Callable[[set[int], str], tuple[str,int]], threshold: int) -
     if status >= 400 and status <= 500:
         return jsonify({"message": message}), status
     return jsonify({"message": "user enroled!"}), 200
-
 
 
 @update_info.route("/majors", methods=["POST"])
@@ -183,9 +185,18 @@ def add_sequence() -> tuple[str, int]:
         return jsonify({"message": "error in backend", "error": message}), 500
     return jsonify({"message": message}), status
 
+
 @update_info.route("/update_all", methods=["POST"])
 def update_all() -> tuple[str, int]:
-    required_keys = {'username', 'email', 'bio','links','majors','minors','specializations'}
+    required_keys = {
+        "username",
+        "email",
+        "bio",
+        "links",
+        "majors",
+        "minors",
+        "specializations",
+    }
     data = request.get_json()
     print(data)
     user = Users.query.filter_by(username=g.username).first()
@@ -194,34 +205,38 @@ def update_all() -> tuple[str, int]:
     for k in required_keys:
         if k not in data:
             return jsonify({"message": f"key {k} not in data!"}), 400
-    #updating user bio
+    # updating user bio
     user.bio = data.get("bio")
-    
-    #updating user links
+
+    # updating user links
     newLink = data.get("links")
     oldLink = {l.url for l in user.links}
     added = [l for l in newLink if l not in oldLink]
     existed = [l for l in user.links if l.url in newLink]
-    
+
     for url in added:
         link = Link(url=url, user=user)
         existed.append(link)
         db.session.add(link)
         db.session.flush()
     user.links = existed
-    #comming the changes for now
+    # comming the changes for now
     db.session.add(user)
     db.session.commit()
 
     # changing major - minor - specs
-    dic = {"majors": [enrol_to_majors, 1], "minors": [enrol_to_minors, 0], "specializations": [enrol_to_specs, 0]}
+    dic = {
+        "majors": [enrol_to_majors, 1],
+        "minors": [enrol_to_minors, 0],
+        "specializations": [enrol_to_specs, 0],
+    }
     for key in dic:
         g.selected = data.get(key)
         message, status = add_field(dic[key][0], dic[key][1])
         if status >= 400 or status < 200:
             return message, status
-        
-    #chaning email
+
+    # chaning email
     newMail = data.get("email")
     if newMail != user.email:
         user.email = newMail
@@ -229,7 +244,7 @@ def update_all() -> tuple[str, int]:
         db.session.add(user)
         db.session.commit()
         send_verification_mail(user)
-    
+
     # changind username
     newUserName = data.get("username")
     if user.username != newUserName:
@@ -243,36 +258,47 @@ def update_all() -> tuple[str, int]:
 
     return jsonify({"message": "change successfull"}), 200
 
+
 @update_info.route("/get_user_info", methods=["GET"])
 def get_all() -> tuple[str, int]:
     user = Users.query.filter_by(username=g.username).first()
     socials = [l.url for l in user.links]
-    majors = [[m.name,m.name, m.id] for m in user.majors]
-    minors = [[m.name,m.name, m.id] for m in user.minors]
+    majors = [[m.name, m.name, m.id] for m in user.majors]
+    minors = [[m.name, m.name, m.id] for m in user.minors]
     specs = [[m.name, m.name, m.id] for m in user.specializations]
-    return jsonify({"username": g.username, 
-                    "email": user.email, 
-                    "bio": user.bio,
-                    "links": [l.url for l in user.links],
-                    "socials": socials,
-                    "majors": majors,
-                    "minors": minors,
-                    "specializations": specs}), 200
+    return jsonify(
+        {
+            "username": g.username,
+            "email": user.email,
+            "bio": user.bio,
+            "links": [l.url for l in user.links],
+            "socials": socials,
+            "majors": majors,
+            "minors": minors,
+            "specializations": specs,
+        }
+    ), 200
+
 
 @update_info.route("/get_user_seq", methods=["GET"])
 def get_user_seq() -> tuple[str, int]:
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
     sem_dic = ["Summer", "Fall", "Winter"]
-    return jsonify({"current_sem": user.current_term,
-                    "sequence": user.sequence.name,
-                    "started_year": user.started_year,
-                    "started_sem": sem_dic[user.started_month],
-                    "grad_year": user.started_year + (len(path) + user.started_month) // 3,
-                    "coop": user.coop,
-                    "path": path}), 200
+    return jsonify(
+        {
+            "current_sem": user.current_term,
+            "sequence": user.sequence.name,
+            "started_year": user.started_year,
+            "started_sem": sem_dic[user.started_month],
+            "grad_year": user.started_year + (len(path) + user.started_month) // 3,
+            "coop": user.coop,
+            "path": path,
+        }
+    ), 200
 
-def translate_path(path:str):
+
+def translate_path(path: str):
     res = path.split("-")
     yearCount = 1
     semCount = 0
@@ -280,15 +306,14 @@ def translate_path(path:str):
     for i in range(len(res)):
         if res[i] == "Study":
             res[i] = f"{yearCount}{'B' if semCount else 'A'}"
-            yearCount+=semCount
+            yearCount += semCount
             semCount = (semCount + 1) % 2
         elif res[i] == "Coop":
             res[i] = f"WT{wtCount}"
-            wtCount+=1
-    if res[-1] == "": res.pop()
+            wtCount += 1
+    if res[-1] == "":
+        res.pop()
     return res
-        
-
 
 
 """

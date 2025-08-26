@@ -18,9 +18,9 @@ def enrol_to_majors(major_ids: set[int], username: str) -> tuple[int, str]:
     user = Users.query.filter_by(username=username).first()
     if not user:
         return (403, "Username does not exist")
-    
+
     majors = Major.query.filter(Major.id.in_(major_ids)).all()
-    
+
     new_ids = {m.id for m in majors}
     old_ids = {m.id for m in user.majors}
     missing = [id for id in major_ids if id not in new_ids]
@@ -33,7 +33,10 @@ def enrol_to_majors(major_ids: set[int], username: str) -> tuple[int, str]:
         user.majors = majors
         db.session.add(user)
         db.session.commit()
-        return (201, f"{user.username} is enroled in {added} and remvoed from {removed}")
+        return (
+            201,
+            f"{user.username} is enroled in {added} and remvoed from {removed}",
+        )
     except Exception as e:
         return (500, str(e))
 
@@ -55,9 +58,9 @@ def enrol_to_minors(minor_ids: set[int], username: str) -> tuple[int, str]:
     user = Users.query.filter_by(username=username).first()
     if not user:
         return (403, "Username does not exist")
-    
+
     minors = Minor.query.filter(Minor.id.in_(minor_ids)).all()
-    
+
     new_ids = {m.id for m in minors}
     old_ids = {m.id for m in user.minors}
     missing = [id for id in minor_ids if id not in new_ids]
@@ -70,7 +73,10 @@ def enrol_to_minors(minor_ids: set[int], username: str) -> tuple[int, str]:
         user.minors = minors
         db.session.add(user)
         db.session.commit()
-        return (201, f"{user.username} is enroled in {added} and remvoed from {removed}")
+        return (
+            201,
+            f"{user.username} is enroled in {added} and remvoed from {removed}",
+        )
     except Exception as e:
         return (500, str(e))
 
@@ -92,9 +98,9 @@ def enrol_to_specs(spec_ids: set[int], username: str) -> tuple[int, str]:
     user = Users.query.filter_by(username=username).first()
     if not user:
         return (403, "Username does not exist")
-    
+
     specs = Specialization.query.filter(Specialization.id.in_(spec_ids)).all()
-    
+
     new_ids = {m.id for m in specs}
     old_ids = {m.id for m in user.specializations}
     missing = [id for id in spec_ids if id not in new_ids]
@@ -107,7 +113,10 @@ def enrol_to_specs(spec_ids: set[int], username: str) -> tuple[int, str]:
         user.specializations = specs
         db.session.add(user)
         db.session.commit()
-        return (201, f"{user.username} is enroled in {added} and remvoed from {removed}")
+        return (
+            201,
+            f"{user.username} is enroled in {added} and remvoed from {removed}",
+        )
     except Exception as e:
         return (500, str(e))
 

@@ -32,7 +32,7 @@ def create_app() -> Flask:
     app.register_blueprint(update_info, url_prefix="/update_info")
     app.register_blueprint(school_info_bp, url_prefix="/school_info")
 
-    #get rid of 
+    # get rid of
     app.register_blueprint(test_bp, url_prefix="/test")
 
     CORS(

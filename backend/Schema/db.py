@@ -59,7 +59,7 @@ major_spec = Table(
     "major_spec",
     Base.metadata,
     Column("spec_id", db.Integer, ForeignKey("specializations.id"), primary_key=True),
-    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True)
+    Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
 )
 
 
@@ -131,19 +131,14 @@ class Users(db.Model):
     started_year: Mapped[int] = mapped_column(
         db.Integer, default=datetime.now().year, server_default=text("2024")
     )
-    started_month: Mapped[int] = mapped_column(
-        db.Integer, default=1
+    started_month: Mapped[int] = mapped_column(db.Integer, default=1)
+    coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
+    bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
+    path: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    links: Mapped[list["Link"]] = relationship(
+        "Link", back_populates="user", cascade="all, delete-orphan, save-update"
     )
-    coop: Mapped[bool] = mapped_column(
-        db.Boolean(), default=True
-    )
-    bio: Mapped[str] = mapped_column(
-        db.String(), default="", nullable=False
-    )
-    path: Mapped[str] = mapped_column(
-        db.String(), default="", server_default=""
-    )
-    links: Mapped[list["Link"]] = relationship("Link", back_populates="user", cascade="all, delete-orphan, save-update")
+
 
 class Link(db.Model):
     __tablename__ = "link"
@@ -153,6 +148,7 @@ class Link(db.Model):
         db.Integer, ForeignKey("users.id"), nullable=False
     )
     user: Mapped["Users"] = relationship("Users", back_populates="links")
+
 
 class JwtToken(db.Model):
     """The JwtToken table."""

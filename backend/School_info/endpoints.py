@@ -42,10 +42,12 @@ def extract_specs_ep() -> tuple[str, int]:
     extract_specializations()
     return "", 204
 
+
 @school_info_bp.route("/update_seqs", methods=["GET"])
 def update_seqs() -> tuple[str, int]:
     scrape_eng()
     return "", 204
+
 
 @school_info_bp.route("/extract_sequences", methods=["GET"])
 def extract_sequences_ep() -> tuple[str, int]:
@@ -60,12 +62,14 @@ def extract_options_ep() -> tuple[str, int]:
     extract_options()
     return "", 204
 
+
 @school_info_bp.route("/count_majors", methods=["GET"])
 def count_majors():
-    exists,dne = major_checking()
+    exists, dne = major_checking()
     return jsonify({"exists": exists, "dne": dne}), 200
 
+
 @school_info_bp.route("/extract_math_sequence", methods=["GET"])
-def extract_math_seq() -> tuple[str,int]:
+def extract_math_seq() -> tuple[str, int]:
     scrape_math()
     return "", 204

@@ -122,7 +122,7 @@ export default function LogedInNav() {
                             panelOn ? "max-h-30 py-[0.85rem]" : "max-h-0"
                         )}
                     >
-                        <HoverEffect pClass="max-w-[100px]" text={username || ""}/>
+                        <HoverEffect pClass="max-w-[100px]" hover={username || ""}>{username || ""}</HoverEffect>
                         <Link
                             href="/settings"
                             className="items-center flex hover:text-[#1a3337] transition-colors duration-300"

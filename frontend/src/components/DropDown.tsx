@@ -118,7 +118,7 @@ export default function DropDown({classes = {}, selectedValue, setSelectedValue,
                 >
                     {selectedValue === undefined ? 
                         <div>Choose your option</div>
-                    : <HoverEffect text={selectedValue[0]} hover={selectedValue[1]} pClass="max-w-[59vw] xs:max-w-[264px]" hoverStyle={{right:"50%", transform: "translateX(50%)", maxWidth:"264px", width: "max-content"}}/>
+                    : <HoverEffect hover={selectedValue[1]} pClass="max-w-[59vw] xs:max-w-[264px]" hoverStyle={{right:"50%", transform: "translateX(50%)", maxWidth:"264px", width: "max-content"}}>{selectedValue[0]}</HoverEffect>
                     }
                     <span className={`pointer-events-none absolute inset-y-0 right-1 flex items-center ${isSelectorOpen ? "rotate-180" : ""}`}>
                         <svg

@@ -11,6 +11,7 @@ from .Login_actions import update_info
 from .Schema import db, migrate
 from .School_info import school_info_bp
 from .Test import test_bp
+from .Courses import courses_bp
 
 load_dotenv()
 
@@ -31,6 +32,7 @@ def create_app() -> Flask:
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(update_info, url_prefix="/update_info")
     app.register_blueprint(school_info_bp, url_prefix="/school_info")
+    app.register_blueprint(courses_bp, url_prefix="/courses")
 
     # get rid of
     app.register_blueprint(test_bp, url_prefix="/test")

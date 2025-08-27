@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function SemesterPage() {
     return (
-        <section className="flex flex-col items-center mt-25">
+        <section className="flex flex-col items-center mt-10">
             <h2 className="text-2xl lg:text-4xl text-slate-800 text-center">Semester Planner</h2>
             <ClassSchedule />
             {/* <Warnings /> */}

@@ -50,7 +50,7 @@ export default function MainLayout({
     return (
         <div>
             <LogedInNav />
-            <main className="mt-20">
+            <main className="mt-20 overflow-x-hidden">
                 {children}
             </main>
         </div>

@@ -35,7 +35,6 @@ export default function ClassSchedule() {
             {/* Calendar */}
             <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
                 {/* lines */}
-
                 {/* Vertical */}
                 <div className="flex justify-between absolute top-4 bottom-4 left-0 right-0">
                     <div className={clsx(lineVertClass, "!border-r-0")} />
@@ -82,7 +81,7 @@ export default function ClassSchedule() {
             </div>
 
             {/* Online Classes */}
-            <div className="mt-15 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+            <div className="mt-15 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-120">Online Classes</div>
                 <div className="text-base sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
@@ -130,7 +129,7 @@ export default function ClassSchedule() {
             </RightSide>
 
             {/* Options */}
-            <div className="mt-10 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+            <div className="mt-10 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-lg">
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-108">Options</div>
                 <div className="flex flex-col px-4 py-2 min-w-108">
                     {checkBoxes.map(options => (

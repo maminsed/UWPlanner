@@ -1,5 +1,16 @@
 import clsx from "clsx";
 import { Fragment } from "react";
+import { IoIosInformationCircleOutline } from "react-icons/io";
+import { LuCamera, LuChevronLeft, LuChevronRight, LuImport, LuPlus, LuShare2 } from "react-icons/lu";
+import HoverEffect from "../HoverEffect";
+
+export function RightSide({ children, className, ...props}: React.HTMLAttributes<HTMLDivElement>) {
+    return (
+        <div className={clsx("flex justify-end gap-2 mb-4 mr-2 items-center", className)} {...props}>
+            {children}
+        </div>
+    )
+}
 
 export default function ClassSchedule() {
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
@@ -7,11 +18,22 @@ export default function ClassSchedule() {
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
     const lineHorMidClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed"
     const lineHorFullClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80"
+    const checkBoxes: string[][] = [
+        ["Course Code", "Open All", "AM/PM", "Lectures", "Final Week"],
+        ["Course Title", "Close All", "Tutorials", "Tests", "First Week"]
+    ];
 
     return (
-        <section className="my-5">
+        <section className="my-5 max-w-[96vw]">
+            {/* Calendar buttons */}
+            <RightSide>
+                <button><LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1"/></button>
+                <button><LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1"/></button>
+                <button className="rounded-lg border-1 px-2 cursor-pointer">Current Week</button>
+            </RightSide>
+
             {/* Calendar */}
-            <div className="relative w-181 max-w-[96vw]">
+            <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
                 {/* lines */}
 
                 {/* Vertical */}
@@ -60,8 +82,69 @@ export default function ClassSchedule() {
             </div>
 
             {/* Online Classes */}
+            <div className="mt-15 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+                <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-120">Online Classes</div>
+                <div className="text-base sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
+                    <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
+                        <div className="flex-1 min-w-20">Code</div>
+                        <div className="flex-2 min-w-40">Course Title</div>
+                        <div className="flex-2 min-w-16">Section</div>
+                        <div className="flex-1 min-w-20">Start Date</div>
+                        <div className="flex-1 min-w-20">End Date</div>
+                    </div>
+                    <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
+                        <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">CS246 <IoIosInformationCircleOutline  className="min-w-4"/></div>
+                        <div className="flex-2 min-w-40">Object-Oriented Software Development</div>
+                        <div className="flex-2 min-w-16">LEC101</div>
+                        <div className="flex-1 min-w-20">2/9/2025</div>
+                        <div className="flex-1 min-w-20">19/12/2025</div>
+                        <div className="absolute right-4 left-4 bottom-0 border-t-1"/>
+                    </div>
+                    <div className="flex flex-row px-2 py-1 items-center min-w-120">
+                        <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">CS246 <IoIosInformationCircleOutline  className="min-w-4"/></div>
+                        <div className="flex-2 min-w-40">Object-Oriented Software Development</div>
+                        <div className="flex-2 min-w-16">LEC101</div>
+                        <div className="flex-1 min-w-20">2/9/2025</div>
+                        <div className="flex-1 min-w-20">19/12/2025</div>
+                    </div>
+                </div>
+                <div className="absolute left-0 right-0 top-10 bottom-2 min-w-120 flex flex-row pr-2 z-2">
+                    <div className="border-r-1 flex-1 min-w-20"/>
+                    <div className="border-r-1 flex-2 min-w-40"/>
+                    <div className="border-r-1 flex-2 min-w-16"/>
+                    <div className="border-r-1 flex-1 min-w-20"/>
+                    <div className="flex-1 min-w-20"/>
+                </div>
+            </div>
+
+            <RightSide className="mb-5">
+                <HoverEffect hover="Add Class">
+                    <LuPlus className="w-6 h-auto font-semibold cursor-pointer"/>
+                </HoverEffect>
+                <HoverEffect hover="Import Schedule">
+                    <LuCamera className="w-6 h-auto font-semibold cursor-pointer"/>
+                </HoverEffect>
+                <HoverEffect hover="Export Schedule">
+                    <LuShare2 className="w-5 h-auto font-semibold cursor-pointer"/>
+                </HoverEffect>
+            </RightSide>
 
             {/* Options */}
+            <div className="mt-10 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+                <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-108">Options</div>
+                <div className="flex flex-col px-4 py-2 min-w-108">
+                    {checkBoxes.map(options => (
+                        <div className="flex gap-1" key={options[0]}>
+                            {options.map(option=>(
+                                <label className="cursor-pointer text-sm sm:text-[1.1rem] min-w-20 flex-1" key={option}>
+                                    <input type="checkbox" disabled={option == "-"}/>
+                                    {option}
+                                </label>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
         </section>
     )
 }

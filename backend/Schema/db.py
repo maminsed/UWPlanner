@@ -252,10 +252,10 @@ class Course(db.Model):
     
     subjectCode: Mapped[str] = mapped_column(db.String()) #e.g. MATH
     catalogNumber: Mapped[str] = mapped_column(db.String()) # e.g. 235
-    title: Mapped[str] = mapped_column(db.String()) #e.g. Linear Algebra 2
-    descriptionAbbreviated: Mapped[str] = mapped_column(db.String())
-    description: Mapped[str] = mapped_column(db.String())
-    gradingBasis: Mapped[str] = mapped_column(db.String())
+    title: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
+    descriptionAbbreviated: Mapped[str] = mapped_column(db.String(), default="")
+    description: Mapped[str] = mapped_column(db.String(), default="")
+    gradingBasis: Mapped[str] = mapped_column(db.String(), default="NUM")
     courseComponentCode: Mapped[str] = mapped_column(db.String()) #e.g. LEC TUT ...
-    enrollConsentCode: Mapped[str] = mapped_column(db.String()) # e.g. if Instructor consent is required to enrol
-    dropConsentCode: Mapped[str] = mapped_column(db.String())
+    enrollConsentCode: Mapped[str] = mapped_column(db.String(), default="N") # e.g. if Instructor consent is required to enrol
+    dropConsentCode: Mapped[str] = mapped_column(db.String(), default="N")

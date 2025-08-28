@@ -13,7 +13,16 @@ export function RightSide({ children, className, ...props}: React.HTMLAttributes
     )
 }
 
-export function Class({start, end, ...props}: {start: string; end: string} & React.HTMLAttributes<HTMLDivElement>) {
+type ClassInterface = {
+    start: string;
+    end: string;
+    code: string;
+    type: string;
+    title: string;
+    location: string;
+}
+
+export function Class({start, end, code, type, title, location, ...props}: ClassInterface & React.HTMLAttributes<HTMLDivElement>) {
     // start, end: 8:50 (no space anywhere)
     const startList = start.split(":").map(i=>Number(i))
     const endList = end.split(":").map(i=>Number(i))
@@ -25,11 +34,11 @@ export function Class({start, end, ...props}: {start: string; end: string} & Rea
             style={{left:"calc(100%/6)", top:`calc(${19+top * 20} * var(--spacing))`, height:`calc(${20 * height} * var(--spacing)`}}
             {...props}
         >
-            <p className="pt-1">COMMST 225</p>
-            <p>LEC</p>
-            <p>Object-Oriented Software Development</p>
+            <p className="pt-1">{code}</p>
+            <p>{type}</p>
+            <p>{title}</p>
             <p>{start}-{end}</p>
-            <p>PAS 2086</p>
+            <p>{location}</p>
             <div className="flex justify-end pr-[3%]">
                 <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
             </div>
@@ -60,7 +69,7 @@ export default function ClassSchedule() {
             {/* Calendar */}
             <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
                 {/* Classes */}
-                <Class start="9:00" end="10:20"/>
+                <Class start="9:00" end="10:20" code="CS246" type="LEC" title="Object-Oriented Software Development" location="MC2035"/>
 
                 {/* lines */}
                 {/* Vertical */}

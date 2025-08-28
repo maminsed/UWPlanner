@@ -1,13 +1,38 @@
 import clsx from "clsx";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
-import { LuCamera, LuChevronLeft, LuChevronRight, LuImport, LuPlus, LuShare2 } from "react-icons/lu";
+import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
 
 export function RightSide({ children, className, ...props}: React.HTMLAttributes<HTMLDivElement>) {
+    // Just a class that has stuff on the right side
     return (
         <div className={clsx("flex justify-end gap-2 mb-4 mr-2 items-center", className)} {...props}>
             {children}
+        </div>
+    )
+}
+
+export function Class({start, end, ...props}: {start: string; end: string} & React.HTMLAttributes<HTMLDivElement>) {
+    // start, end: 8:50 (no space anywhere)
+    const startList = start.split(":").map(i=>Number(i))
+    const endList = end.split(":").map(i=>Number(i))
+    const top = (startList[0] - 8) + startList[1] / 60
+    const height = (endList[0] - startList[0]) + (endList[1] - startList[1]) / 60
+    return (
+        <div 
+            className="absolute w-1/6 bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
+            style={{left:"calc(100%/6)", top:`calc(${19+top * 20} * var(--spacing))`, height:`calc(${20 * height} * var(--spacing)`}}
+            {...props}
+        >
+            <p className="pt-1">COMMST 225</p>
+            <p>LEC</p>
+            <p>Object-Oriented Software Development</p>
+            <p>{start}-{end}</p>
+            <p>PAS 2086</p>
+            <div className="flex justify-end pr-[3%]">
+                <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
+            </div>
         </div>
     )
 }
@@ -34,6 +59,9 @@ export default function ClassSchedule() {
 
             {/* Calendar */}
             <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+                {/* Classes */}
+                <Class start="9:00" end="10:20"/>
+
                 {/* lines */}
                 {/* Vertical */}
                 <div className="flex justify-between absolute top-4 bottom-4 left-0 right-0">
@@ -136,7 +164,7 @@ export default function ClassSchedule() {
                         <div className="flex gap-1" key={options[0]}>
                             {options.map(option=>(
                                 <label className="cursor-pointer text-sm sm:text-[1.1rem] min-w-20 flex-1" key={option}>
-                                    <input type="checkbox" disabled={option == "-"}/>
+                                    <input type="checkbox" disabled={option == "-"} className="mr-1"/>
                                     {option}
                                 </label>
                             ))}

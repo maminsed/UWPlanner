@@ -239,19 +239,40 @@ class Sequence(db.Model):
         "Major", back_populates="sequences", secondary=major_sequence
     )
 
+
 class Course(db.Model):
     """Database for Courses."""
 
     __tablename__ = "courses"
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-    courseId: Mapped[str] = mapped_column(db.String(), nullable=False)
+    course_id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     offeredIn: Mapped[str] = mapped_column(db.String(), default="")
     
-    subjectCode: Mapped[str] = mapped_column(db.String()) #e.g. MATH
-    catalogNumber: Mapped[str] = mapped_column(db.String()) # e.g. 235
+    code: Mapped[str] = mapped_column(db.String()) #e.g. MATH
     title: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
 
     preReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     coReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     antiReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+
+    sections: Mapped[list["Section"]] = relationship(
+        "Section", cascade="all, delete-orphan, save-update", back_populates="course"
+    )
+
+class Section(db.Model):
+    """Database for Sections."""
+
+    __tablename__ = "sections"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    section_name: Mapped[str] = mapped_column(db.String()) #e.g. TUT 101
+    term_id: Mapped[int] = mapped_column(db.Integer)
+    updated_at: Mapped[Optional[str]] = mapped_column()
+
+    enrollment_capacity: Mapped[int] = mapped_column(default=0)
+    enrollment_total: Mapped[int] = mapped_column(default=0)
+    course_id: Mapped[int] = mapped_column(
+        db.Integer, ForeignKey("courses.course_id"), nullable=False
+    )
+    course: Mapped[Course] = relationship(
+        "Course", back_populates="sections", foreign_keys=[course_id]
+    )

@@ -248,12 +248,12 @@ class Course(db.Model):
     offeredIn: Mapped[str] = mapped_column(db.String(), default="")
     
     code: Mapped[str] = mapped_column(db.String()) #e.g. MATH
-    title: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
+    name: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
 
-    preReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
-    coReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
-    antiReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    prereqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    antireqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
 
     sections: Mapped[list["Section"]] = relationship(
         "Section", cascade="all, delete-orphan, save-update", back_populates="course"

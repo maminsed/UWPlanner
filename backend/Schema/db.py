@@ -134,10 +134,17 @@ class Users(db.Model):
     started_month: Mapped[int] = mapped_column(db.Integer, default=1)
     coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
     bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
+    # seprated with - 
     path: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     links: Mapped[list["Link"]] = relationship(
         "Link", back_populates="user", cascade="all, delete-orphan, save-update"
     )
+
+    #Course paths: Follow UWFLOW ids!!
+    # A set of ids for the current sems courses seprated with - 
+    section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="") 
+    # A set of Names for future semester courses, coruses seprated with - semesters seprated with //
+    course_ids: Mapped[str] = mapped_column(db.String, default="", server_default="")
 
 
 class Link(db.Model):

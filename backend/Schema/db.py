@@ -245,17 +245,13 @@ class Course(db.Model):
     __tablename__ = "courses"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     courseId: Mapped[str] = mapped_column(db.String(), nullable=False)
-    offeredIn: Mapped[str] = mapped_column(db.String(), default="1255")
-
-    associatedAcademicGroupCode: Mapped[str] = mapped_column(db.String())
-    associatedAcademicOrgCode: Mapped[str] = mapped_column(db.String())
+    offeredIn: Mapped[str] = mapped_column(db.String(), default="")
     
     subjectCode: Mapped[str] = mapped_column(db.String()) #e.g. MATH
     catalogNumber: Mapped[str] = mapped_column(db.String()) # e.g. 235
     title: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
-    descriptionAbbreviated: Mapped[str] = mapped_column(db.String(), default="")
     description: Mapped[str] = mapped_column(db.String(), default="")
-    gradingBasis: Mapped[str] = mapped_column(db.String(), default="NUM")
-    courseComponentCode: Mapped[str] = mapped_column(db.String()) #e.g. LEC TUT ...
-    enrollConsentCode: Mapped[str] = mapped_column(db.String(), default="N") # e.g. if Instructor consent is required to enrol
-    dropConsentCode: Mapped[str] = mapped_column(db.String(), default="N")
+
+    preReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    coReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    antiReq: Mapped[str] = mapped_column(db.String(), default="", server_default="")

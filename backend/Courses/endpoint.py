@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from dotenv import load_dotenv
-from .extraction import extract_prereq, get_course_data
+from .extraction import get_course_data
 
 load_dotenv()
 courses_bp = Blueprint("Courses", __name__)

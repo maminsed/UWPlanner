@@ -1,11 +1,9 @@
 from ..Schema import Course, db
 from sqlalchemy import insert
-
-import os
 import requests
 
+GQL_URL = "https://uwflow.com/graphql"
 def get_course_data():
-    GQL_URL = "https://uwflow.com/graphql"
     GQL_QUERY = """
     query Course($limit: Int, $offset: Int) {
         course(limit: $limit, offset: $offset) {
@@ -49,11 +47,6 @@ def get_course_data():
             break
         offset+=limit
     return errors
-
-
-
-def extract_prereq():
-    pass
 
 """
 def get_course_data_backup():

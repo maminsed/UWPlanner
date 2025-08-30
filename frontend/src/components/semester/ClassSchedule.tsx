@@ -1,8 +1,12 @@
+'use client'
 import clsx from "clsx";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
 import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
+import useGQL from "@/lib/useGQL";
 
 export function RightSide({ children, className, ...props}: React.HTMLAttributes<HTMLDivElement>) {
     // Just a class that has stuff on the right side
@@ -14,37 +18,77 @@ export function RightSide({ children, className, ...props}: React.HTMLAttributes
 }
 
 type ClassInterface = {
-    start: string;
-    end: string;
+    startSeconds: number;
+    endSeconds: number;
+    startDate: string;
+    endDate: string;
+    days: ("M"|"T"|"W"|"Th"|"F")[]; // :["M","T", "W","Th","F"]
     code: string;
-    type: string;
     title: string;
+    type: string;
+    prof: string;
     location: string;
 }
 
-export function Class({start, end, code, type, title, location, ...props}: ClassInterface & React.HTMLAttributes<HTMLDivElement>) {
+function translateSecToHour(time:number) {
+    const min = Math.floor((time % 3600) / 60)
+    return `${Math.floor(time / 3600)}:${min}${min < 10 ? '0' : ''}`
+}
+
+
+function Class({startSeconds, endSeconds, days, code, type, title, prof, location}: ClassInterface) {
     // start, end: 8:50 (no space anywhere)
-    const startList = start.split(":").map(i=>Number(i))
-    const endList = end.split(":").map(i=>Number(i))
-    const top = (startList[0] - 8) + startList[1] / 60
-    const height = (endList[0] - startList[0]) + (endList[1] - startList[1]) / 60
+    const top = (startSeconds - (8 * 3600)) / 3600;
+    const height = (endSeconds - startSeconds) / 3600;
+    const dayMap = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"}
     return (
-        <div 
-            className="absolute w-1/6 bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
-            style={{left:"calc(100%/6)", top:`calc(${19+top * 20} * var(--spacing))`, height:`calc(${20 * height} * var(--spacing)`}}
-            {...props}
-        >
-            <p className="pt-1">{code}</p>
-            <p>{type}</p>
-            <p>{title}</p>
-            <p>{start}-{end}</p>
-            <p>{location}</p>
-            <div className="flex justify-end pr-[3%]">
-                <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
-            </div>
+        <Fragment>
+            {days.map(day=> (
+                <div 
+                    key={day}
+                    className="absolute w-1/6 bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
+                    style={{left:`calc(${dayMap[day]})`, top:`calc(${19+top * 20} * var(--spacing))`, height:`calc(${20 * height} * var(--spacing)`}}
+                >
+                    <p className="pt-1">{code}</p>
+                    <p>{type}</p>
+                    <p>{title}</p>
+                    <p>{translateSecToHour(startSeconds)}-{translateSecToHour(endSeconds)}</p>
+                    <p>{location}</p>
+                    <p>{prof}</p>
+                    <div className="flex justify-end pr-[3%]">
+                        <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
+                    </div>
+                </div>
+            ))}
+        </Fragment>
+    )
+}
+
+function OnlineClass({code, type, title, startDate, endDate, first=false}: ClassInterface & {first?: boolean}) {
+    return (
+        <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
+            <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline  className="min-w-4"/></div>
+            <div className="flex-2 min-w-40">{title}</div>
+            <div className="flex-2 min-w-16">{type}</div>
+            <div className="flex-1 min-w-20 text-[1rem]">{startDate}</div>
+            <div className="flex-1 min-w-20 text-[1rem]">{endDate}</div>
+            {!first && <div className="absolute right-4 left-4 top-0 border-t-1"/>}
         </div>
     )
 }
+
+function getMonday() {
+    const today = new Date();
+    const day = today.getDay();
+
+    let diff = day - 1
+    if (day === 0) diff = -1;
+    if (day === 6) diff = -2;
+    today.setDate(today.getDate() - diff);
+    return today
+}
+
+
 
 export default function ClassSchedule() {
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
@@ -52,24 +96,140 @@ export default function ClassSchedule() {
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
     const lineHorMidClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed"
     const lineHorFullClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80"
+    const [classes, setClasses] = useState<ClassInterface[]>([])
+    const [mondayDate, setMondayDate] = useState<Date>(getMonday())
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const days = ["Mon", "Tue", "Wed","Thu","Fri"]
     const checkBoxes: string[][] = [
         ["Course Code", "Open All", "AM/PM", "Lectures", "Final Week"],
         ["Course Title", "Close All", "Tutorials", "Tests", "First Week"]
     ];
+    const backend = api();
+    const gql = useGQL();
 
+    useEffect(()=>{
+        async function initialSetup() {
+            const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`)
+            if (!res?.ok) {
+                console.error("error!")
+            } else {
+                const response = await res.json().catch(()=>{});
+                const sections = response.sections;
+                // TODO: UPDATE TERM_ID!
+                const GQL_QUERY= `
+                    query Course_section($sections: [Int!]!, $termId: Int!) {
+                            course_section(
+                            where: {
+                                class_number: { _in: $sections }
+                                term_id: { _eq: $termId }
+                            }
+                        ) {
+                            class_number
+                            course_id
+                            id
+                            section_name
+                            term_id
+                            course {
+                                code
+                                name
+                            }
+                            meetings {
+                                days
+                                end_date
+                                end_seconds
+                                is_cancelled
+                                is_closed
+                                is_tba
+                                location
+                                section_id
+                                start_date
+                                start_seconds
+                                prof_id
+                            }
+                        }
+                    }
+                `
+                const gql_response = await gql(GQL_QUERY, {sections, termId: 1255});
+                console.log(gql_response?.data?.course_section)
+                const data: ClassInterface[] = []
+                gql_response?.data?.course_section.forEach((section:any):void=>{
+                    section.meetings.forEach((meeting:any)=>{
+                        data.push({
+                            startSeconds: meeting.start_seconds || 0,
+                            endSeconds: meeting.end_seconds || 0,
+                            startDate: meeting.start_date,
+                            endDate: meeting.end_date,
+                            days: meeting.days,
+                            code: section.course.code.toUpperCase() || '',
+                            title: section.course.name || '',
+                            type: section.section_name || '',
+                            location: meeting.location || '',
+                            prof: meeting.prof_id || ''})
+                        
+                    })
+                    
+                })
+                setClasses(data);
+            }
+        }
+
+        initialSetup()
+    },[])
+
+    function moveTime(diff: number) {
+        setMondayDate(prevDate=>{
+            const date= new Date(prevDate);
+            date.setDate(date.getDate()+diff);
+            return date;
+        })
+    }
+
+    function inWeek(startDate: string, endDate: string) {
+        const [startYear, startMonth, startDay] = startDate.split("-").map(Number)
+        const startObj = new Date(startYear, startMonth - 1, startDay)
+
+        const [endYear, endMonth, endDay] = endDate.split("-").map(Number)
+        const endObj = new Date(endYear, endMonth - 1, endDay)
+
+        const fridayDate = new Date(mondayDate);
+        fridayDate.setDate(fridayDate.getDate()+4);
+        return startObj < fridayDate && endObj > mondayDate;
+    }
+
+    function loadOnlines() {
+        let first = true;
+        return (
+            <>
+                {classes.map((section,i)=> {
+                    if (section.startSeconds === section.endSeconds && section.startSeconds === 0) {
+                        if (first) {
+                            first = false;
+                            return <OnlineClass {...section} key={i} first={true}/>
+                        }
+                        return <OnlineClass {...section} key={i}/>
+                    }
+                    return null
+                })}
+            </>
+        )
+    }
+
+    console.log(classes)
     return (
         <section className="my-5 max-w-[96vw]">
             {/* Calendar buttons */}
             <RightSide>
-                <button><LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1"/></button>
-                <button><LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1"/></button>
-                <button className="rounded-lg border-1 px-2 cursor-pointer">Current Week</button>
+                <button onClick={()=>moveTime(-7)}><LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/></button>
+                <button onClick={()=>moveTime(7)}><LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/></button>
+                <button onClick={()=>setMondayDate(getMonday)} className="rounded-lg border-1 px-2 cursor-pointer hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green">Current Week</button>
             </RightSide>
 
             {/* Calendar */}
             <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
                 {/* Classes */}
-                <Class start="9:00" end="10:20" code="CS246" type="LEC" title="Object-Oriented Software Development" location="MC2035"/>
+                {classes.map((section,i)=> (
+                    inWeek(section.startDate, section.endDate) ? <Class key={i} {...section}/> : null
+                ))}
 
                 {/* lines */}
                 {/* Vertical */}
@@ -96,11 +256,14 @@ export default function ClassSchedule() {
                 {/* Dates: */}
                 <div className="flex flex-row">
                     <div className={clsx(dateBoxClass, "rounded-tl-lg")}></div>
-                    <div className={dateBoxClass}>Mon Aug 25</div>
-                    <div className={dateBoxClass}>Tue Aug 26</div>
-                    <div className={dateBoxClass}>Wed Aug 27</div>
-                    <div className={dateBoxClass}>Thur Aug 28</div>
-                    <div className={clsx(dateBoxClass, "rounded-tr-lg")}>Fri Aug 29</div>
+                    {[...Array(5)].map((_,i)=>{ 
+                        const date = new Date(mondayDate);
+                        date.setDate(mondayDate.getDate() + i);
+
+                        return (
+                            <div key={i} className={i==4 ? clsx(dateBoxClass, "rounded-tr-lg") : dateBoxClass}>{days[i]} {months[date.getMonth()]} {date.getDate()}</div>
+                        )
+                    })}
                 </div>
                 {/* The days */}
                 <div>
@@ -128,21 +291,7 @@ export default function ClassSchedule() {
                         <div className="flex-1 min-w-20">Start Date</div>
                         <div className="flex-1 min-w-20">End Date</div>
                     </div>
-                    <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
-                        <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">CS246 <IoIosInformationCircleOutline  className="min-w-4"/></div>
-                        <div className="flex-2 min-w-40">Object-Oriented Software Development</div>
-                        <div className="flex-2 min-w-16">LEC101</div>
-                        <div className="flex-1 min-w-20">2/9/2025</div>
-                        <div className="flex-1 min-w-20">19/12/2025</div>
-                        <div className="absolute right-4 left-4 bottom-0 border-t-1"/>
-                    </div>
-                    <div className="flex flex-row px-2 py-1 items-center min-w-120">
-                        <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">CS246 <IoIosInformationCircleOutline  className="min-w-4"/></div>
-                        <div className="flex-2 min-w-40">Object-Oriented Software Development</div>
-                        <div className="flex-2 min-w-16">LEC101</div>
-                        <div className="flex-1 min-w-20">2/9/2025</div>
-                        <div className="flex-1 min-w-20">19/12/2025</div>
-                    </div>
+                    {loadOnlines()}
                 </div>
                 <div className="absolute left-0 right-0 top-10 bottom-2 min-w-120 flex flex-row pr-2 z-2">
                     <div className="border-r-1 flex-1 min-w-20"/>

@@ -1,6 +1,6 @@
 'use client'
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
@@ -24,6 +24,7 @@ type ClassInterface = {
     endDate: string;
     days: ("M"|"T"|"W"|"Th"|"F")[]; // :["M","T", "W","Th","F"]
     code: string;
+    courseId: number;
     title: string;
     type: string;
     prof: string;
@@ -103,7 +104,20 @@ function getMonday(today = new Date()) {
     return newD;
 }
 
+function hasOverlap([start1,end1]:[number,number], [start2,end2]:[number,number]) {
+    return !((start1 >= end2) || (end1 <=start2))
+}
 
+
+
+type DayMapInterface = {
+    "M": [number, number, number][], //start,end,course_id
+    "T": [number, number, number][],
+    "W": [number, number, number][],
+    "Th": [number, number, number][],
+    "F": [number, number, number][],
+    "Tot": [number, number][],
+}
 
 export default function ClassSchedule() {
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
@@ -119,6 +133,9 @@ export default function ClassSchedule() {
         [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
         [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
     ]);
+
+
+    const dayMap = useRef<DayMapInterface>({"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []})
     const backend = api();
     const gql = useGQL();
     console.log(mondayDate)
@@ -176,6 +193,7 @@ export default function ClassSchedule() {
                             endDate: meeting.end_date,
                             days: meeting.days,
                             code: section.course.code.toUpperCase() || '',
+                            courseId: section.course_id,
                             title: section.course.name || '',
                             type: section.section_name || '',
                             location: meeting.location || '',
@@ -190,6 +208,48 @@ export default function ClassSchedule() {
 
         initialSetup()
     },[])
+
+    useEffect(()=>{
+        function updateDayMap() {
+            const res: DayMapInterface = {"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []};
+            
+            classes.forEach(section=> {
+                if (inWeek(section.startDate, section.endDate)) {
+                    section.days.forEach(day=> {
+                        res[day].push([section.startSeconds, section.endSeconds, section.courseId]);
+                        res["Tot"].push([section.startSeconds, section.endSeconds]);
+                    })
+                }
+            })
+
+            Object.keys(res).forEach((day)=>{
+                const dayKey = day as keyof DayMapInterface;
+                res[dayKey].sort(([s1,e1,_1],[s2,e2,_2])=>s1 - s2 || e1 - e2)
+            })
+
+            if (res["Tot"].length) {
+                const tot:[number,number][] = []
+                let [start,end] = res["Tot"][0]
+                res["Tot"].forEach(day=> {
+                    if (hasOverlap([start,end], day)) {
+                        start = Math.min(start, day[0]);
+                        end = Math.max(end, day[1]);
+                    } else {
+                        tot.push([start,end]);
+                        start = day[0];
+                        end = day[1];
+                    }
+                })
+                tot.push([start,end])
+                res["Tot"] = tot;
+            }
+
+            dayMap.current = res;
+        }
+
+        updateDayMap()
+
+    },[classes, mondayDate])
 
 
     function moveTime(diff: number) {
@@ -268,7 +328,7 @@ export default function ClassSchedule() {
         
     }
 
-
+    console.log(dayMap.current)
     return (
         <section className="my-5 max-w-[96vw]">
             {/* Calendar buttons */}

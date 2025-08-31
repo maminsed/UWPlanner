@@ -48,19 +48,37 @@ function getVal(value:string, checkBoxes: [string, boolean][][]) {
 }
 
 
-function Class({startSeconds, endSeconds, days, code, type, title, prof, location, checkBoxes}: ClassInterface & {checkBoxes: [string, boolean][][]}) {
+function Class({startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap}: ClassInterface & {checkBoxes: [string, boolean][][], dayMap: DayMapInterface}) {
     const top = (startSeconds - (8 * 3600)) / 3600;
     const height = (endSeconds - startSeconds) / 3600;
-    const dayMap = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"};
+    const dayLeft = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"};
+
+    function countOccurance(
+        day:keyof DayMapInterface):[number,number] // #overlap,ith overlap
+    {
+        let count = 0;
+        let ith = 0;
+        dayMap[day].forEach(section=> {
+            if (hasOverlap([startSeconds,endSeconds],[section[0],section[1]])) {
+                if (section[2] === courseId) ith = count;
+                ++count;
+            }
+        })
+        return [count,ith]
+    }
+
     return (
         <Fragment>
             {days.map(day=> {
-            const width = 6;
+            const [count,ith] = countOccurance(day);
+            const width = 6 * count;
+            const offset = `${100 * ith}%/${width}`
+
             return (
                 <div 
                     key={day}
                     className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
-                    style={{left:`calc(${dayMap[day]})`, 
+                    style={{left:`calc(${dayLeft[day]} + ${offset})`, 
                             top:`calc(${19+top * 20} * var(--spacing))`, 
                             height:`calc(${20 * height} * var(--spacing)`,
                             width:`calc(100%/${width})`}}
@@ -135,7 +153,7 @@ export default function ClassSchedule() {
     ]);
 
 
-    const dayMap = useRef<DayMapInterface>({"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []})
+    const [dayMap, setDayMap] = useState<DayMapInterface>({"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []})
     const backend = api();
     const gql = useGQL();
     console.log(mondayDate)
@@ -244,7 +262,7 @@ export default function ClassSchedule() {
                 res["Tot"] = tot;
             }
 
-            dayMap.current = res;
+            setDayMap(res);
         }
 
         updateDayMap()
@@ -328,7 +346,6 @@ export default function ClassSchedule() {
         
     }
 
-    console.log(dayMap.current)
     return (
         <section className="my-5 max-w-[96vw]">
             {/* Calendar buttons */}
@@ -363,7 +380,7 @@ export default function ClassSchedule() {
             <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto overflow-y-clip">
                 {/* Classes */}
                 {classes.map((section,i)=> (
-                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? <Class key={i} {...section} checkBoxes={checkBoxes}/> : null
+                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? <Class key={i} {...section} checkBoxes={checkBoxes} dayMap={dayMap}/> : null
                 ))}
 
                 {/* lines */}

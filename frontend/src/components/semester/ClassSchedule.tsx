@@ -79,11 +79,11 @@ function Class({startSeconds, endSeconds, days, code, type, title, prof, locatio
     )
 }
 
-function OnlineClass({code, type, title, startDate, endDate, first=false}: ClassInterface & {first?: boolean}) {
+function OnlineClass({code, type, title, startDate, endDate, first=false, checkBoxes}: ClassInterface & {first?: boolean, checkBoxes:[string, boolean][][]}) {
     return (
         <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
-            <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline  className="min-w-4"/></div>
-            <div className="flex-2 min-w-40">{title}</div>
+            {getVal("course code",checkBoxes) && <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline  className="min-w-4"/></div>}
+            {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">{title}</div>}
             <div className="flex-2 min-w-16">{type}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{startDate}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{endDate}</div>
@@ -229,9 +229,9 @@ export default function ClassSchedule() {
                     if (section.startSeconds === section.endSeconds && section.startSeconds === 0 && selectedClass(section.type)) {
                         if (first) {
                             first = false;
-                            return <OnlineClass {...section} key={i} first={true}/>
+                            return <OnlineClass {...section} key={i} first={true} checkBoxes={checkBoxes}/>
                         }
-                        return <OnlineClass {...section} key={i}/>
+                        return <OnlineClass {...section} key={i} checkBoxes={checkBoxes}/>
                     }
                     return null
                 })}
@@ -300,7 +300,7 @@ export default function ClassSchedule() {
             </RightSide>
 
             {/* Calendar */}
-            <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto">
+            <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto overflow-y-clip">
                 {/* Classes */}
                 {classes.map((section,i)=> (
                     (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? <Class key={i} {...section} checkBoxes={checkBoxes}/> : null
@@ -320,13 +320,12 @@ export default function ClassSchedule() {
 
                 {/* Horizantal */}
                 <div className={lineHorFullClass} style={{top: `calc(${19}*var(--spacing))`}}/>
-                {[...Array(12)].map((_,i) => (
+                {[...Array(13)].map((_,i) => (
                     <Fragment key={i}>
                         <div className={lineHorMidClass} style={{top: `calc(${29+20*i}*var(--spacing))`}}/>
                         <div className={lineHorFullClass} style={{top: `calc(${39+20*i}*var(--spacing))`}}/>
                     </Fragment>
                 ))}
-                <div className={lineHorMidClass} style={{top: `calc(${29+20*12}*var(--spacing))`}}/>
 
                 {/* Dates: */}
                 <div className="flex flex-row">
@@ -360,8 +359,8 @@ export default function ClassSchedule() {
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-120">Online Classes</div>
                 <div className="text-sm sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
-                        <div className="flex-1 min-w-20">Code</div>
-                        <div className="flex-2 min-w-40">Course Title</div>
+                        {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
+                        {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">Course Title</div>}
                         <div className="flex-2 min-w-16">Section</div>
                         <div className="flex-1 min-w-20">Start Date</div>
                         <div className="flex-1 min-w-20">End Date</div>
@@ -369,8 +368,8 @@ export default function ClassSchedule() {
                     {loadOnlines()}
                 </div>
                 <div className="absolute left-0 right-0 top-10 bottom-2 min-w-120 flex flex-row pr-2 z-2">
-                    <div className="border-r-1 flex-1 min-w-20"/>
-                    <div className="border-r-1 flex-2 min-w-40"/>
+                    {getVal("course code", checkBoxes) && <div className="border-r-1 flex-1 min-w-20"/>}
+                    {getVal("course title", checkBoxes) && <div className="border-r-1 flex-2 min-w-40"/>}
                     <div className="border-r-1 flex-2 min-w-16"/>
                     <div className="border-r-1 flex-1 min-w-20"/>
                     <div className="flex-1 min-w-20"/>

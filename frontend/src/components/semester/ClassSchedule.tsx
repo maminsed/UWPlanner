@@ -30,36 +30,51 @@ type ClassInterface = {
     location: string;
 }
 
-function translateSecToHour(time:number) {
-    const min = Math.floor((time % 3600) / 60)
-    return `${Math.floor(time / 3600)}:${min}${min < 10 ? '0' : ''}`
+function translateSecToHour(time:number, checkBoxes: [string, boolean][][]) {
+    const min = Math.floor((time % 3600) / 60);
+    const hour = Math.floor(time / 3600);
+    const AM_PM = getVal("AM/PM", checkBoxes)
+    return `${AM_PM ? hour % 12 : hour}:${min}${min < 10 ? '0' : ''}${AM_PM && hour > 12 ? 'PM' : ''}`
+}
+
+function getVal(value:string, checkBoxes: [string, boolean][][]) {
+    for (let r = 0; r < checkBoxes.length; ++r) {
+        for (let c = 0; c < checkBoxes[r].length; ++c) {
+            if (checkBoxes[r][c][0].toLocaleLowerCase() == value.toLocaleLowerCase()) return checkBoxes[r][c][1];
+        }
+    }
+    return true;
 }
 
 
-function Class({startSeconds, endSeconds, days, code, type, title, prof, location}: ClassInterface) {
-    // start, end: 8:50 (no space anywhere)
+function Class({startSeconds, endSeconds, days, code, type, title, prof, location, checkBoxes}: ClassInterface & {checkBoxes: [string, boolean][][]}) {
     const top = (startSeconds - (8 * 3600)) / 3600;
     const height = (endSeconds - startSeconds) / 3600;
-    const dayMap = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"}
+    const dayMap = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"};
     return (
         <Fragment>
-            {days.map(day=> (
+            {days.map(day=> {
+            const width = 6;
+            return (
                 <div 
                     key={day}
-                    className="absolute w-1/6 bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
-                    style={{left:`calc(${dayMap[day]})`, top:`calc(${19+top * 20} * var(--spacing))`, height:`calc(${20 * height} * var(--spacing)`}}
+                    className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
+                    style={{left:`calc(${dayMap[day]})`, 
+                            top:`calc(${19+top * 20} * var(--spacing))`, 
+                            height:`calc(${20 * height} * var(--spacing)`,
+                            width:`calc(100%/${width})`}}
                 >
-                    <p className="pt-1">{code}</p>
+                    {getVal("course code", checkBoxes) && <p className="pt-1">{code}</p>}
                     <p>{type}</p>
-                    <p>{title}</p>
-                    <p>{translateSecToHour(startSeconds)}-{translateSecToHour(endSeconds)}</p>
+                    {getVal("course title", checkBoxes) && <p>{title}</p>}
+                    <p>{translateSecToHour(startSeconds, checkBoxes)}-{translateSecToHour(endSeconds, checkBoxes)}</p>
                     <p>{location}</p>
                     <p>{prof}</p>
                     <div className="flex justify-end pr-[3%]">
                         <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
                     </div>
                 </div>
-            ))}
+            )})}
         </Fragment>
     )
 }
@@ -70,22 +85,22 @@ function OnlineClass({code, type, title, startDate, endDate, first=false}: Class
             <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline  className="min-w-4"/></div>
             <div className="flex-2 min-w-40">{title}</div>
             <div className="flex-2 min-w-16">{type}</div>
-            <div className="flex-1 min-w-20 text-[1rem]">{startDate}</div>
-            <div className="flex-1 min-w-20 text-[1rem]">{endDate}</div>
+            <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{startDate}</div>
+            <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{endDate}</div>
             {!first && <div className="absolute right-4 left-4 top-0 border-t-1"/>}
         </div>
     )
 }
 
-function getMonday() {
-    const today = new Date();
+function getMonday(today = new Date()) {
     const day = today.getDay();
 
     let diff = day - 1
     if (day === 0) diff = -1;
     if (day === 6) diff = -2;
     today.setDate(today.getDate() - diff);
-    return today
+    const newD = new Date(today);
+    return newD;
 }
 
 
@@ -96,17 +111,17 @@ export default function ClassSchedule() {
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
     const lineHorMidClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed"
     const lineHorFullClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80"
-    const [classes, setClasses] = useState<ClassInterface[]>([])
-    const [mondayDate, setMondayDate] = useState<Date>(getMonday())
+    const [classes, setClasses] = useState<ClassInterface[]>([]);
+    const [mondayDate, setMondayDate] = useState<Date>(()=>getMonday());
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const days = ["Mon", "Tue", "Wed","Thu","Fri"]
-    const checkBoxes: string[][] = [
-        ["Course Code", "Open All", "AM/PM", "Lectures", "Final Week"],
-        ["Course Title", "Close All", "Tutorials", "Tests", "First Week"]
-    ];
+    const [checkBoxes, setCheckBoxes] = useState<[string, boolean][][]>([
+        [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
+        [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
+    ]);
     const backend = api();
     const gql = useGQL();
-
+    console.log(mondayDate)
     useEffect(()=>{
         async function initialSetup() {
             const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`)
@@ -150,7 +165,7 @@ export default function ClassSchedule() {
                     }
                 `
                 const gql_response = await gql(GQL_QUERY, {sections, termId: 1255});
-                console.log(gql_response?.data?.course_section)
+                // console.log(gql_response?.data?.course_section)
                 const data: ClassInterface[] = []
                 gql_response?.data?.course_section.forEach((section:any):void=>{
                     section.meetings.forEach((meeting:any)=>{
@@ -169,12 +184,13 @@ export default function ClassSchedule() {
                     })
                     
                 })
-                setClasses(data);
+                setClasses(data as ClassInterface[]);
             }
         }
 
         initialSetup()
     },[])
+
 
     function moveTime(diff: number) {
         setMondayDate(prevDate=>{
@@ -196,12 +212,21 @@ export default function ClassSchedule() {
         return startObj < fridayDate && endObj > mondayDate;
     }
 
+    function selectedClass(course_type: string) {
+        const type = course_type.split(' ')[0] as keyof typeof type_map;
+        const type_map = { TUT: 'Tutorials', LEC: 'lectures', TST: 'tests' };
+        if (type_map[type]) {
+            return getVal(type_map[type], checkBoxes);
+        }
+        return true;
+    }
+
     function loadOnlines() {
         let first = true;
         return (
             <>
                 {classes.map((section,i)=> {
-                    if (section.startSeconds === section.endSeconds && section.startSeconds === 0) {
+                    if (section.startSeconds === section.endSeconds && section.startSeconds === 0 && selectedClass(section.type)) {
                         if (first) {
                             first = false;
                             return <OnlineClass {...section} key={i} first={true}/>
@@ -214,21 +239,71 @@ export default function ClassSchedule() {
         )
     }
 
-    console.log(classes)
+
+    function handleOptions(outerI: number, innerI: number, value:boolean|null=null) {
+
+        if (checkBoxes[outerI][innerI][0] == 'Final Week' && checkBoxes[outerI][innerI][1] == false && value  === null) {
+            let res: null|string = null;
+            classes.forEach(section => {
+                if (res === null || section.endDate > res) {
+                    res = section.endDate;
+                }
+            })
+            if (res !== null) {
+                const [Year, Month, Day] = (res as String).split("-").map(Number)
+                const Obj = new Date(Year, Month - 1, Day)
+                setMondayDate(()=>getMonday(new Date(Obj)))
+            }
+        }
+
+        setCheckBoxes((prev)=> (
+            prev.map((r,rI)=> (
+                rI != outerI ? r : r.map((item,c)=> 
+                    c != innerI ? item : [item[0], value === null ? !item[1] : value]
+                )
+            ))
+        ))
+        
+
+        
+    }
+
+
     return (
         <section className="my-5 max-w-[96vw]">
             {/* Calendar buttons */}
             <RightSide>
-                <button onClick={()=>moveTime(-7)}><LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/></button>
-                <button onClick={()=>moveTime(7)}><LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/></button>
-                <button onClick={()=>setMondayDate(getMonday)} className="rounded-lg border-1 px-2 cursor-pointer hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green">Current Week</button>
+                {/* Fix it so first and final are off when u move */}
+                <button 
+                    onClick={()=>{
+                        moveTime(-7); 
+                        handleOptions(0, checkBoxes[0].length-1, false);
+                    }}
+                >
+                    <LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/>
+                </button>
+                <button 
+                    onClick={()=>{
+                        moveTime(7); 
+                        handleOptions(0, checkBoxes[0].length-1, false)}}
+                >
+                    <LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/>
+                </button>
+                <button 
+                    onClick={()=>{
+                        setMondayDate(()=>getMonday(new Date())); 
+                        handleOptions(0, checkBoxes[0].length-1, false)}} 
+                    className="rounded-lg border-1 px-2 cursor-pointer hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"
+                >
+                    Current Week
+                </button>
             </RightSide>
 
             {/* Calendar */}
-            <div className="relative w-181 max-w-[96vw] [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+            <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto">
                 {/* Classes */}
                 {classes.map((section,i)=> (
-                    inWeek(section.startDate, section.endDate) ? <Class key={i} {...section}/> : null
+                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? <Class key={i} {...section} checkBoxes={checkBoxes}/> : null
                 ))}
 
                 {/* lines */}
@@ -281,9 +356,9 @@ export default function ClassSchedule() {
             </div>
 
             {/* Online Classes */}
-            <div className="mt-15 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
+            <div className="mt-15 mb-4 overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-120">Online Classes</div>
-                <div className="text-base sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
+                <div className="text-sm sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
                         <div className="flex-1 min-w-20">Code</div>
                         <div className="flex-2 min-w-40">Course Title</div>
@@ -315,15 +390,20 @@ export default function ClassSchedule() {
             </RightSide>
 
             {/* Options */}
-            <div className="mt-10 mb-4 overflow-x-auto mx-2 bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-lg">
+            <div className="mt-10 mb-4 overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-lg">
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-108">Options</div>
                 <div className="flex flex-col px-4 py-2 min-w-108">
-                    {checkBoxes.map(options => (
-                        <div className="flex gap-1" key={options[0]}>
-                            {options.map(option=>(
-                                <label className="cursor-pointer text-sm sm:text-[1.1rem] min-w-20 flex-1" key={option}>
-                                    <input type="checkbox" disabled={option == "-"} className="mr-1"/>
-                                    {option}
+                    {checkBoxes.map((options, outerI) => (
+                        <div className="flex gap-1" key={options[0][0]}>
+                            {options.map((option,innerI)=>(
+                                <label className="cursor-pointer text-sm sm:text-[1.1rem] min-w-20 flex-1" key={option[0]}>
+                                    <input 
+                                        type="checkbox" 
+                                        disabled={option[0] == "-"} 
+                                        className="mr-1" 
+                                        checked={option[1]} 
+                                        onChange={()=>handleOptions(outerI, innerI)}/>
+                                    {option[0]}
                                 </label>
                             ))}
                         </div>

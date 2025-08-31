@@ -5,7 +5,7 @@ import { IoIosInformationCircleOutline } from "react-icons/io";
 
 export default function SemesterPage() {
     return (
-        <section className="flex flex-col items-center mt-10">
+        <section className="flex flex-col items-center mt-10 px-2">
             <h2 className="text-2xl lg:text-4xl text-slate-800 text-center">Semester Planner</h2>
             <ClassSchedule />
             {/* <Warnings /> */}

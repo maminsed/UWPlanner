@@ -142,7 +142,8 @@ class Users(db.Model):
 
     #Course paths: Follow UWFLOW ids!!
     # A set of ids for the current sems courses seprated with - 
-    section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="") 
+    # section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="") 
+    schedules: Mapped[list["Schedule"]] = relationship("Schedule", back_populates="user", cascade="all, delete-orphan, save-update")
     # A set of Names for future semester courses, coruses seprated with - semesters seprated with //
     course_ids: Mapped[str] = mapped_column(db.String, default="", server_default="")
 
@@ -262,24 +263,12 @@ class Course(db.Model):
     coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     antireqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
 
-    # sections: Mapped[list["Section"]] = relationship(
-    #     "Section", cascade="all, delete-orphan, save-update", back_populates="course"
-    # )
+class Schedule(db.Model):
+    """Database for Sections."""
 
-# class Section(db.Model):
-#     """Database for Sections."""
-
-#     __tablename__ = "sections"
-#     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-#     section_name: Mapped[str] = mapped_column(db.String()) #e.g. TUT 101
-#     term_id: Mapped[int] = mapped_column(db.Integer)
-#     updated_at: Mapped[Optional[str]] = mapped_column()
-
-#     enrollment_capacity: Mapped[int] = mapped_column(default=0)
-#     enrollment_total: Mapped[int] = mapped_column(default=0)
-#     course_id: Mapped[int] = mapped_column(
-#         db.Integer, ForeignKey("courses.course_id"), nullable=False
-#     )
-#     course: Mapped[Course] = relationship(
-#         "Course", back_populates="sections", foreign_keys=[course_id]
-#     )
+    __tablename__ = "schedules"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    term_id: Mapped[int] = mapped_column(db.Integer)
+    user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey("users.id"))
+    user: Mapped["Users"] = relationship("Users", back_populates="scheduels")
+    sections: Mapped[str] = mapped_column(db.String())

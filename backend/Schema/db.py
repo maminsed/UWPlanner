@@ -270,5 +270,5 @@ class Schedule(db.Model):
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     term_id: Mapped[int] = mapped_column(db.Integer)
     user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey("users.id"))
-    user: Mapped["Users"] = relationship("Users", back_populates="scheduels")
+    user: Mapped["Users"] = relationship("Users", back_populates="schedules")
     sections: Mapped[str] = mapped_column(db.String())

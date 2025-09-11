@@ -26,5 +26,7 @@ def get_user_sections():
         return jsonify({"message": "term_id not specified"}), 400
     user = Users.query.filter_by(username=g.username).first()
     section_ids = "-".join([schedule.sections for schedule in user.schedules if schedule.term_id == term_id])
+    if section_ids == '':
+        return jsonify({"sections": []}), 200
     return jsonify({"sections": list(map(int, section_ids.split("-")))}), 200
 

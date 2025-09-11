@@ -1,12 +1,13 @@
 'use client'
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
-import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
+import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuSearch, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
 import useGQL from "@/lib/useGQL";
+import { AiOutlineClose } from "react-icons/ai";
 
 export function RightSide({ children, className, ...props}: React.HTMLAttributes<HTMLDivElement>) {
     // Just a class that has stuff on the right side
@@ -48,9 +49,7 @@ function getVal(value:string, checkBoxes: [string, boolean][][]) {
 }
 
 
-function Class({startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap}: ClassInterface & {checkBoxes: [string, boolean][][], dayMap: DayMapInterface}) {
-    const top = (startSeconds - (8 * 3600)) / 3600;
-    const height = (endSeconds - startSeconds) / 3600;
+function Class({startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap, top, height}: ClassInterface & {checkBoxes: [string, boolean][][], dayMap: DayMapInterface, top:number, height:number}) {
     const dayLeft = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"};
 
     function countOccurance(
@@ -79,13 +78,14 @@ function Class({startSeconds, endSeconds, days, code, courseId, type, title, pro
                     key={day}
                     className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
                     style={{left:`calc(${dayLeft[day]} + ${offset})`, 
-                            top:`calc(${19+top * 20} * var(--spacing))`, 
-                            height:`calc(${20 * height} * var(--spacing)`,
+                            top:`calc(${top} * var(--spacing))`, 
+                            height:`calc(${height} * var(--spacing)`,
                             width:`calc(100%/${width})`}}
                 >
                     {getVal("course code", checkBoxes) && <p className="pt-1">{code}</p>}
-                    <p>{type}</p>
                     {getVal("course title", checkBoxes) && <p>{title}</p>}
+                    <p>{courseId}</p>
+                    <p>{type}</p>
                     <p>{translateSecToHour(startSeconds, checkBoxes)}-{translateSecToHour(endSeconds, checkBoxes)}</p>
                     <p>{location}</p>
                     <p>{prof}</p>
@@ -137,9 +137,13 @@ type DayMapInterface = {
     "Tot": [number, number][],
 }
 
+function getTermId() {
+    return 1255;
+}
+
 export default function ClassSchedule() {
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
-    const normalBoxClass = clsx("bg-white flex-1 h-20 text-sm xs:text-base")
+    const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
     const lineHorMidClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed"
     const lineHorFullClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80"
@@ -151,15 +155,24 @@ export default function ClassSchedule() {
         [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
         [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
     ]);
+    const [overLay, setOverLay] = useState<boolean>(false)
+    const [termId, setTermId] = useState<number>(getTermId);
 
 
     const [dayMap, setDayMap] = useState<DayMapInterface>({"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []})
     const backend = api();
     const gql = useGQL();
-    console.log(mondayDate)
     useEffect(()=>{
         async function initialSetup() {
-            const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`)
+            const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`, {
+                "method": "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "term_id": termId
+                })
+            })
             if (!res?.ok) {
                 console.error("error!")
             } else {
@@ -199,8 +212,7 @@ export default function ClassSchedule() {
                         }
                     }
                 `
-                const gql_response = await gql(GQL_QUERY, {sections, termId: 1255});
-                // console.log(gql_response?.data?.course_section)
+                const gql_response = await gql(GQL_QUERY, {sections, termId});
                 const data: ClassInterface[] = []
                 gql_response?.data?.course_section.forEach((section:any):void=>{
                     section.meetings.forEach((meeting:any)=>{
@@ -346,8 +358,67 @@ export default function ClassSchedule() {
         
     }
 
+    function handleAdd() {
+        setOverLay(true);
+    }
+
+    function getIthValue(i:number, isSeconds:boolean = false) {
+        // Funciton that takes in the ith value and if it's compressed it returns the compressed version, if not it returns the normal version
+        if (!getVal('Compress', checkBoxes)) {
+            if (isSeconds) i = (i / 3600) - 8;
+            return i * 20 + 19;
+        }
+        if (!isSeconds) i = (i + 8) * 3600;
+        let res = 19;
+        let prevEnd = 8 * 3600;
+        for (let j = 0; j < dayMap['Tot'].length; ++j) {
+            // If the start is bigger
+            if (dayMap['Tot'][j][0] > i) {
+                return res + ((i - prevEnd) / 3600) * 10;
+            }
+            // If the end is bigger
+            if (dayMap['Tot'][j][1] > i) {
+                return res + (((i - dayMap['Tot'][j][0]) * 20) + ((dayMap['Tot'][j][0] - prevEnd) * 10)) / 3600;
+            }
+            // If start and end are smaller
+            res+= (((dayMap['Tot'][j][1] - dayMap['Tot'][j][0]) / 3600) * 20) + (((dayMap['Tot'][j][0] - prevEnd) / 3600) * 10) 
+            prevEnd = dayMap['Tot'][j][1];
+        }
+        return res + (isSeconds ? ((i - prevEnd) / 3600) * 10 : 10);
+    }
+    
     return (
         <section className="my-5 max-w-[96vw]">
+            {overLay && 
+            <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center">
+                <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10">
+                    <RightSide className="!mb-1 !mr-0">
+                        <HoverEffect hover="close" className="cursor-pointer" onClick={()=>setOverLay(false)}>
+                            <AiOutlineClose className="w-6 font-semibold h-auto"/>
+                        </HoverEffect>
+                    </RightSide>
+                    <h3 className="w-full text-center text-xl font-semibold">Add Course:</h3>
+                    <p className="text-sm text-center mb-5">Just choose one/or more options and fill it out</p>
+                    <label className="block text-lg">
+                        Search:
+                        <div className="relative">
+                            <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"/>
+                            <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6"/>
+                        </div>
+                    </label>
+                    <label className="block text-lg mt-4">
+                        Id:
+                        <div className="relative">
+                            <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"/>
+                            <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6"/>
+                        </div>
+                    </label>
+                    <RightSide className="!mr-0">
+                        <button className="border-1 px-8 py-1 text-base mt-5 rounded-md cursor-pointer bg-dark-green text-light-green">Add</button>
+                    </RightSide>
+                </div>
+            </div>
+            }
             {/* Calendar buttons */}
             <RightSide>
                 {/* Fix it so first and final are off when u move */}
@@ -380,7 +451,16 @@ export default function ClassSchedule() {
             <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto overflow-y-clip">
                 {/* Classes */}
                 {classes.map((section,i)=> (
-                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? <Class key={i} {...section} checkBoxes={checkBoxes} dayMap={dayMap}/> : null
+                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? 
+                        <Class 
+                            key={i} 
+                            {...section} 
+                            checkBoxes={checkBoxes} 
+                            dayMap={dayMap}
+                            top={getIthValue(section.startSeconds, true)}
+                            height={getIthValue(section.endSeconds, true) - getIthValue(section.startSeconds, true)}
+                            /> 
+                        : null
                 ))}
 
                 {/* lines */}
@@ -396,11 +476,11 @@ export default function ClassSchedule() {
                 </div>
 
                 {/* Horizantal */}
-                <div className={lineHorFullClass} style={{top: `calc(${19}*var(--spacing))`}}/>
+                <div className={lineHorFullClass} style={{top: `calc(${getIthValue(0)}*var(--spacing))`}}/>
                 {[...Array(13)].map((_,i) => (
                     <Fragment key={i}>
-                        <div className={lineHorMidClass} style={{top: `calc(${29+20*i}*var(--spacing))`}}/>
-                        <div className={lineHorFullClass} style={{top: `calc(${39+20*i}*var(--spacing))`}}/>
+                        <div className={lineHorMidClass} style={{top: `calc(${getIthValue(i+0.5)}*var(--spacing))`}}/>
+                        <div className={lineHorFullClass} style={{top: `calc(${getIthValue(i+1)}*var(--spacing))`}}/>
                     </Fragment>
                 ))}
 
@@ -419,7 +499,7 @@ export default function ClassSchedule() {
                 {/* The days */}
                 <div>
                     {[...Array(13)].map((_,i) => (
-                        <div className="flex flex-row" key={i}>
+                        <div className="flex flex-row" style={{height:`calc(${getIthValue(i+1)-getIthValue(i) } * var(--spacing))`}} key={i}>
                             <div className={clsx(normalBoxClass, i == 12 && "rounded-bl-lg", "pl-2 xs:text-center")}>{i+8}:00</div>
                             <div className={normalBoxClass}></div>
                             <div className={normalBoxClass}></div>
@@ -454,7 +534,7 @@ export default function ClassSchedule() {
             </div>
 
             <RightSide className="mb-5">
-                <HoverEffect hover="Add Class">
+                <HoverEffect hover="Add Class" onClick={handleAdd}>
                     <LuPlus className="w-6 h-auto font-semibold cursor-pointer"/>
                 </HoverEffect>
                 <HoverEffect hover="Import Schedule">

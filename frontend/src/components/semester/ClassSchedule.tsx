@@ -19,12 +19,14 @@ export function RightSide({ children, className, ...props}: React.HTMLAttributes
 }
 
 type ClassInterface = {
+    sectionId: number;
     startSeconds: number;
     endSeconds: number;
     startDate: string;
     endDate: string;
     days: ("M"|"T"|"W"|"Th"|"F")[]; // :["M","T", "W","Th","F"]
     code: string;
+    classNumber: number;
     courseId: number;
     title: string;
     type: string;
@@ -137,8 +139,37 @@ type DayMapInterface = {
     "Tot": [number, number][],
 }
 
+// TODO: fix this
 function getTermId() {
     return 1255;
+}
+
+function getTermName(termId:number) {
+    let res = ""
+    if (termId % 10 == 5) {
+        res+="Spring "
+    } else if (termId % 10 == 9) {
+        res+="Fall "
+    } else {
+        res+="Winter "
+    }
+    res+=Math.floor(termId/10) + 1900
+    return res;
+}
+
+function termOperation(termId:number, distance:number) {
+    let currTerm = 0;
+    if (termId % 10 == 5) currTerm = 1;
+    else if (termId % 10 == 9) currTerm = 2;
+    
+    let resTerm = (currTerm + distance)%3;
+    if (resTerm < 0) resTerm+=3;
+    if (resTerm == 0) resTerm = 1;
+    else if (resTerm == 1) resTerm = 5;
+    else resTerm = 9;
+
+    const yearDiff = Math.floor((currTerm + distance)/ 3);
+    return (Math.floor(termId/10) + yearDiff) * 10 + resTerm;
 }
 
 export default function ClassSchedule() {
@@ -216,18 +247,24 @@ export default function ClassSchedule() {
                 const data: ClassInterface[] = []
                 gql_response?.data?.course_section.forEach((section:any):void=>{
                     section.meetings.forEach((meeting:any)=>{
-                        data.push({
+                        const prevSection = data[data.length - 1];
+                        const newSection = {
+                            sectionId: section.id,
                             startSeconds: meeting.start_seconds || 0,
                             endSeconds: meeting.end_seconds || 0,
                             startDate: meeting.start_date,
                             endDate: meeting.end_date,
+                            classNumber: section.class_number,
                             days: meeting.days,
                             code: section.course.code.toUpperCase() || '',
                             courseId: section.course_id,
                             title: section.course.name || '',
                             type: section.section_name || '',
                             location: meeting.location || '',
-                            prof: meeting.prof_id || ''})
+                            prof: meeting.prof_id || ''}
+                        if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
+                            data.push(newSection)
+                        }
                         
                     })
                     
@@ -237,7 +274,7 @@ export default function ClassSchedule() {
         }
 
         initialSetup()
-    },[])
+    },[termId])
 
     useEffect(()=>{
         function updateDayMap() {
@@ -420,6 +457,21 @@ export default function ClassSchedule() {
             </div>
             }
             {/* Calendar buttons */}
+
+            <div className="w-full flex justify-center">
+                <select 
+                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%]" 
+                    value={termId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
+                    {[...Array(5)].map((_, i) => (
+                        <option 
+                            value={termOperation(termId, i - 2)} 
+                            key={i}>
+                            {getTermName(termOperation(termId, i - 2))}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             <RightSide>
                 {/* Fix it so first and final are off when u move */}
                 <button 
@@ -518,7 +570,7 @@ export default function ClassSchedule() {
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
                         {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
                         {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">Course Title</div>}
-                        <div className="flex-2 min-w-16">Section</div>
+                        <div className="flex-2 min-w-16">Type</div>
                         <div className="flex-1 min-w-20">Start Date</div>
                         <div className="flex-1 min-w-20">End Date</div>
                     </div>

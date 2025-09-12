@@ -9,7 +9,7 @@ import HoverEffect from "../HoverEffect";
 import useGQL from "@/lib/useGQL";
 import { AiOutlineClose } from "react-icons/ai";
 
-export function RightSide({ children, className, ...props}: React.HTMLAttributes<HTMLDivElement>) {
+export function RightSide({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     // Just a class that has stuff on the right side
     return (
         <div className={clsx("flex justify-end gap-2 mb-4 mr-2 items-center", className)} {...props}>
@@ -24,7 +24,7 @@ type ClassInterface = {
     endSeconds: number;
     startDate: string;
     endDate: string;
-    days: ("M"|"T"|"W"|"Th"|"F")[]; // :["M","T", "W","Th","F"]
+    days: ("M" | "T" | "W" | "Th" | "F")[]; // :["M","T", "W","Th","F"]
     code: string;
     classNumber: number;
     courseId: number;
@@ -34,14 +34,14 @@ type ClassInterface = {
     location: string;
 }
 
-function translateSecToHour(time:number, checkBoxes: [string, boolean][][]) {
+function translateSecToHour(time: number, checkBoxes: [string, boolean][][]) {
     const min = Math.floor((time % 3600) / 60);
     const hour = Math.floor(time / 3600);
     const AM_PM = getVal("AM/PM", checkBoxes)
     return `${AM_PM ? hour % 12 : hour}:${min}${min < 10 ? '0' : ''}${AM_PM && hour > 12 ? 'PM' : ''}`
 }
 
-function getVal(value:string, checkBoxes: [string, boolean][][]) {
+function getVal(value: string, checkBoxes: [string, boolean][][]) {
     for (let r = 0; r < checkBoxes.length; ++r) {
         for (let c = 0; c < checkBoxes[r].length; ++c) {
             if (checkBoxes[r][c][0].toLocaleLowerCase() == value.toLocaleLowerCase()) return checkBoxes[r][c][1];
@@ -51,64 +51,67 @@ function getVal(value:string, checkBoxes: [string, boolean][][]) {
 }
 
 
-function Class({startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap, top, height}: ClassInterface & {checkBoxes: [string, boolean][][], dayMap: DayMapInterface, top:number, height:number}) {
-    const dayLeft = {"M": "100%/6", "T": "200%/6", "W":"300%/6", "Th": "400%/6", "F": "500%/6"};
+function Class({ startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap, top, height }: ClassInterface & { checkBoxes: [string, boolean][][], dayMap: DayMapInterface, top: number, height: number }) {
+    const dayLeft = { "M": "100%/6", "T": "200%/6", "W": "300%/6", "Th": "400%/6", "F": "500%/6" };
 
     function countOccurance(
-        day:keyof DayMapInterface):[number,number] // #overlap,ith overlap
+        day: keyof DayMapInterface): [number, number] // #overlap,ith overlap
     {
         let count = 0;
         let ith = 0;
-        dayMap[day].forEach(section=> {
-            if (hasOverlap([startSeconds,endSeconds],[section[0],section[1]])) {
+        dayMap[day].forEach(section => {
+            if (hasOverlap([startSeconds, endSeconds], [section[0], section[1]])) {
                 if (section[2] === courseId) ith = count;
                 ++count;
             }
         })
-        return [count,ith]
+        return [count, ith]
     }
 
     return (
         <Fragment>
-            {days.map(day=> {
-            const [count,ith] = countOccurance(day);
-            const width = 6 * count;
-            const offset = `${100 * ith}%/${width}`
+            {days.map(day => {
+                const [count, ith] = countOccurance(day);
+                const width = 6 * count;
+                const offset = `${100 * ith}%/${width}`
 
-            return (
-                <div 
-                    key={day}
-                    className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller" 
-                    style={{left:`calc(${dayLeft[day]} + ${offset})`, 
-                            top:`calc(${top} * var(--spacing))`, 
-                            height:`calc(${height} * var(--spacing)`,
-                            width:`calc(100%/${width})`}}
-                >
-                    {getVal("course code", checkBoxes) && <p className="pt-1">{code}</p>}
-                    {getVal("course title", checkBoxes) && <p>{title}</p>}
-                    <p>{courseId}</p>
-                    <p>{type}</p>
-                    <p>{translateSecToHour(startSeconds, checkBoxes)}-{translateSecToHour(endSeconds, checkBoxes)}</p>
-                    <p>{location}</p>
-                    <p>{prof}</p>
-                    <div className="flex justify-end pr-[3%]">
-                        <LuMaximize2 className="right-2.5 my-1 cursor-pointer"/>
+                return (
+                    <div
+                        key={day}
+                        className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller"
+                        style={{
+                            left: `calc(${dayLeft[day]} + ${offset})`,
+                            top: `calc(${top} * var(--spacing))`,
+                            height: `calc(${height} * var(--spacing)`,
+                            width: `calc(100%/${width})`
+                        }}
+                    >
+                        {getVal("course code", checkBoxes) && <p className="pt-1">{code}</p>}
+                        {getVal("course title", checkBoxes) && <p>{title}</p>}
+                        <p>{courseId}</p>
+                        <p>{type}</p>
+                        <p>{translateSecToHour(startSeconds, checkBoxes)}-{translateSecToHour(endSeconds, checkBoxes)}</p>
+                        <p>{location}</p>
+                        <p>{prof}</p>
+                        <div className="flex justify-end pr-[3%]">
+                            <LuMaximize2 className="right-2.5 my-1 cursor-pointer" />
+                        </div>
                     </div>
-                </div>
-            )})}
+                )
+            })}
         </Fragment>
     )
 }
 
-function OnlineClass({code, type, title, startDate, endDate, first=false, checkBoxes}: ClassInterface & {first?: boolean, checkBoxes:[string, boolean][][]}) {
+function OnlineClass({ code, type, title, startDate, endDate, first = false, checkBoxes }: ClassInterface & { first?: boolean, checkBoxes: [string, boolean][][] }) {
     return (
         <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
-            {getVal("course code",checkBoxes) && <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline  className="min-w-4"/></div>}
+            {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline className="min-w-4" /></div>}
             {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">{title}</div>}
             <div className="flex-2 min-w-16">{type}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{startDate}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{endDate}</div>
-            {!first && <div className="absolute right-4 left-4 top-0 border-t-1"/>}
+            {!first && <div className="absolute right-4 left-4 top-0 border-t-1" />}
         </div>
     )
 }
@@ -124,8 +127,8 @@ function getMonday(today = new Date()) {
     return newD;
 }
 
-function hasOverlap([start1,end1]:[number,number], [start2,end2]:[number,number]) {
-    return !((start1 >= end2) || (end1 <=start2))
+function hasOverlap([start1, end1]: [number, number], [start2, end2]: [number, number]) {
+    return !((start1 >= end2) || (end1 <= start2))
 }
 
 
@@ -144,32 +147,32 @@ function getTermId() {
     return 1255;
 }
 
-function getTermName(termId:number) {
+function getTermName(termId: number) {
     let res = ""
     if (termId % 10 == 5) {
-        res+="Spring "
+        res += "Spring "
     } else if (termId % 10 == 9) {
-        res+="Fall "
+        res += "Fall "
     } else {
-        res+="Winter "
+        res += "Winter "
     }
-    res+=Math.floor(termId/10) + 1900
+    res += Math.floor(termId / 10) + 1900
     return res;
 }
 
-function termOperation(termId:number, distance:number) {
+function termOperation(termId: number, distance: number) {
     let currTerm = 0;
     if (termId % 10 == 5) currTerm = 1;
     else if (termId % 10 == 9) currTerm = 2;
-    
-    let resTerm = (currTerm + distance)%3;
-    if (resTerm < 0) resTerm+=3;
+
+    let resTerm = (currTerm + distance) % 3;
+    if (resTerm < 0) resTerm += 3;
     if (resTerm == 0) resTerm = 1;
     else if (resTerm == 1) resTerm = 5;
     else resTerm = 9;
 
-    const yearDiff = Math.floor((currTerm + distance)/ 3);
-    return (Math.floor(termId/10) + yearDiff) * 10 + resTerm;
+    const yearDiff = Math.floor((currTerm + distance) / 3);
+    return (Math.floor(termId / 10) + yearDiff) * 10 + resTerm;
 }
 
 export default function ClassSchedule() {
@@ -179,9 +182,9 @@ export default function ClassSchedule() {
     const lineHorMidClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed"
     const lineHorFullClass = "absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80"
     const [classes, setClasses] = useState<ClassInterface[]>([]);
-    const [mondayDate, setMondayDate] = useState<Date>(()=>getMonday());
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const days = ["Mon", "Tue", "Wed","Thu","Fri"]
+    const [mondayDate, setMondayDate] = useState<Date>(() => getMonday());
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     const [checkBoxes, setCheckBoxes] = useState<[string, boolean][][]>([
         [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
         [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
@@ -190,10 +193,10 @@ export default function ClassSchedule() {
     const [termId, setTermId] = useState<number>(getTermId);
 
 
-    const [dayMap, setDayMap] = useState<DayMapInterface>({"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []})
+    const [dayMap, setDayMap] = useState<DayMapInterface>({ "M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": [] })
     const backend = api();
     const gql = useGQL();
-    useEffect(()=>{
+    useEffect(() => {
         async function initialSetup() {
             const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`, {
                 "method": "POST",
@@ -207,10 +210,10 @@ export default function ClassSchedule() {
             if (!res?.ok) {
                 console.error("error!")
             } else {
-                const response = await res.json().catch(()=>{});
+                const response = await res.json().catch(() => { });
                 const sections = response.sections;
                 // TODO: UPDATE TERM_ID!
-                const GQL_QUERY= `
+                const GQL_QUERY = `
                     query Course_section($sections: [Int!]!, $termId: Int!) {
                             course_section(
                             where: {
@@ -243,10 +246,10 @@ export default function ClassSchedule() {
                         }
                     }
                 `
-                const gql_response = await gql(GQL_QUERY, {sections, termId});
+                const gql_response = await gql(GQL_QUERY, { sections, termId });
                 const data: ClassInterface[] = []
-                gql_response?.data?.course_section.forEach((section:any):void=>{
-                    section.meetings.forEach((meeting:any)=>{
+                gql_response?.data?.course_section.forEach((section: any): void => {
+                    section.meetings.forEach((meeting: any) => {
                         const prevSection = data[data.length - 1];
                         const newSection = {
                             sectionId: section.id,
@@ -261,53 +264,54 @@ export default function ClassSchedule() {
                             title: section.course.name || '',
                             type: section.section_name || '',
                             location: meeting.location || '',
-                            prof: meeting.prof_id || ''}
+                            prof: meeting.prof_id || ''
+                        }
                         if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
                             data.push(newSection)
                         }
-                        
+
                     })
-                    
+
                 })
                 setClasses(data as ClassInterface[]);
             }
         }
 
         initialSetup()
-    },[termId])
+    }, [termId])
 
-    useEffect(()=>{
+    useEffect(() => {
         function updateDayMap() {
-            const res: DayMapInterface = {"M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": []};
-            
-            classes.forEach(section=> {
+            const res: DayMapInterface = { "M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": [] };
+
+            classes.forEach(section => {
                 if (inWeek(section.startDate, section.endDate)) {
-                    section.days.forEach(day=> {
+                    section.days.forEach(day => {
                         res[day].push([section.startSeconds, section.endSeconds, section.courseId]);
                         res["Tot"].push([section.startSeconds, section.endSeconds]);
                     })
                 }
             })
 
-            Object.keys(res).forEach((day)=>{
+            Object.keys(res).forEach((day) => {
                 const dayKey = day as keyof DayMapInterface;
-                res[dayKey].sort(([s1,e1,_1],[s2,e2,_2])=>s1 - s2 || e1 - e2)
+                res[dayKey].sort(([s1, e1, _1], [s2, e2, _2]) => s1 - s2 || e1 - e2)
             })
 
             if (res["Tot"].length) {
-                const tot:[number,number][] = []
-                let [start,end] = res["Tot"][0]
-                res["Tot"].forEach(day=> {
-                    if (hasOverlap([start,end], day)) {
+                const tot: [number, number][] = []
+                let [start, end] = res["Tot"][0]
+                res["Tot"].forEach(day => {
+                    if (hasOverlap([start, end], day)) {
                         start = Math.min(start, day[0]);
                         end = Math.max(end, day[1]);
                     } else {
-                        tot.push([start,end]);
+                        tot.push([start, end]);
                         start = day[0];
                         end = day[1];
                     }
                 })
-                tot.push([start,end])
+                tot.push([start, end])
                 res["Tot"] = tot;
             }
 
@@ -316,13 +320,13 @@ export default function ClassSchedule() {
 
         updateDayMap()
 
-    },[classes, mondayDate])
+    }, [classes, mondayDate])
 
 
     function moveTime(diff: number) {
-        setMondayDate(prevDate=>{
-            const date= new Date(prevDate);
-            date.setDate(date.getDate()+diff);
+        setMondayDate(prevDate => {
+            const date = new Date(prevDate);
+            date.setDate(date.getDate() + diff);
             return date;
         })
     }
@@ -335,7 +339,7 @@ export default function ClassSchedule() {
         const endObj = new Date(endYear, endMonth - 1, endDay)
 
         const fridayDate = new Date(mondayDate);
-        fridayDate.setDate(fridayDate.getDate()+4);
+        fridayDate.setDate(fridayDate.getDate() + 4);
         return startObj < fridayDate && endObj > mondayDate;
     }
 
@@ -352,13 +356,13 @@ export default function ClassSchedule() {
         let first = true;
         return (
             <>
-                {classes.map((section,i)=> {
+                {classes.map((section, i) => {
                     if (section.startSeconds === section.endSeconds && section.startSeconds === 0 && selectedClass(section.type)) {
                         if (first) {
                             first = false;
-                            return <OnlineClass {...section} key={i} first={true} checkBoxes={checkBoxes}/>
+                            return <OnlineClass {...section} key={i} first={true} checkBoxes={checkBoxes} />
                         }
-                        return <OnlineClass {...section} key={i} checkBoxes={checkBoxes}/>
+                        return <OnlineClass {...section} key={i} checkBoxes={checkBoxes} />
                     }
                     return null
                 })}
@@ -367,10 +371,10 @@ export default function ClassSchedule() {
     }
 
 
-    function handleOptions(outerI: number, innerI: number, value:boolean|null=null) {
+    function handleOptions(outerI: number, innerI: number, value: boolean | null = null) {
 
-        if (checkBoxes[outerI][innerI][0] == 'Final Week' && checkBoxes[outerI][innerI][1] == false && value  === null) {
-            let res: null|string = null;
+        if (checkBoxes[outerI][innerI][0] == 'Final Week' && checkBoxes[outerI][innerI][1] == false && value === null) {
+            let res: null | string = null;
             classes.forEach(section => {
                 if (res === null || section.endDate > res) {
                     res = section.endDate;
@@ -379,27 +383,27 @@ export default function ClassSchedule() {
             if (res !== null) {
                 const [Year, Month, Day] = (res as String).split("-").map(Number)
                 const Obj = new Date(Year, Month - 1, Day)
-                setMondayDate(()=>getMonday(new Date(Obj)))
+                setMondayDate(() => getMonday(new Date(Obj)))
             }
         }
 
-        setCheckBoxes((prev)=> (
-            prev.map((r,rI)=> (
-                rI != outerI ? r : r.map((item,c)=> 
+        setCheckBoxes((prev) => (
+            prev.map((r, rI) => (
+                rI != outerI ? r : r.map((item, c) =>
                     c != innerI ? item : [item[0], value === null ? !item[1] : value]
                 )
             ))
         ))
-        
 
-        
+
+
     }
 
     function handleAdd() {
         setOverLay(true);
     }
 
-    function getIthValue(i:number, isSeconds:boolean = false) {
+    function getIthValue(i: number, isSeconds: boolean = false) {
         // Funciton that takes in the ith value and if it's compressed it returns the compressed version, if not it returns the normal version
         if (!getVal('Compress', checkBoxes)) {
             if (isSeconds) i = (i / 3600) - 8;
@@ -418,53 +422,53 @@ export default function ClassSchedule() {
                 return res + (((i - dayMap['Tot'][j][0]) * 20) + ((dayMap['Tot'][j][0] - prevEnd) * 10)) / 3600;
             }
             // If start and end are smaller
-            res+= (((dayMap['Tot'][j][1] - dayMap['Tot'][j][0]) / 3600) * 20) + (((dayMap['Tot'][j][0] - prevEnd) / 3600) * 10) 
+            res += (((dayMap['Tot'][j][1] - dayMap['Tot'][j][0]) / 3600) * 20) + (((dayMap['Tot'][j][0] - prevEnd) / 3600) * 10)
             prevEnd = dayMap['Tot'][j][1];
         }
         return res + (isSeconds ? ((i - prevEnd) / 3600) * 10 : 10);
     }
-    
+
     return (
         <section className="my-5 max-w-[96vw]">
-            {overLay && 
-            <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center">
-                <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10">
-                    <RightSide className="!mb-1 !mr-0">
-                        <HoverEffect hover="close" className="cursor-pointer" onClick={()=>setOverLay(false)}>
-                            <AiOutlineClose className="w-6 font-semibold h-auto"/>
-                        </HoverEffect>
-                    </RightSide>
-                    <h3 className="w-full text-center text-xl font-semibold">Add Course:</h3>
-                    <p className="text-sm text-center mb-5">Just choose one/or more options and fill it out</p>
-                    <label className="block text-lg">
-                        Search:
-                        <div className="relative">
-                            <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"/>
-                            <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6"/>
-                        </div>
-                    </label>
-                    <label className="block text-lg mt-4">
-                        Id:
-                        <div className="relative">
-                            <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"/>
-                            <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6"/>
-                        </div>
-                    </label>
-                    <RightSide className="!mr-0">
-                        <button className="border-1 px-8 py-1 text-base mt-5 rounded-md cursor-pointer bg-dark-green text-light-green">Add</button>
-                    </RightSide>
+            {overLay &&
+                <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center">
+                    <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10">
+                        <RightSide className="!mb-1 !mr-0">
+                            <HoverEffect hover="close" className="cursor-pointer" onClick={() => setOverLay(false)}>
+                                <AiOutlineClose className="w-6 font-semibold h-auto" />
+                            </HoverEffect>
+                        </RightSide>
+                        <h3 className="w-full text-center text-xl font-semibold">Add Course:</h3>
+                        <p className="text-sm text-center mb-5">Just choose one/or more options and fill it out</p>
+                        <label className="block text-lg">
+                            Search:
+                            <div className="relative">
+                                <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75" />
+                                <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6" />
+                            </div>
+                        </label>
+                        <label className="block text-lg mt-4">
+                            Id:
+                            <div className="relative">
+                                <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75" />
+                                <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6" />
+                            </div>
+                        </label>
+                        <RightSide className="!mr-0">
+                            <button className="border-1 px-8 py-1 text-base mt-5 rounded-md cursor-pointer bg-dark-green text-light-green">Add</button>
+                        </RightSide>
+                    </div>
                 </div>
-            </div>
             }
             {/* Calendar buttons */}
 
             <div className="w-full flex justify-center">
-                <select 
-                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%]" 
+                <select
+                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%]"
                     value={termId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
                     {[...Array(5)].map((_, i) => (
-                        <option 
-                            value={termOperation(termId, i - 2)} 
+                        <option
+                            value={termOperation(termId, i - 2)}
                             key={i}>
                             {getTermName(termOperation(termId, i - 2))}
                         </option>
@@ -474,25 +478,27 @@ export default function ClassSchedule() {
 
             <RightSide>
                 {/* Fix it so first and final are off when u move */}
-                <button 
-                    onClick={()=>{
-                        moveTime(-7); 
-                        handleOptions(0, checkBoxes[0].length-1, false);
+                <button
+                    onClick={() => {
+                        moveTime(-7);
+                        handleOptions(0, checkBoxes[0].length - 1, false);
                     }}
                 >
-                    <LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/>
+                    <LuChevronLeft className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green" />
                 </button>
-                <button 
-                    onClick={()=>{
-                        moveTime(7); 
-                        handleOptions(0, checkBoxes[0].length-1, false)}}
+                <button
+                    onClick={() => {
+                        moveTime(7);
+                        handleOptions(0, checkBoxes[0].length - 1, false)
+                    }}
                 >
-                    <LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"/>
+                    <LuChevronRight className="w-4 md:w-5 h-auto cursor-pointer rounded-full border-1 hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green" />
                 </button>
-                <button 
-                    onClick={()=>{
-                        setMondayDate(()=>getMonday(new Date())); 
-                        handleOptions(0, checkBoxes[0].length-1, false)}} 
+                <button
+                    onClick={() => {
+                        setMondayDate(() => getMonday(new Date()));
+                        handleOptions(0, checkBoxes[0].length - 1, false)
+                    }}
                     className="rounded-lg border-1 px-2 cursor-pointer hover:bg-dark-green/90 hover:text-light-green duration-150 active:bg-dark-green"
                 >
                     Current Week
@@ -502,16 +508,16 @@ export default function ClassSchedule() {
             {/* Calendar */}
             <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto overflow-y-clip">
                 {/* Classes */}
-                {classes.map((section,i)=> (
-                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ? 
-                        <Class 
-                            key={i} 
-                            {...section} 
-                            checkBoxes={checkBoxes} 
+                {classes.map((section, i) => (
+                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ?
+                        <Class
+                            key={i}
+                            {...section}
+                            checkBoxes={checkBoxes}
                             dayMap={dayMap}
                             top={getIthValue(section.startSeconds, true)}
                             height={getIthValue(section.endSeconds, true) - getIthValue(section.startSeconds, true)}
-                            /> 
+                        />
                         : null
                 ))}
 
@@ -528,31 +534,31 @@ export default function ClassSchedule() {
                 </div>
 
                 {/* Horizantal */}
-                <div className={lineHorFullClass} style={{top: `calc(${getIthValue(0)}*var(--spacing))`}}/>
-                {[...Array(13)].map((_,i) => (
+                <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(0)}*var(--spacing))` }} />
+                {[...Array(13)].map((_, i) => (
                     <Fragment key={i}>
-                        <div className={lineHorMidClass} style={{top: `calc(${getIthValue(i+0.5)}*var(--spacing))`}}/>
-                        <div className={lineHorFullClass} style={{top: `calc(${getIthValue(i+1)}*var(--spacing))`}}/>
+                        <div className={lineHorMidClass} style={{ top: `calc(${getIthValue(i + 0.5)}*var(--spacing))` }} />
+                        <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(i + 1)}*var(--spacing))` }} />
                     </Fragment>
                 ))}
 
                 {/* Dates: */}
                 <div className="flex flex-row">
                     <div className={clsx(dateBoxClass, "rounded-tl-lg")}></div>
-                    {[...Array(5)].map((_,i)=>{ 
+                    {[...Array(5)].map((_, i) => {
                         const date = new Date(mondayDate);
                         date.setDate(mondayDate.getDate() + i);
 
                         return (
-                            <div key={i} className={i==4 ? clsx(dateBoxClass, "rounded-tr-lg") : dateBoxClass}>{days[i]} {months[date.getMonth()]} {date.getDate()}</div>
+                            <div key={i} className={i == 4 ? clsx(dateBoxClass, "rounded-tr-lg") : dateBoxClass}>{days[i]} {months[date.getMonth()]} {date.getDate()}</div>
                         )
                     })}
                 </div>
                 {/* The days */}
                 <div>
-                    {[...Array(13)].map((_,i) => (
-                        <div className="flex flex-row" style={{height:`calc(${getIthValue(i+1)-getIthValue(i) } * var(--spacing))`}} key={i}>
-                            <div className={clsx(normalBoxClass, i == 12 && "rounded-bl-lg", "pl-2 xs:text-center")}>{i+8}:00</div>
+                    {[...Array(13)].map((_, i) => (
+                        <div className="flex flex-row" style={{ height: `calc(${getIthValue(i + 1) - getIthValue(i)} * var(--spacing))` }} key={i}>
+                            <div className={clsx(normalBoxClass, i == 12 && "rounded-bl-lg", "pl-2 xs:text-center")}>{i + 8}:00</div>
                             <div className={normalBoxClass}></div>
                             <div className={normalBoxClass}></div>
                             <div className={normalBoxClass}></div>
@@ -577,23 +583,23 @@ export default function ClassSchedule() {
                     {loadOnlines()}
                 </div>
                 <div className="absolute left-0 right-0 top-10 bottom-2 min-w-120 flex flex-row pr-2 z-2">
-                    {getVal("course code", checkBoxes) && <div className="border-r-1 flex-1 min-w-20"/>}
-                    {getVal("course title", checkBoxes) && <div className="border-r-1 flex-2 min-w-40"/>}
-                    <div className="border-r-1 flex-2 min-w-16"/>
-                    <div className="border-r-1 flex-1 min-w-20"/>
-                    <div className="flex-1 min-w-20"/>
+                    {getVal("course code", checkBoxes) && <div className="border-r-1 flex-1 min-w-20" />}
+                    {getVal("course title", checkBoxes) && <div className="border-r-1 flex-2 min-w-40" />}
+                    <div className="border-r-1 flex-2 min-w-16" />
+                    <div className="border-r-1 flex-1 min-w-20" />
+                    <div className="flex-1 min-w-20" />
                 </div>
             </div>
 
             <RightSide className="mb-5">
                 <HoverEffect hover="Add Class" onClick={handleAdd}>
-                    <LuPlus className="w-6 h-auto font-semibold cursor-pointer"/>
+                    <LuPlus className="w-6 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>
                 <HoverEffect hover="Import Schedule">
-                    <LuCamera className="w-6 h-auto font-semibold cursor-pointer"/>
+                    <LuCamera className="w-6 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>
                 <HoverEffect hover="Export Schedule">
-                    <LuShare2 className="w-5 h-auto font-semibold cursor-pointer"/>
+                    <LuShare2 className="w-5 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>
             </RightSide>
 
@@ -603,14 +609,14 @@ export default function ClassSchedule() {
                 <div className="flex flex-col px-4 py-2 min-w-108">
                     {checkBoxes.map((options, outerI) => (
                         <div className="flex gap-1" key={options[0][0]}>
-                            {options.map((option,innerI)=>(
+                            {options.map((option, innerI) => (
                                 <label className="cursor-pointer text-sm sm:text-[1.1rem] min-w-20 flex-1" key={option[0]}>
-                                    <input 
-                                        type="checkbox" 
-                                        disabled={option[0] == "-"} 
-                                        className="mr-1" 
-                                        checked={option[1]} 
-                                        onChange={()=>handleOptions(outerI, innerI)}/>
+                                    <input
+                                        type="checkbox"
+                                        disabled={option[0] == "-"}
+                                        className="mr-1"
+                                        checked={option[1]}
+                                        onChange={() => handleOptions(outerI, innerI)} />
                                     {option[0]}
                                 </label>
                             ))}

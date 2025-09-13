@@ -4,19 +4,11 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
-import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuSearch, LuShare2 } from "react-icons/lu";
+import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
 import useGQL from "@/lib/useGQL";
-import { AiOutlineClose } from "react-icons/ai";
-
-export function RightSide({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-    // Just a class that has stuff on the right side
-    return (
-        <div className={clsx("flex justify-end gap-2 mb-4 mr-2 items-center", className)} {...props}>
-            {children}
-        </div>
-    )
-}
+import AddACourse from "./AddACourse";
+import RightSide from "../utils/RightSide";
 
 type ClassInterface = {
     sectionId: number;
@@ -147,8 +139,8 @@ type DayMapInterface = {
 function getTermId() {
     const date = new Date();
     let term = 1;
-    if (date.getMonth() >= 5 && date.getMonth() < 9) term = 5;
-    else if (date.getMonth() >= 9) term = 9;
+    if (date.getMonth() >= 4 && date.getMonth() < 8) term = 5;
+    else if (date.getMonth() >= 8) term = 9;
     return (date.getFullYear() - 1900) * 10 + term
 }
 
@@ -224,7 +216,7 @@ export default function ClassSchedule() {
                 setSize(response.size || 0)
                 if (!sections) {
                     setClasses([]);
-                    return ;
+                    return;
                 }
                 // TODO: UPDATE TERM_ID!
                 const GQL_QUERY = `
@@ -445,34 +437,10 @@ export default function ClassSchedule() {
     return (
         <section className="my-5 max-w-[96vw]">
             {overLay &&
-                <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center">
-                    <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10">
-                        <RightSide className="!mb-1 !mr-0">
-                            <HoverEffect hover="close" className="cursor-pointer" onClick={() => setOverLay(false)}>
-                                <AiOutlineClose className="w-6 font-semibold h-auto" />
-                            </HoverEffect>
-                        </RightSide>
-                        <h3 className="w-full text-center text-xl font-semibold">Add Course:</h3>
-                        <p className="text-sm text-center mb-5">Just choose one/or more options and fill it out</p>
-                        <label className="block text-lg">
-                            Search:
-                            <div className="relative">
-                                <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75" />
-                                <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6" />
-                            </div>
-                        </label>
-                        <label className="block text-lg mt-4">
-                            Id:
-                            <div className="relative">
-                                <input className="border-1 rounded-sm  block w-full py-2 pl-1 pr-7 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75" />
-                                <LuSearch className="absolute top-0 right-1 h-full cursor-pointer w-6" />
-                            </div>
-                        </label>
-                        <RightSide className="!mr-0">
-                            <button className="border-1 px-8 py-1 text-base mt-5 rounded-md cursor-pointer bg-dark-green text-light-green">Add</button>
-                        </RightSide>
-                    </div>
-                </div>
+                <AddACourse 
+                    close={()=>{setOverLay(false)}} 
+                    updatePage={()=>{}}
+                />
             }
 
             {/* Semester Selector */}
@@ -491,8 +459,7 @@ export default function ClassSchedule() {
             </div>
 
             {/* Calendar buttons */}
-            <RightSide>
-                {/* Fix it so first and final are off when u move */}
+            <RightSide className="max-w-181 mx-auto mb-4">
                 <button
                     onClick={() => {
                         moveTime(-7);
@@ -610,7 +577,7 @@ export default function ClassSchedule() {
                 </div>
             </div>
 
-            <RightSide className="mb-5">
+            <RightSide className="mb-5 mx-auto max-w-181">
                 <HoverEffect hover="Add Class" onClick={handleAdd}>
                     <LuPlus className="w-6 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>

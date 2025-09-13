@@ -51,7 +51,7 @@ function getVal(value: string, checkBoxes: [string, boolean][][]) {
 }
 
 
-function Class({ startSeconds, endSeconds, days, code, courseId, type, title, prof, location, checkBoxes, dayMap, top, height }: ClassInterface & { checkBoxes: [string, boolean][][], dayMap: DayMapInterface, top: number, height: number }) {
+function Class({ startSeconds, endSeconds, days, code, courseId, classNumber, type, title, prof, location, checkBoxes, dayMap, top, height }: ClassInterface & { checkBoxes: [string, boolean][][], dayMap: DayMapInterface, top: number, height: number }) {
     const dayLeft = { "M": "100%/6", "T": "200%/6", "W": "300%/6", "Th": "400%/6", "F": "500%/6" };
 
     function countOccurance(
@@ -88,7 +88,7 @@ function Class({ startSeconds, endSeconds, days, code, courseId, type, title, pr
                     >
                         {getVal("course code", checkBoxes) && <p className="pt-1">{code}</p>}
                         {getVal("course title", checkBoxes) && <p>{title}</p>}
-                        <p>{courseId}</p>
+                        <p>{classNumber}</p>
                         <p>{type}</p>
                         <p>{translateSecToHour(startSeconds, checkBoxes)}-{translateSecToHour(endSeconds, checkBoxes)}</p>
                         <p>{location}</p>
@@ -103,12 +103,13 @@ function Class({ startSeconds, endSeconds, days, code, courseId, type, title, pr
     )
 }
 
-function OnlineClass({ code, type, title, startDate, endDate, first = false, checkBoxes }: ClassInterface & { first?: boolean, checkBoxes: [string, boolean][][] }) {
+function OnlineClass({ code, type, title, startDate, classNumber, endDate, first = false, checkBoxes }: ClassInterface & { first?: boolean, checkBoxes: [string, boolean][][] }) {
     return (
-        <div className="flex flex-row px-2 py-1 items-center min-w-120 relative">
+        <div className="flex flex-row px-2 py-1 items-center min-w-132 relative">
             {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">{code} <IoIosInformationCircleOutline className="min-w-4" /></div>}
             {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">{title}</div>}
             <div className="flex-2 min-w-16">{type}</div>
+            <div className="flex-2 min-w-16">{classNumber}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{startDate}</div>
             <div className="flex-1 min-w-20 text-sm sm:text-[1rem]">{endDate}</div>
             {!first && <div className="absolute right-4 left-4 top-0 border-t-1" />}
@@ -144,7 +145,11 @@ type DayMapInterface = {
 
 // TODO: fix this
 function getTermId() {
-    return 1255;
+    const date = new Date();
+    let term = 1;
+    if (date.getMonth() >= 5 && date.getMonth() < 9) term = 5;
+    else if (date.getMonth() >= 9) term = 9;
+    return (date.getFullYear() - 1900) * 10 + term
 }
 
 function getTermName(termId: number) {
@@ -176,6 +181,7 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
+    // TODO: adding backend to +, batch adding
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
@@ -191,6 +197,8 @@ export default function ClassSchedule() {
     ]);
     const [overLay, setOverLay] = useState<boolean>(false)
     const [termId, setTermId] = useState<number>(getTermId);
+    const [startedTerm, setstartedTerm] = useState<number>(getTermId);
+    const [size, setSize] = useState<number>(0)
 
 
     const [dayMap, setDayMap] = useState<DayMapInterface>({ "M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": [] })
@@ -212,6 +220,12 @@ export default function ClassSchedule() {
             } else {
                 const response = await res.json().catch(() => { });
                 const sections = response.sections;
+                setstartedTerm(response.start_sem || 0)
+                setSize(response.size || 0)
+                if (!sections) {
+                    setClasses([]);
+                    return ;
+                }
                 // TODO: UPDATE TERM_ID!
                 const GQL_QUERY = `
                     query Course_section($sections: [Int!]!, $termId: Int!) {
@@ -460,22 +474,23 @@ export default function ClassSchedule() {
                     </div>
                 </div>
             }
-            {/* Calendar buttons */}
 
+            {/* Semester Selector */}
             <div className="w-full flex justify-center">
                 <select
-                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%]"
-                    value={termId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
-                    {[...Array(5)].map((_, i) => (
+                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%] mb-2"
+                    value={Math.min(termId, termOperation(startedTerm, size))} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
+                    {[...Array(size)].map((_, i) => (
                         <option
-                            value={termOperation(termId, i - 2)}
+                            value={termOperation(startedTerm, i)}
                             key={i}>
-                            {getTermName(termOperation(termId, i - 2))}
+                            {getTermName(termOperation(startedTerm, i))}
                         </option>
                     ))}
                 </select>
             </div>
 
+            {/* Calendar buttons */}
             <RightSide>
                 {/* Fix it so first and final are off when u move */}
                 <button
@@ -506,85 +521,89 @@ export default function ClassSchedule() {
             </RightSide>
 
             {/* Calendar */}
-            <div className="relative w-181 max-w-[92vw] [box-shadow:2px_4px_54.2px_0px_#608E9436] mx-auto overflow-y-clip">
-                {/* Classes */}
-                {classes.map((section, i) => (
-                    (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ?
-                        <Class
-                            key={i}
-                            {...section}
-                            checkBoxes={checkBoxes}
-                            dayMap={dayMap}
-                            top={getIthValue(section.startSeconds, true)}
-                            height={getIthValue(section.endSeconds, true) - getIthValue(section.startSeconds, true)}
-                        />
-                        : null
-                ))}
-
-                {/* lines */}
-                {/* Vertical */}
-                <div className="flex justify-between absolute top-4 bottom-4 left-0 right-0">
-                    <div className={clsx(lineVertClass, "!border-r-0")} />
-                    <div className={lineVertClass} />
-                    <div className={lineVertClass} />
-                    <div className={lineVertClass} />
-                    <div className={lineVertClass} />
-                    <div className={lineVertClass} />
-                    <div className={clsx(lineVertClass, "!border-r-0")} />
-                </div>
-
-                {/* Horizantal */}
-                <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(0)}*var(--spacing))` }} />
-                {[...Array(13)].map((_, i) => (
-                    <Fragment key={i}>
-                        <div className={lineHorMidClass} style={{ top: `calc(${getIthValue(i + 0.5)}*var(--spacing))` }} />
-                        <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(i + 1)}*var(--spacing))` }} />
-                    </Fragment>
-                ))}
-
-                {/* Dates: */}
-                <div className="flex flex-row">
-                    <div className={clsx(dateBoxClass, "rounded-tl-lg")}></div>
-                    {[...Array(5)].map((_, i) => {
-                        const date = new Date(mondayDate);
-                        date.setDate(mondayDate.getDate() + i);
-
-                        return (
-                            <div key={i} className={i == 4 ? clsx(dateBoxClass, "rounded-tr-lg") : dateBoxClass}>{days[i]} {months[date.getMonth()]} {date.getDate()}</div>
-                        )
-                    })}
-                </div>
-                {/* The days */}
-                <div>
-                    {[...Array(13)].map((_, i) => (
-                        <div className="flex flex-row" style={{ height: `calc(${getIthValue(i + 1) - getIthValue(i)} * var(--spacing))` }} key={i}>
-                            <div className={clsx(normalBoxClass, i == 12 && "rounded-bl-lg", "pl-2 xs:text-center")}>{i + 8}:00</div>
-                            <div className={normalBoxClass}></div>
-                            <div className={normalBoxClass}></div>
-                            <div className={normalBoxClass}></div>
-                            <div className={normalBoxClass}></div>
-                            <div className={clsx(normalBoxClass, i == 12 && "rounded-br-lg")}></div>
-                        </div>
+            <div className="w-[92vw] overflow-x-auto scroller mx-auto">
+                <div className="relative max-w-181 w-[92vw] min-w-120 sm:min-w-0 mx-auto overflow-y-clip">
+                    {/* Classes */}
+                    {classes.map((section, i) => (
+                        (inWeek(section.startDate, section.endDate) && selectedClass(section.type)) ?
+                            <Class
+                                key={i}
+                                {...section}
+                                checkBoxes={checkBoxes}
+                                dayMap={dayMap}
+                                top={getIthValue(section.startSeconds, true)}
+                                height={getIthValue(section.endSeconds, true) - getIthValue(section.startSeconds, true)}
+                            />
+                            : null
                     ))}
+
+                    {/* lines */}
+                    {/* Vertical */}
+                    <div className="flex justify-between absolute top-4 bottom-4 left-0 right-0">
+                        <div className={clsx(lineVertClass, "!border-r-0")} />
+                        <div className={lineVertClass} />
+                        <div className={lineVertClass} />
+                        <div className={lineVertClass} />
+                        <div className={lineVertClass} />
+                        <div className={lineVertClass} />
+                        <div className={clsx(lineVertClass, "!border-r-0")} />
+                    </div>
+
+                    {/* Horizantal */}
+                    <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(0)}*var(--spacing))` }} />
+                    {[...Array(13)].map((_, i) => (
+                        <Fragment key={i}>
+                            <div className={lineHorMidClass} style={{ top: `calc(${getIthValue(i + 0.5)}*var(--spacing))` }} />
+                            <div className={lineHorFullClass} style={{ top: `calc(${getIthValue(i + 1)}*var(--spacing))` }} />
+                        </Fragment>
+                    ))}
+
+                    {/* Dates: */}
+                    <div className="flex flex-row">
+                        <div className={clsx(dateBoxClass, "rounded-tl-lg")}></div>
+                        {[...Array(5)].map((_, i) => {
+                            const date = new Date(mondayDate);
+                            date.setDate(mondayDate.getDate() + i);
+
+                            return (
+                                <div key={i} className={i == 4 ? clsx(dateBoxClass, "rounded-tr-lg") : dateBoxClass}>{days[i]} {months[date.getMonth()]} {date.getDate()}</div>
+                            )
+                        })}
+                    </div>
+                    {/* The days */}
+                    <div>
+                        {[...Array(13)].map((_, i) => (
+                            <div className="flex flex-row" style={{ height: `calc(${getIthValue(i + 1) - getIthValue(i)} * var(--spacing))` }} key={i}>
+                                <div className={clsx(normalBoxClass, i == 12 && "rounded-bl-lg", "pl-2 xs:text-center")}>{i + 8}:00</div>
+                                <div className={normalBoxClass}></div>
+                                <div className={normalBoxClass}></div>
+                                <div className={normalBoxClass}></div>
+                                <div className={normalBoxClass}></div>
+                                <div className={clsx(normalBoxClass, i == 12 && "rounded-br-lg")}></div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
             {/* Online Classes */}
-            <div className="mt-15 mb-4 overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
-                <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-120">Online Classes</div>
-                <div className="text-sm sm:text-[1.1rem] gap-0.5 min-w-120 z-20 relative">
+            <div className="mt-15 mb-4 max-w-181 flex flex-col align-middle mx-auto overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
+                <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-132">Online Classes</div>
+                <div className="text-sm sm:text-[1.1rem] gap-0.5 min-w-132 z-20 relative">
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
                         {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
                         {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">Course Title</div>}
                         <div className="flex-2 min-w-16">Type</div>
+                        <div className="flex-2 min-w-16">SectionId</div>
                         <div className="flex-1 min-w-20">Start Date</div>
                         <div className="flex-1 min-w-20">End Date</div>
                     </div>
                     {loadOnlines()}
                 </div>
-                <div className="absolute left-0 right-0 top-10 bottom-2 min-w-120 flex flex-row pr-2 z-2">
+                <div className="absolute left-0 right-0 top-10 bottom-2 min-w-132 flex flex-row pr-2 z-2">
                     {getVal("course code", checkBoxes) && <div className="border-r-1 flex-1 min-w-20" />}
                     {getVal("course title", checkBoxes) && <div className="border-r-1 flex-2 min-w-40" />}
+                    <div className="border-r-1 flex-2 min-w-16" />
                     <div className="border-r-1 flex-2 min-w-16" />
                     <div className="border-r-1 flex-1 min-w-20" />
                     <div className="flex-1 min-w-20" />
@@ -604,7 +623,7 @@ export default function ClassSchedule() {
             </RightSide>
 
             {/* Options */}
-            <div className="mt-10 mb-4 overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-lg">
+            <div className="mt-10 max-w-181 mx-auto mb-4 overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-lg">
                 <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-108">Options</div>
                 <div className="flex flex-col px-4 py-2 min-w-108">
                     {checkBoxes.map((options, outerI) => (

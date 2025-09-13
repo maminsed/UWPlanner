@@ -131,7 +131,7 @@ class Users(db.Model):
     started_year: Mapped[int] = mapped_column(
         db.Integer, default=datetime.now().year, server_default=text("2024")
     )
-    started_month: Mapped[int] = mapped_column(db.Integer, default=1)
+    started_month: Mapped[int] = mapped_column(db.Integer, default=1)  # {0:"Summer", 1:"Fall", 2:"Winter"}
     coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
     bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
     # seprated with - 

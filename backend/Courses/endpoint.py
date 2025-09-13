@@ -28,5 +28,9 @@ def get_user_sections():
     section_ids = "-".join([schedule.sections for schedule in user.schedules if schedule.term_id == term_id])
     if section_ids == '':
         return jsonify({"sections": []}), 200
-    return jsonify({"sections": list(map(int, section_ids.split("-")))}), 200
+    size = 0
+    if user.path != '':
+        size = max(0,len(user.path.split('-'))-1)
+    sem_dic = {0:5,1:9,2:1}
+    return jsonify({"sections": list(map(int, section_ids.split("-"))), "start_sem": (user.started_year - 1900)*10 + sem_dic[user.started_month], "size": size}), 200
 

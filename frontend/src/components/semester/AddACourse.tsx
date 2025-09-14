@@ -185,19 +185,28 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
         setCloseSections(closeSearchOptions);
     }
 
-    function handleKeyDown(
+    function handleKeyDown<T>(
         e: React.KeyboardEvent<HTMLInputElement>, 
-        options:(SectionInterface|OptionsInterface)[],
+        options: T[],
         updateIndexFunction: (arg0:number)=>void, 
-        IndexValue: number) 
+        IndexValue: number,
+        updateValueFunction: (arg1:boolean, arg2:T)=>void
+    )
     {
         const size = options.length
         if (size == 0) return;
         if (e.key === "ArrowDown") {
+            e.preventDefault()
             updateIndexFunction((IndexValue+1)%options.length);
         } else if (e.key === "ArrowUp") {
+            e.preventDefault()
             if (IndexValue <= 0) IndexValue = options.length
             updateIndexFunction(IndexValue-1);
+        } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (IndexValue != -1) {
+                updateValueFunction(true, options[IndexValue]);
+            }
         }
     }
 
@@ -245,7 +254,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             className="border-1 rounded-sm  block w-full py-2 px-1 pr-2 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"
                             value={`${searchPhrase.code.toUpperCase()}${searchPhrase.code == "" ? "" : " - "}${searchPhrase.name}`}
                             onChange={(e) => updateSearchPhrase(false, { name: e.currentTarget.value, code: "", course_id: -1 })}
-                            onKeyDown={(e)=>handleKeyDown(e, searchOptions, setSearchHighlitedIndex, searchHighlitedIndex)}
+                            onKeyDown={(e)=>handleKeyDown<OptionsInterface>(e, searchOptions, setSearchHighlitedIndex, searchHighlitedIndex, updateSearchPhrase)}
                             />
                     </div>
                     {!closeSearchOptions &&
@@ -267,7 +276,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             onFocus={fetchIds}
                             value={sectionPhrase}
                             onChange={(e) => updateChosenSection(false, e.currentTarget.value)}
-                            onKeyDown={(e)=>handleKeyDown(e, filterSectionOptions(), setSectionHighlitedIndex, sectionHighlitedIndex)}
+                            onKeyDown={(e)=>handleKeyDown<SectionInterface>(e, filterSectionOptions(), setSectionHighlitedIndex, sectionHighlitedIndex, updateChosenSection)}
                         />
                     </div>
                     {!closeSection &&

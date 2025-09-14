@@ -440,6 +440,7 @@ export default function ClassSchedule() {
                 <AddACourse 
                     close={()=>{setOverLay(false)}} 
                     updatePage={()=>{}}
+                    termId={termId}
                 />
             }
 

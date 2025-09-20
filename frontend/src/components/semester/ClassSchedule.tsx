@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { Fragment } from "react";
 import { IoIosInformationCircleOutline } from "react-icons/io";
-import { LuCamera, LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
+import { LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
 import useGQL from "@/lib/useGQL";
 import AddACourse from "./AddACourse";
 import RightSide from "../utils/RightSide";
+import { BiImport } from "react-icons/bi";
+import BatchAddCourses from "./BatchAddCourses";
 
 type ClassInterface = {
     sectionId: number;
@@ -135,7 +137,7 @@ type DayMapInterface = {
     "Tot": [number, number][],
 }
 
-// TODO: fix this
+
 function getTermId() {
     const date = new Date();
     let term = 1;
@@ -173,6 +175,7 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
+    // TODO: batch adding, adding terms to the Fall 2025
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
@@ -186,11 +189,12 @@ export default function ClassSchedule() {
         [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
         [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
     ]);
-    const [overLay, setOverLay] = useState<boolean>(false)
+    const [singleOverLay, setsingleOverLay] = useState<boolean>(false)
     const [termId, setTermId] = useState<number>(getTermId);
     const [startedTerm, setstartedTerm] = useState<number>(getTermId);
-    const [size, setSize] = useState<number>(0)
     const [updateCond, setUpdateCond] = useState<number>(0)
+    const [path, setPath] = useState<string[]>([])
+    const [batchOverLay, setBatchOverLay] = useState<boolean>(false)
 
 
     const [dayMap, setDayMap] = useState<DayMapInterface>({ "M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": [] })
@@ -213,7 +217,11 @@ export default function ClassSchedule() {
                 const response = await res.json().catch(() => { });
                 const sections = response.sections;
                 setstartedTerm(response.start_sem || 0)
-                setSize(response.size || 0)
+                setPath(response.path || [])
+                if (!response.path){
+                    alert("Please get a sequence first in settings or Graph")
+                    console.error("User with no sequence is here?")
+                }
                 if (!sections) {
                     setClasses([]);
                     return;
@@ -402,11 +410,7 @@ export default function ClassSchedule() {
 
     function updatePage() {
         setUpdateCond(updateCond+1);
-        setOverLay(false);
-    }
-
-    function handleAdd() {
-        setOverLay(true);
+        setsingleOverLay(false);
     }
 
     function getIthValue(i: number, isSeconds: boolean = false) {
@@ -436,10 +440,18 @@ export default function ClassSchedule() {
 
     return (
         <section className="my-5 max-w-[96vw]">
-            {overLay &&
+            {singleOverLay &&
                 <AddACourse 
-                    close={()=>{setOverLay(false)}} 
+                    close={()=>{setsingleOverLay(false)}} 
                     updatePage={updatePage}
+                    termId={termId}
+                />
+            }
+
+            {batchOverLay &&
+                <BatchAddCourses 
+                    close={()=>setBatchOverLay(false)}
+                    updatePage={()=>{}}
                     termId={termId}
                 />
             }
@@ -447,13 +459,14 @@ export default function ClassSchedule() {
             {/* Semester Selector */}
             <div className="w-full flex justify-center">
                 <select
-                    className="border-1 rounded-md px-2 py-1 w-50 max-w-[95%] mb-2"
-                    value={Math.min(termId, termOperation(startedTerm, size))} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
-                    {[...Array(size)].map((_, i) => (
+                    className="border-1 rounded-md px-2 py-1 w-60 max-w-[95%] mb-2"
+                    value={Math.min(termId, termOperation(startedTerm, path.length))} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setTermId(Number(e.currentTarget.value)) }}>
+                    {path.map((p, i) => (
                         <option
                             value={termOperation(startedTerm, i)}
-                            key={i}>
-                            {getTermName(termOperation(startedTerm, i))}
+                            key={i}
+                        >
+                            {getTermName(termOperation(startedTerm, i))} - {p}
                         </option>
                     ))}
                 </select>
@@ -579,11 +592,11 @@ export default function ClassSchedule() {
             </div>
 
             <RightSide className="mb-5 mx-auto max-w-181">
-                <HoverEffect hover="Add Class" onClick={handleAdd}>
+                <HoverEffect hover="Add Class" onClick={()=>setsingleOverLay(true)}>
                     <LuPlus className="w-6 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>
-                <HoverEffect hover="Import Schedule">
-                    <LuCamera className="w-6 h-auto font-semibold cursor-pointer" />
+                <HoverEffect hover="Import Schedule" onClick={()=>setBatchOverLay(true)}>
+                    <BiImport className="w-6 h-auto font-semibold cursor-pointer" />
                 </HoverEffect>
                 <HoverEffect hover="Export Schedule">
                     <LuShare2 className="w-5 h-auto font-semibold cursor-pointer" />

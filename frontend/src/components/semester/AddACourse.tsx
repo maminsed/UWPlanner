@@ -1,11 +1,11 @@
 'use client'
 import { AiOutlineClose } from "react-icons/ai";
 import HoverEffect from "../HoverEffect";
-import { LuSearch } from "react-icons/lu";
 import RightSide from "../utils/RightSide";
 import { clsx } from "clsx";
-import { JSX, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import useGQL from "@/lib/useGQL";
+import DropDown2 from "../utils/DropDown2";
 import { IoIosInformationCircleOutline } from "react-icons/io";
 import { api } from "@/lib/useApi";
 
@@ -20,16 +20,6 @@ type SectionInterface = {
     course_id: number;
     section_name: string;
 
-}
-
-interface DropDown2Props<T> {
-    optionList: T[];
-    hover?: boolean;
-    hoverFunction: (arg0: T) => string;
-    valueFunction: (arg0: T) => string;
-    updateFunction: (arg0: boolean, arg1: T) => void;
-    highlitedIndex: number;
-    setHighlitedIndex: (arg0: number)=>void;
 }
 
 function changeQuery(phrase: string): [number, string] {
@@ -51,46 +41,6 @@ function changeQuery(phrase: string): [number, string] {
     }
 
     return [count, res + ":* "]
-}
-
-function DropDown2<T>({
-    optionList,
-    hover = true,
-    hoverFunction,
-    valueFunction,
-    updateFunction,
-    highlitedIndex,
-}: DropDown2Props<T>): JSX.Element {
-
-
-    return (
-        <div className="bg-teal-800 text-light-green py-1 rounded-sm mt-1 w-[90vw] max-w-75 scroller max-h-30 overflow-x-clip overflow-y-auto">
-            {optionList.map((o, k) => (
-                <div
-                    className={clsx("cursor-pointer w-[92vw] max-w-75 hover:bg-teal-700 truncate px-1", highlitedIndex === k && "bg-teal-600")}
-                    onClick={() => updateFunction(true, o)}
-                    key={k}
-                    ref={(el) => {
-                        if (highlitedIndex === k && el) {
-                            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                        }
-                    }}
-                >
-                    {hover ?
-                        <HoverEffect hover={hoverFunction(o)} >
-                            {valueFunction(o)}
-                        </HoverEffect>
-                        :
-                        valueFunction(o)
-                    }
-                </div>
-            )
-            )}
-            {optionList.length == 0 &&
-                <div className="cursor-pointer hover:bg-teal-700 truncate px-1 " > No results </div>
-            }
-        </div>
-    )
 }
 
 export default function AddACourse({ className, close, updatePage, termId, ...props }: React.HTMLAttributes<HTMLDivElement> & { close: () => void, updatePage: () => void, termId: number }) {
@@ -237,6 +187,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
             setMessage("Please choose all the options first");
             return ;
         }
+        setMessage("Loading...")
         const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add`,{
             method: "POST",
             headers: {
@@ -275,7 +226,8 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                     </HoverEffect>
                 </RightSide>
                 <h3 className="w-full text-center text-xl font-semibold">Add Course:</h3>
-                <p className="text-sm text-center mb-5">Just choose one/or more options and fill it out</p>
+                <p className="text-sm text-center">Just choose one/or more options and fill it out</p>
+                <p className="text-sm text-center mb-5 text-teal-400">*To add multiple click on the import button*</p>
                 <label className="block text-lg">
                     Search:
                     <div className="relative">
@@ -320,10 +272,10 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                         />}
                 </label>
                 {message.length ? 
-                <p className="text-red-600 my-2 max-w-75">{message}</p> 
+                <p className={clsx(message == "Loading..." ? "text-dark-green" : "text-red-600", "my-2 max-w-75")}>{message}</p> 
                 : ""}
                 <RightSide className="my-2">
-                    <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit}>Add</button>
+                    <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit} disabled={message==="Loading..."}>Add</button>
                 </RightSide>
             </div>
         </div>

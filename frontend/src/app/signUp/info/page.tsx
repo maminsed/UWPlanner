@@ -59,7 +59,7 @@ export default function Info() {
         const response = await (res as Response).json().catch(()=>{})
         if (res.ok) {
             if (order == ordering.length - 1) {
-                router.push("/test")
+                router.push("/semester")
                 console.log("ended")
                 return
             }

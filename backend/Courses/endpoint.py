@@ -27,13 +27,11 @@ def get_user_sections():
     user = Users.query.filter_by(username=g.username).first()
     if not user: return jsonify({"message": "user not found"}), 500
     section_ids = "-".join([schedule.sections for schedule in user.schedules if schedule.term_id == term_id])
-    if section_ids == '':
-        return jsonify({"sections": []}), 200
-    size = 0
-    if user.path != '':
-        size = max(0,len(user.path.split('-'))-1)
+    sections = []
+    if section_ids != '':
+        sections = list(map(int, section_ids.split("-")))
     sem_dic = {0:5,1:9,2:1}
-    return jsonify({"sections": list(map(int, section_ids.split("-"))), "start_sem": (user.started_year - 1900)*10 + sem_dic[user.started_month], "size": size}), 200
+    return jsonify({"sections": sections, "start_sem": (user.started_year - 1900)*10 + sem_dic[user.started_month], "path": user.path.split("-")}), 200
 
 @courses_bp.route("/add", methods=["POST"])
 def add_section_to_user():

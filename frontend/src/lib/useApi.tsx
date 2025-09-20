@@ -75,7 +75,7 @@ export function api() {
                 } else if (response.action == "logout") {
                     router("/")
                 } else if (response.action == "main_page") {
-                    router("/test")
+                    router("/semester")
                 }
             }
         }

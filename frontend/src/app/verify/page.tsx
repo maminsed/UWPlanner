@@ -53,7 +53,7 @@ export default function Verify() {
         const res = await response.json().catch(() => {});
         if (!response.ok) {
             if (res.action == "main_page") {
-                router.push("/test");
+                router.push("/semester");
             }
             return;
         }
@@ -87,7 +87,7 @@ export default function Verify() {
                     message: res.message || "error",
                 });
             } else if (res.action) {
-                router.push("/test")
+                router.push("/semester")
             } else {
                 console.log("Congrats: "+res.message)
                 router.push('/signUp/info')

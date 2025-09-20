@@ -59,7 +59,7 @@ export default function LogIn() {
             setExp(exp)
             const { username } = res;
             console.log(`Welcome Back baby ${username}`)
-            router.push("/test")
+            router.push("/semester")
         } catch (err) {
             setError("root", {
                 "message": err instanceof Error ? err.message : "Error - Please Try again"

@@ -173,7 +173,6 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
-    // TODO: adding backend to +, batch adding
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
@@ -191,6 +190,7 @@ export default function ClassSchedule() {
     const [termId, setTermId] = useState<number>(getTermId);
     const [startedTerm, setstartedTerm] = useState<number>(getTermId);
     const [size, setSize] = useState<number>(0)
+    const [updateCond, setUpdateCond] = useState<number>(0)
 
 
     const [dayMap, setDayMap] = useState<DayMapInterface>({ "M": [], "T": [], "W": [], "Th": [], "F": [], "Tot": [] })
@@ -284,7 +284,7 @@ export default function ClassSchedule() {
         }
 
         initialSetup()
-    }, [termId])
+    }, [termId, updateCond])
 
     useEffect(() => {
         function updateDayMap() {
@@ -378,7 +378,6 @@ export default function ClassSchedule() {
 
 
     function handleOptions(outerI: number, innerI: number, value: boolean | null = null) {
-
         if (checkBoxes[outerI][innerI][0] == 'Final Week' && checkBoxes[outerI][innerI][1] == false && value === null) {
             let res: null | string = null;
             classes.forEach(section => {
@@ -392,7 +391,6 @@ export default function ClassSchedule() {
                 setMondayDate(() => getMonday(new Date(Obj)))
             }
         }
-
         setCheckBoxes((prev) => (
             prev.map((r, rI) => (
                 rI != outerI ? r : r.map((item, c) =>
@@ -400,9 +398,11 @@ export default function ClassSchedule() {
                 )
             ))
         ))
+    }
 
-
-
+    function updatePage() {
+        setUpdateCond(updateCond+1);
+        setOverLay(false);
     }
 
     function handleAdd() {
@@ -439,7 +439,7 @@ export default function ClassSchedule() {
             {overLay &&
                 <AddACourse 
                     close={()=>{setOverLay(false)}} 
-                    updatePage={()=>{}}
+                    updatePage={updatePage}
                     termId={termId}
                 />
             }

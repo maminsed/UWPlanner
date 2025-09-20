@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user() -> Response | tuple[str, int]:
+def add_user() -> Response:
     """Register a new user.
 
     Expects:

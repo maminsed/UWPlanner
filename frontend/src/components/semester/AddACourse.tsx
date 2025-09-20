@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { JSX, useEffect, useState } from "react";
 import useGQL from "@/lib/useGQL";
 import { IoIosInformationCircleOutline } from "react-icons/io";
+import { api } from "@/lib/useApi";
 
 type OptionsInterface = {
     code: string;
@@ -98,7 +99,8 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
     const [closeSearchOptions, setCloseSearchOptions] = useState<boolean>(true)
     const [searchHighlitedIndex, setSearchHighlitedIndex] = useState<number>(-1);
 
-    const [message, setMessage] = useState<string>("")
+    const [message, setMessage] = useState<string>("");
+    const backend = api();
 
     const [sectionOptions, setSectionOptions] = useState<SectionInterface[]>([])
     const [chosenSection, setChosenSection] = useState<SectionInterface>({ class_number: -1, course_id: -1, section_name: "" })
@@ -158,7 +160,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
             }
         `
         const response = (await gql(GQL_QUERY, { term_id: termId, course_id: searchPhrase.course_id })).data.course_section;
-        if (!response) {
+        if (!response || response.length == 0) {
             setMessage("There are no available sections for this course this semster.")
         }
         setCloseSections(false);
@@ -166,6 +168,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
     }
 
     function updateSearchPhrase(closeSearchOptions: boolean, searchPhrase: OptionsInterface) {
+        if (closeSearchOptions) setMessage("")
         setCloseSearchOptions(closeSearchOptions);
         setSearchPhrase(searchPhrase);
         setSearchHighlitedIndex(-1);
@@ -229,6 +232,32 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
         return res;
     }
 
+    async function handleSubmit() {
+        if (searchPhrase.course_id == -1 || chosenSection.class_number == -1) {
+            setMessage("Please choose all the options first");
+            return ;
+        }
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add`,{
+            method: "POST",
+            headers: {
+                "Content-type": "application/json",
+            },
+            body: JSON.stringify({
+                "term_id": termId,
+                "class_number": chosenSection.class_number,
+                "course_id": searchPhrase.course_id,
+            })
+        })
+        
+        const response = await res.json().catch(()=>{})
+        if (!res.ok) {
+            if (response.message) setMessage(response.message);
+            else setMessage('error occured')
+            return ;
+        }
+        updatePage();
+    }
+
     filterSectionOptions()
     return (
         <div
@@ -290,8 +319,11 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             setHighlitedIndex={setSectionHighlitedIndex}
                         />}
                 </label>
-                <RightSide className="mb-4">
-                    <button className="border-1 px-8 py-1 text-base mt-5 rounded-md cursor-pointer bg-dark-green text-light-green">Add</button>
+                {message.length ? 
+                <p className="text-red-600 my-2 max-w-75">{message}</p> 
+                : ""}
+                <RightSide className="my-2">
+                    <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit}>Add</button>
                 </RightSide>
             </div>
         </div>

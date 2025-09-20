@@ -175,7 +175,7 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
-    // TODO: batch adding, adding terms to the Fall 2025
+
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
@@ -187,7 +187,7 @@ export default function ClassSchedule() {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     const [checkBoxes, setCheckBoxes] = useState<[string, boolean][][]>([
         [["Course Code", true], ["AM/PM", false], ["Lectures", true], ["Final Week", false]],
-        [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", false]]
+        [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", true]]
     ]);
     const [singleOverLay, setsingleOverLay] = useState<boolean>(false)
     const [termId, setTermId] = useState<number>(getTermId);
@@ -222,11 +222,12 @@ export default function ClassSchedule() {
                     alert("Please get a sequence first in settings or Graph")
                     console.error("User with no sequence is here?")
                 }
-                if (!sections) {
+                if (!sections || sections.length === 0) {
                     setClasses([]);
+                    handleOptions(1,3,true);
                     return;
                 }
-                // TODO: UPDATE TERM_ID!
+
                 const GQL_QUERY = `
                     query Course_section($sections: [Int!]!, $termId: Int!) {
                             course_section(

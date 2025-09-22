@@ -1,5 +1,7 @@
 from flask import Blueprint, jsonify,g, request
 from dotenv import load_dotenv
+
+from backend.utils.path import translate_path
 from .extraction import get_course_data
 from backend.Auth import verify as verify_jwt
 from ..Schema import Users, Schedule, db
@@ -39,7 +41,7 @@ def get_user_sections():
     if section_ids != '':
         sections = list(map(int, section_ids.split("-")))
     sem_dic = {0:5,1:9,2:1}
-    return jsonify({"sections": sections, "start_sem": (user.started_year - 1900)*10 + sem_dic[user.started_month], "path": user.path.split("-")}), 200
+    return jsonify({"sections": sections, "start_sem": (user.started_year - 1900)*10 + sem_dic[user.started_month], "path": translate_path(user.path)}), 200
 
 @courses_bp.route("/add_single", methods=["POST"])
 def add_section_to_user():

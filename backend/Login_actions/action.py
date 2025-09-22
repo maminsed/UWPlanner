@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify, make_response, request
 from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
 from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
+from backend.utils.path import translate_path
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
@@ -297,25 +298,6 @@ def get_user_seq() -> tuple[str, int]:
             "path": path,
         }
     ), 200
-
-
-def translate_path(path: str):
-    res = path.split("-")
-    yearCount = 1
-    semCount = 0
-    wtCount = 1
-    for i in range(len(res)):
-        if res[i] == "Study":
-            res[i] = f"{yearCount}{'B' if semCount else 'A'}"
-            yearCount += semCount
-            semCount = (semCount + 1) % 2
-        elif res[i] == "Coop":
-            res[i] = f"WT{wtCount}"
-            wtCount += 1
-    if res[-1] == "":
-        res.pop()
-    return res
-
 
 """
      profilePicture,

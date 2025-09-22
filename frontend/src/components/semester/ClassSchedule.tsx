@@ -175,7 +175,7 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
-
+    // TODO: batch adding
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"

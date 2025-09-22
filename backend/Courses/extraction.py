@@ -1,8 +1,11 @@
 from ..Schema import Course, db
 from sqlalchemy import insert
 import requests
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-GQL_URL = "https://uwflow.com/graphql"
+GQL_URL = os.getenv("GQL_URL")
 def get_course_data():
     GQL_QUERY = """
     query Course($limit: Int, $offset: Int) {

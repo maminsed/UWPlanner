@@ -188,7 +188,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
             return ;
         }
         setMessage("Loading...")
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add`,{
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add_single`,{
             method: "POST",
             headers: {
                 "Content-type": "application/json",

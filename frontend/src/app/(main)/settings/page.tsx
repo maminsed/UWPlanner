@@ -7,6 +7,7 @@ import { ReportingSettings } from "@/components/settings/ReportingSettings";
 import Link from "next/link";
 
 export default function SettingsPage() {
+    // TODO: figure out profile pictures 
 
     const settingSections = [
         { name: "Account" },

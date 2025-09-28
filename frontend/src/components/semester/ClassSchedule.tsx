@@ -175,7 +175,7 @@ function termOperation(termId: number, distance: number) {
 }
 
 export default function ClassSchedule() {
-    // TODO: batch adding
+    // TODO: option to choose from available courses what to display - Fix the downloading of scheudle into a google calendar - colour coding courses - send alerats and stuff to upstream so that it can display
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"
@@ -575,7 +575,7 @@ export default function ClassSchedule() {
                     <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
                         {getVal("course code", checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
                         {getVal("course title", checkBoxes) && <div className="flex-2 min-w-40">Course Title</div>}
-                        <div className="flex-2 min-w-16">Type</div>
+                        <div className="flex-2 min-w-16">Section Name</div>
                         <div className="flex-2 min-w-16">SectionId</div>
                         <div className="flex-1 min-w-20">Start Date</div>
                         <div className="flex-1 min-w-20">End Date</div>

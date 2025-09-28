@@ -1,3 +1,5 @@
+import PanZoomCanvas from "@/components/utils/PanZoomCanvas";
+
 export default function GraphPage() {
-    return <div>Graph Page</div>;
+    return <PanZoomCanvas></PanZoomCanvas>;
 }

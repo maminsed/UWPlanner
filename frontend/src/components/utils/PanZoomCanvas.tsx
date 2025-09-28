@@ -3,19 +3,19 @@ import { useRef, useState, useEffect } from "react"
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(v, hi)) }
 
-export default function PanZoomCanvas() {
+export default function PanZoomCanvas({ children }: { children: React.JSX.Element }) {
     // container and content ref
     const containerRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);
 
     // content style values
-    interface viewInterface {tx: number, ty:number, scale:number}
-    const [view, setView] = useState<viewInterface>({tx:0, ty:0, scale:1})
+    interface viewInterface { tx: number, ty: number, scale: number }
+    const [view, setView] = useState<viewInterface>({ tx: 0, ty: 0, scale: 1 })
     const viewRef = useRef<viewInterface>(view);
     useEffect(() => { viewRef.current = view }, [view])
 
     // constants
-    const MIN_SCALE = 0.25;
+    const MIN_SCALE = 0.5;
     const MAX_SCALE = 4;
     const ZOOM_STEP = 1.15;
 
@@ -47,11 +47,11 @@ export default function PanZoomCanvas() {
         // Adjust translate so (cx,cy) remains stable under the new scale
         // Derivation: screen = T + S * world; keeping screen fixed ⇒
         // T' = (cx,cy) - newS/oldS * ((cx,cy) - T)
-        setView((prev)=> {
+        setView((prev) => {
             const k = newScale / prev.scale;
             const newTx = cx - k * (cx - prev.tx);
             const newTy = cy - k * (cy - prev.ty);
-            return {scale: newScale, tx: newTx, ty: newTy}
+            return { scale: newScale, tx: newTx, ty: newTy }
         })
     }
 
@@ -72,7 +72,7 @@ export default function PanZoomCanvas() {
         const newTx = (cRect.width - worldW * newScale) / 2;
         const newTy = (cRect.height - worldH * newScale) / 2;
 
-        setView({scale:newScale, tx:newTx, ty:newTy})
+        setView({ scale: newScale, tx: newTx, ty: newTy })
     }
 
     useEffect(() => {
@@ -89,8 +89,7 @@ export default function PanZoomCanvas() {
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
             const { clientX, clientY, deltaY, deltaX, ctrlKey, metaKey } = e;
-
-            if (!(ctrlKey || metaKey)) {
+            if (ctrlKey || metaKey) {
                 // Zoom: trackpad pinch or ctrl/cmd + wheel
                 const direction = deltaY < 0 ? 1 : -1; // up = zoom in
                 const factor = direction > 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
@@ -99,10 +98,10 @@ export default function PanZoomCanvas() {
                 const speed = 1;
                 const dx = e.shiftKey ? deltaY : deltaX;
                 const dy = e.shiftKey ? 0 : deltaY;
-                setView((prev)=> {
+                setView((prev) => {
                     const tx = prev.tx - dx * speed;
                     const ty = prev.ty - dy * speed;
-                    return {...prev, tx, ty}
+                    return { ...prev, tx, ty }
                 })
             }
         }
@@ -163,7 +162,7 @@ export default function PanZoomCanvas() {
             const newTx = cx - kk * (cx - pinch.startTx);
             const newTy = cy - kk * (cy - pinch.startTy);
 
-            setView({scale:newScale, tx:newTx, ty:newTy});
+            setView({ scale: newScale, tx: newTx, ty: newTy });
             return;
         }
 
@@ -171,7 +170,7 @@ export default function PanZoomCanvas() {
             const newTx = e.clientX - lastPanRef.current.x + view.tx;
             const newTy = e.clientY - lastPanRef.current.y + view.ty;
             lastPanRef.current = { x: e.clientX, y: e.clientY };
-            setView((prev)=>({...prev, tx:newTx, ty:newTy}))
+            setView((prev) => ({ ...prev, tx: newTx, ty: newTy }))
         }
     }
 
@@ -201,7 +200,7 @@ export default function PanZoomCanvas() {
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 style={{ touchAction: 'none' }}
-                className="relative overflow-hidden bg-amber-700 w-screen h-screen"
+                className="relative overflow-hidden bg-light-green  w-screen h-screen"
             >
                 {/* Background Image */}
                 <div className="absolute inset-0" aria-hidden>
@@ -209,9 +208,9 @@ export default function PanZoomCanvas() {
                         className="w-full h-full opacity-60"
                         style={{
                             backgroundImage:
-                                "repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 40px)",
-                            backgroundSize: "40px 40px",
-                            backgroundPosition: `${view.tx % 40}px ${view.ty % 40}px`, // parallax grid
+                                "radial-gradient(var(--color-dark-green) 1px, transparent 1px)",
+                            backgroundSize: `${40 * view.scale}px ${40 * view.scale}px`,
+                            backgroundPosition: `${view.tx % (40 * view.scale)}px ${view.ty % (40 * view.scale)}px`, // parallax grid
                         }}
                     />
                 </div>
@@ -224,9 +223,7 @@ export default function PanZoomCanvas() {
                         transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
                     }}
                 >
-                    <div className="px-50 py-20">
-                        Class - Imma touch u
-                    </div>
+                    {children}
                 </div>
             </div>
         </div>

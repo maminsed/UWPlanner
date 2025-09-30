@@ -208,7 +208,7 @@ export default function PanZoomCanvas({ children }: { children: React.JSX.Elemen
                         className="w-full h-full opacity-60"
                         style={{
                             backgroundImage:
-                                "radial-gradient(var(--color-dark-green) 1px, transparent 1px)",
+                                `radial-gradient(var(--color-dark-green) ${Math.max(1,view.scale)}px, transparent ${Math.max(1,view.scale)}px)`,
                             backgroundSize: `${40 * view.scale}px ${40 * view.scale}px`,
                             backgroundPosition: `${view.tx % (40 * view.scale)}px ${view.ty % (40 * view.scale)}px`, // parallax grid
                         }}
@@ -217,7 +217,7 @@ export default function PanZoomCanvas({ children }: { children: React.JSX.Elemen
 
                 <div
                     ref={contentRef}
-                    className="absolute top-0 left-0 will-change-transform bg-dark-green text-light-green border-1"
+                    className="absolute top-0 left-0 will-change-transform"
                     style={{
                         transformOrigin: "0 0",
                         transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,

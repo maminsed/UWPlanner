@@ -65,7 +65,7 @@ export default function LogedInNav() {
     }, []);
     
         return (
-        <nav className="absolute top-0 left-0 right-0 z-50 flex flex-row justify-between items-center px-8 md:px-15 py-8">
+        <nav className="absolute top-0 left-0 right-0 z-50 flex flex-row justify-between items-center px-8 md:px-15 pt-6 pb-3 backdrop-blur-xs rounded-b-lg">
             <div>
                 <Link href="/">
                     <Image

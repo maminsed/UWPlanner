@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GQL_URL = os.getenv("GQL_URL")
-def get_course_data():
+def get_course_data(): # You can update this to use JSON
     GQL_QUERY = """
     query Course($limit: Int, $offset: Int) {
         course(limit: $limit, offset: $offset) {

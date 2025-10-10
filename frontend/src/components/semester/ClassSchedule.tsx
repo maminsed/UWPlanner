@@ -11,6 +11,7 @@ import AddACourse from "./AddACourse";
 import RightSide from "../utils/RightSide";
 import { BiImport } from "react-icons/bi";
 import BatchAddCourses from "./BatchAddCourses";
+import { getCurrentTermId, getTermName, termOperation } from "../utils/termUtils";
 
 type ClassInterface = {
     sectionId: number;
@@ -126,8 +127,6 @@ function hasOverlap([start1, end1]: [number, number], [start2, end2]: [number, n
     return !((start1 >= end2) || (end1 <= start2))
 }
 
-
-
 type DayMapInterface = {
     "M": [number, number, number][], //start,end,course_id
     "T": [number, number, number][],
@@ -135,43 +134,6 @@ type DayMapInterface = {
     "Th": [number, number, number][],
     "F": [number, number, number][],
     "Tot": [number, number][],
-}
-
-
-function getTermId() {
-    const date = new Date();
-    let term = 1;
-    if (date.getMonth() >= 4 && date.getMonth() < 8) term = 5;
-    else if (date.getMonth() >= 8) term = 9;
-    return (date.getFullYear() - 1900) * 10 + term
-}
-
-function getTermName(termId: number) {
-    let res = ""
-    if (termId % 10 == 5) {
-        res += "Spring "
-    } else if (termId % 10 == 9) {
-        res += "Fall "
-    } else {
-        res += "Winter "
-    }
-    res += Math.floor(termId / 10) + 1900
-    return res;
-}
-
-function termOperation(termId: number, distance: number) {
-    let currTerm = 0;
-    if (termId % 10 == 5) currTerm = 1;
-    else if (termId % 10 == 9) currTerm = 2;
-
-    let resTerm = (currTerm + distance) % 3;
-    if (resTerm < 0) resTerm += 3;
-    if (resTerm == 0) resTerm = 1;
-    else if (resTerm == 1) resTerm = 5;
-    else resTerm = 9;
-
-    const yearDiff = Math.floor((currTerm + distance) / 3);
-    return (Math.floor(termId / 10) + yearDiff) * 10 + resTerm;
 }
 
 export default function ClassSchedule() {
@@ -190,8 +152,8 @@ export default function ClassSchedule() {
         [["Course Title", true], ["Tutorials", true], ["Tests", true], ["Compress", true]]
     ]);
     const [singleOverLay, setsingleOverLay] = useState<boolean>(false)
-    const [termId, setTermId] = useState<number>(getTermId);
-    const [startedTerm, setstartedTerm] = useState<number>(getTermId);
+    const [termId, setTermId] = useState<number>(getCurrentTermId);
+    const [startedTerm, setstartedTerm] = useState<number>(getCurrentTermId);
     const [updateCond, setUpdateCond] = useState<number>(0)
     const [path, setPath] = useState<string[]>([])
     const [batchOverLay, setBatchOverLay] = useState<boolean>(false)

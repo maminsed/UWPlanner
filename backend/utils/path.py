@@ -1,7 +1,7 @@
 import json
 
 
-def translate_path(path: str):
+def translate_path(path: str): # returns: [1A, 1B, ...]
     # Split the input path string by the "-" delimiter
     res = json.loads(path)
     
@@ -30,4 +30,18 @@ def translate_path(path: str):
         res.pop()
     
     # Return the modified path as a list of strings
+    return res
+
+def term_inc(term:int):
+    next_map = {1:5,5:9,9:1}
+    month = next_map[term % 10]
+    year = term // 10 + int(month==1)
+    return year * 10 + month
+
+def translate_to_id(path: str, started_term:int): # returns [1255,...]
+    res = json.loads(path)
+    curr_sem = started_term
+    for i in range(len(res)):
+        res[i] = curr_sem
+        curr_sem=term_inc(curr_sem)
     return res

@@ -7,7 +7,7 @@ from flask import Blueprint, g, jsonify, make_response, request
 from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
 from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
-from backend.utils.path import translate_path
+from backend.utils.path import translate_path, translate_to_id
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
@@ -284,8 +284,18 @@ def get_all() -> tuple[str, int]:
 
 @update_info.route("/get_user_seq", methods=["GET"])
 def get_user_seq() -> tuple[str, int]:
+    include_courses:bool = request.args.get("include_courses") or False
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
+    if include_courses == "true":
+        term_ids = translate_to_id(user.path, user.started_term)
+        schedules = user.schedules
+        for index,term in enumerate(term_ids):
+            exists = [s for s in schedules if s.term_id == term]
+            path[index] = (
+                path[index],
+                json.loads(exists[0].sections) if len(exists) != 0 else []
+            )
     sem_dic = {5:"Summer", 9:"Fall", 1:"Winter"}
     return jsonify(
         {

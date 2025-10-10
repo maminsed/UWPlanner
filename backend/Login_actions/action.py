@@ -289,12 +289,12 @@ def get_user_seq() -> tuple[str, int]:
     path = translate_path(user.path)
     if include_courses == "true":
         term_ids = translate_to_id(user.path, user.started_term)
-        schedules = user.schedules
+        semesters = user.semesters
         for index,term in enumerate(term_ids):
-            exists = [s for s in schedules if s.term_id == term]
+            exists = [s for s in semesters if s.term_id == term]
             path[index] = (
                 path[index],
-                json.loads(exists[0].sections) if len(exists) != 0 else []
+                json.loads(exists[0].courses) if len(exists) != 0 else []
             )
     sem_dic = {5:"Summer", 9:"Fall", 1:"Winter"}
     return jsonify(

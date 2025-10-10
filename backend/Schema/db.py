@@ -141,7 +141,7 @@ class Users(db.Model):
     #Course paths: Follow UWFLOW ids!!
     # A set of ids for the current sems courses seprated with - 
     # section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="") 
-    schedules: Mapped[list["Schedule"]] = relationship("Schedule", back_populates="user", cascade="all, delete-orphan, save-update")
+    semesters: Mapped[list["Semester"]] = relationship("Semester", back_populates="user", cascade="all, delete-orphan, save-update")
     # A set of Names for future semester courses, coruses seprated with - semesters seprated with //
     course_ids: Mapped[str] = mapped_column(db.String, default="", server_default="")
 
@@ -261,12 +261,13 @@ class Course(db.Model):
     coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     antireqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
 
-class Schedule(db.Model):
+class Semester(db.Model):
     """Database for Sections."""
 
-    __tablename__ = "schedules"
+    __tablename__ = "semester"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     term_id: Mapped[int] = mapped_column(db.Integer)
     user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey("users.id"))
-    user: Mapped["Users"] = relationship("Users", back_populates="schedules")
+    user: Mapped["Users"] = relationship("Users", back_populates="semesters")
     sections: Mapped[str] = mapped_column(db.String())
+    courses: Mapped[str] = mapped_column(db.String())

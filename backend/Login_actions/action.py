@@ -286,14 +286,14 @@ def get_all() -> tuple[str, int]:
 def get_user_seq() -> tuple[str, int]:
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
-    sem_dic = ["Summer", "Fall", "Winter"]
+    sem_dic = {5:"Summer", 9:"Fall", 1:"Winter"}
     return jsonify(
         {
             "current_sem": user.current_term,
+            "started_term_id": user.started_term,
             "sequence": user.sequence.name,
-            "started_year": user.started_year,
-            "started_sem": sem_dic[user.started_month],
-            "grad_year": user.started_year + (len(path) + user.started_month) // 3,
+            "started_year": user.started_term // 10 + 1900,
+            "started_sem": sem_dic[user.started_term % 10],
             "coop": user.coop,
             "path": path,
         }

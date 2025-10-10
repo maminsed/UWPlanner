@@ -3,6 +3,7 @@ import { MdArrowBackIosNew } from "react-icons/md";
 import { Fragment, useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import clsx from "clsx";
+import { getTermName, termOperation } from "../utils/termUtils";
 
 function groupK<T>(path: T[], k: number = 3): T[][] {
     const res: T[][] = []
@@ -20,9 +21,8 @@ export function SequenceSettings() {
     const backend = api();
     const [currentSem, setCurrentSem] = useState<number>(0);
     const [seq, setSeq] = useState<string>("");
-    const [startedYear, setStartedYear] = useState<string>("");
-    const [startedSem, setStartedSem] = useState<string>("");
-    const [gradYear, setGradYear] = useState<string>("");
+    const [startedTerm, setStartedTerm] = useState<string>("");
+    const [gradTerm, setGradTerm] = useState<string>("");
     const [coop, setCoop] = useState<boolean>(false);
     const [path, setPath] = useState<string[]>([]);
 
@@ -37,9 +37,8 @@ export function SequenceSettings() {
             } else {
                 setCurrentSem(response.current_sem);
                 setSeq(response.sequence);
-                setStartedYear(response.started_year);
-                setStartedSem(response.started_sem);
-                setGradYear(response.grad_year);
+                setStartedTerm(getTermName(response.started_term_id));
+                setGradTerm(getTermName(termOperation(response.started_term_id, response.path.length)));
                 setCoop(response.coop);
                 setPath(response.path);
             }
@@ -85,23 +84,16 @@ export function SequenceSettings() {
                 
                 <div className="flex flex-row justify-between">
                     <p className="text-lg">
-                        Started Year
+                        Started Term
                     </p>
-                    <p>{startedYear}</p>
-                </div>
-
-                <div className="flex flex-row justify-between">
-                    <p className="text-lg">
-                        Started Semester
-                    </p>
-                    <p>{startedSem}</p>
+                    <p>{startedTerm}</p>
                 </div>
             
                 <div className="flex flex-row justify-between">
                     <p className="text-lg">
-                        Graduation Year
+                        Graduation Term
                     </p>
-                    <p>{gradYear}</p>
+                    <p>{gradTerm}</p>
                 </div>
 
                 <div className="flex flex-row justify-between">
@@ -119,8 +111,9 @@ export function SequenceSettings() {
                     <p className="text-lg">
                         Path
                     </p>
+                {/* TODO: Make the current sem update automaticaly and not require backend */}
                 {groupK<string>(path).map((group, index) => (
-                    <div className="flex flex-row justify-between align-middle mt-2 max-w-60" key={index}>
+                    <div className="flex flex-row justify-start gap-4 align-middle mt-2 max-w-60" key={index}>
                         {group.map((sem, j) => (
                             <Fragment key={j}>
                                 <div className={clsx("w-11 aspect-square rounded-lg text-light-green text-center leading-11 font-semibold", 

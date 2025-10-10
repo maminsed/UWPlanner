@@ -1,3 +1,4 @@
+"""TODO: DELETE THIS FILE"""
 from flask import Blueprint, jsonify
 
 from .extraction import (
@@ -8,7 +9,7 @@ from .extraction import (
     update_major_info,
 )
 from .selenium.major_scrapper import major_checking
-from .selenium.sequence_scraper import scrape_eng, scrape_math, scrape_sequences
+from .selenium.sequence_scraper import scrape_math, scrape_sequences
 
 school_info_bp = Blueprint("school_info", __name__)
 
@@ -40,12 +41,6 @@ def extract_minors_ep() -> tuple[str, int]:
 def extract_specs_ep() -> tuple[str, int]:
     """Endpoint to extract Specializations."""
     extract_specializations()
-    return "", 204
-
-
-@school_info_bp.route("/update_seqs", methods=["GET"])
-def update_seqs() -> tuple[str, int]:
-    scrape_eng()
     return "", 204
 
 

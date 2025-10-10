@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 from typing import Callable, Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
@@ -160,13 +161,13 @@ def get_sequence():
         default = Sequence.query.filter_by(name="Default").first()
         res[default.id] = ["Default", default.plan, default.id]
 
-        # id: name, plan
+        # id: name, plan, id
         if user.coop:
             for m in user.majors:
                 for seq in m.sequences:
                     if seq.id not in res:
-                        res[seq.id] = (seq.name, seq.plan, seq.id)
-        return jsonify({"data": [["_", [res[f] for f in res.keys()]]]})
+                        res[seq.id] = (seq.name, "-".join(json.loads(seq.plan)), seq.id)
+        return jsonify({"data": [["_", list(res.values())]]})
     except Exception as e:
         print(e)
         return jsonify(
@@ -200,7 +201,6 @@ def update_all() -> tuple[str, int]:
         "specializations",
     }
     data = request.get_json()
-    print(data)
     user = Users.query.filter_by(username=g.username).first()
     if not user:
         return jsonify({"message": "user does not exist"}), 400

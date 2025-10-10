@@ -125,8 +125,8 @@ def enrol_to_seq(seq_id: str, username: str) -> tuple[int, str]:
     """Function to enrol a student in a specialization.
 
     Requires:
-        - seq_name (str):
-            The name of the sequence, prone to change.
+        - seq_id (number):
+            The id of the sequence.
 
     Returns:
         the status and the message.

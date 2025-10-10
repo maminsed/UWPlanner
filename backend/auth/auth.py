@@ -56,7 +56,7 @@ def add_user() -> Response:
             login_method=LoginMethod.email,
         )
         #adding default seq
-        default_seq = Sequence.query.filter_by(Sequence.name == 'default').first()
+        default_seq = Sequence.query.filter_by(name='default').first()
         if (default_seq): 
             user.sequence = default_seq
             user.path = default_seq.plan

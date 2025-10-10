@@ -242,7 +242,7 @@ class Sequence(db.Model):
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )
-    plan: Mapped[str] = mapped_column(db.String(), nullable=False)
+    plan: Mapped[str] = mapped_column(db.String(), nullable=False, default='[]')
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="sequences", secondary=major_sequence
     )

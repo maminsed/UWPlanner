@@ -2,16 +2,19 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { getTermName, termOperation } from "../utils/termUtils";
+import useGQL from "@/lib/useGQL";
 
-function Semester({ semester, class_lst }: { semester: string, class_lst:number[] }) {
+function Semester({ semester, class_lst, course_dict }: { semester: string, class_lst: number[], course_dict: Map<number, string> }) {
     return (
         <div className="flex flex-col text-xl gap-6 items-center">
             <div className="px-6 py-2 rounded-3xl bg-white shadow-xs mb-3 w-full font-semibold text-center text-lg whitespace-nowrap">
                 {semester}
             </div>
-            {class_lst.map((_, i) => (
+            {class_lst.map((course, i) => (
                 <div key={i} className="rounded-r-xl bg-[#8AD5DF]/60 text-dark-green flex items-center">
-                    <div className="bg-dark-green h-full w-2" /><span className="py-4 pr-6 pl-4">CS12{i}</span><div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />
+                    <div className="bg-dark-green h-full w-2" />
+                    <span className="py-4 pr-6 pl-4 min-w-25">{course_dict.get(course)?.toUpperCase()}</span>
+                    <div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />
                 </div>
             ))}
         </div>
@@ -19,9 +22,15 @@ function Semester({ semester, class_lst }: { semester: string, class_lst:number[
 }
 
 export default function Graph() {
+    // TODO: 
+    //       get the prerequisite chain
+    //       add an update view function so you can tell panel your ready to be centerd 
+    //       do something with the centering
     const backend = api();
-    const [path, setPath] = useState<[string,number[]][]>([])
+    const gql = useGQL();
+    const [path, setPath] = useState<[string, number[]][]>([])
     const [startedTerm, setStartedTerm] = useState<number>(0)
+    const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map())
 
     useEffect(() => {
         async function initialSetup() {
@@ -32,8 +41,34 @@ export default function Graph() {
             if (!res.ok) {
                 console.error("error occured - please reload");
             } else {
-                setPath(response.path)
-                setStartedTerm(response.started_term_id)
+                setPath(response.path);
+                setStartedTerm(response.started_term_id);
+                const course_ids = new Set<number>();
+                response.path.forEach((semester: [string, number[]]) => {
+                    semester[1].forEach(course => {
+                        if (!course_ids.has(course)) course_ids.add(course);
+                    })
+                })
+
+                const GQL_QUERY = `
+                    query Course($course_ids: [Int!]!) {
+                        course(where: { id: { _in: $course_ids } }) {
+                            code
+                            coreqs
+                            id
+                            name
+                            prereqs
+                            antireqs
+                        }
+                    }
+                `
+
+                const gql_response = await gql(GQL_QUERY, { 'course_ids': Array.from(course_ids) });
+                const newMap = new Map<number, string>();
+                gql_response?.data?.course.forEach((course: any) => {
+                    newMap.set(course.id, course.code);
+                })
+                setCourseDict(newMap);
             }
         }
 
@@ -43,7 +78,12 @@ export default function Graph() {
     return (
         <div className="flex gap-6 p-8">
             {path.map((semester, i) => (
-                <Semester key={i} semester={`${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`} class_lst={semester[1]}/>
+                <Semester
+                    key={i}
+                    semester={`${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`}
+                    class_lst={semester[1]}
+                    course_dict={courseDict}
+                />
             ))}
         </div>
     )

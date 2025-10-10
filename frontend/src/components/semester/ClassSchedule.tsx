@@ -138,6 +138,7 @@ type DayMapInterface = {
 
 export default function ClassSchedule() {
     // TODO: option to choose from available courses what to display - Fix the downloading of scheudle into a google calendar - colour coding courses - send alerats and stuff to upstream so that it can display
+    // There is an issue with when the user is in compact and they decide to hide tutorial or something
     const dateBoxClass = clsx("bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg")
     const normalBoxClass = clsx("bg-white flex-1 text-sm xs:text-base")
     const lineVertClass = "border-r-1 border-[#6EC0CB]"

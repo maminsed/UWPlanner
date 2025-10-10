@@ -139,22 +139,21 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
     }
 
     function handleKeyDown<T>(
-        e: React.KeyboardEvent<HTMLInputElement>, 
+        e: React.KeyboardEvent<HTMLInputElement>,
         options: T[],
-        updateIndexFunction: (arg0:number)=>void, 
+        updateIndexFunction: (arg0: number) => void,
         IndexValue: number,
-        updateValueFunction: (arg1:boolean, arg2:T)=>void
-    )
-    {
+        updateValueFunction: (arg1: boolean, arg2: T) => void
+    ) {
         const size = options.length
         if (size == 0) return;
         if (e.key === "ArrowDown") {
             e.preventDefault()
-            updateIndexFunction((IndexValue+1)%options.length);
+            updateIndexFunction((IndexValue + 1) % options.length);
         } else if (e.key === "ArrowUp") {
             e.preventDefault()
             if (IndexValue <= 0) IndexValue = options.length
-            updateIndexFunction(IndexValue-1);
+            updateIndexFunction(IndexValue - 1);
         } else if (e.key === "Enter") {
             e.preventDefault();
             if (IndexValue != -1) {
@@ -185,10 +184,10 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
     async function handleSubmit() {
         if (searchPhrase.course_id == -1 || chosenSection.class_number == -1) {
             setMessage("Please choose all the options first");
-            return ;
+            return;
         }
         setMessage("Loading...")
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add_single`,{
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add_single`, {
             method: "POST",
             headers: {
                 "Content-type": "application/json",
@@ -199,12 +198,12 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                 "course_id": searchPhrase.course_id,
             })
         })
-        
-        const response = await res.json().catch(()=>{})
+
+        const response = await res.json().catch(() => { })
         if (!res.ok) {
             if (response.message) setMessage(response.message);
             else setMessage('error occured')
-            return ;
+            return;
         }
         updatePage();
     }
@@ -235,8 +234,8 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             className="border-1 rounded-sm  block w-full py-2 px-1 pr-2 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"
                             value={`${searchPhrase.code.toUpperCase()}${searchPhrase.code == "" ? "" : " - "}${searchPhrase.name}`}
                             onChange={(e) => updateSearchPhrase(false, { name: e.currentTarget.value, code: "", course_id: -1 })}
-                            onKeyDown={(e)=>handleKeyDown<OptionsInterface>(e, searchOptions, setSearchHighlitedIndex, searchHighlitedIndex, updateSearchPhrase)}
-                            />
+                            onKeyDown={(e) => handleKeyDown<OptionsInterface>(e, searchOptions, setSearchHighlitedIndex, searchHighlitedIndex, updateSearchPhrase)}
+                        />
                     </div>
                     {!closeSearchOptions &&
                         <DropDown2<OptionsInterface>
@@ -257,7 +256,7 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             onFocus={fetchIds}
                             value={sectionPhrase}
                             onChange={(e) => updateChosenSection(false, e.currentTarget.value)}
-                            onKeyDown={(e)=>handleKeyDown<SectionInterface>(e, filterSectionOptions(), setSectionHighlitedIndex, sectionHighlitedIndex, updateChosenSection)}
+                            onKeyDown={(e) => handleKeyDown<SectionInterface>(e, filterSectionOptions(), setSectionHighlitedIndex, sectionHighlitedIndex, updateChosenSection)}
                         />
                     </div>
                     {!closeSection &&
@@ -269,13 +268,14 @@ export default function AddACourse({ className, close, updatePage, termId, ...pr
                             updateFunction={updateChosenSection}
                             highlitedIndex={sectionHighlitedIndex}
                             setHighlitedIndex={setSectionHighlitedIndex}
-                        />}
+                        />
+                    }
                 </label>
-                {message.length ? 
-                <p className={clsx(message == "Loading..." ? "text-dark-green" : "text-red-600", "my-2 max-w-75")}>{message}</p> 
-                : ""}
+                {message.length ?
+                    <p className={clsx(message == "Loading..." ? "text-dark-green" : "text-red-600", "my-2 max-w-75")}>{message}</p>
+                    : ""}
                 <RightSide className="my-2">
-                    <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit} disabled={message==="Loading..."}>Add</button>
+                    <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit} disabled={message === "Loading..."}>Add</button>
                 </RightSide>
             </div>
         </div>

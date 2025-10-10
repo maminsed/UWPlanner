@@ -16,6 +16,7 @@ function groupK<T>(path: T[], k: number = 3): T[][] {
 }
 
 export function SequenceSettings() {
+    // TODO: Bitch you have a fake save changes here :skull - hoe this entire page is fake
     const backend = api();
     const [currentSem, setCurrentSem] = useState<number>(0);
     const [seq, setSeq] = useState<string>("");

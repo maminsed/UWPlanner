@@ -101,9 +101,10 @@ export default function Info() {
         <main>
             <h2 className="md:mt-15 px-3 mt-5 text-center md:text-2xl text-xl font-semibold">Just a few more questions to know you better</h2>
 
-            <div className="mx-auto w-fit mt-20 px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
+            <div className="mx-auto w-fit max-w-[96%] mt-20 px-2 sm:px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
                 <h5 className="text-2xl font-medium text-center mt-2">{heading[order]}</h5>
                 {blank_allowed ? <p className="text-center">You can leave it blank if you want</p> : ""}
+                {order == ordering.length-1 ? <p className="text-center">Select a Sequence and Hover over to see the terms</p> : ""}
                 <div className="mb-8"></div>
                 {dropIds.map(item => (
                     <div key={item[0]} className="flex items-center gap-2 justify-center">

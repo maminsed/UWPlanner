@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from backend.utils.path import translate_path
 from .extraction import get_course_data
 from backend.Auth import verify as verify_jwt
-from ..Schema import Users, Schedule, db
+from ..Schema import Users, Semester, db
 import os
 import requests
 import bleach
@@ -48,20 +48,15 @@ def get_user_sections():
         return jsonify({"message": "user not found"}), 500
 
     # Get the sections for the specified term
-    section_ids = [schedule.sections for schedule in user.schedules if schedule.term_id == term_id]
+    section_ids = [semester.sections for semester in user.semesters if semester.term_id == term_id]
     sections = []
     if len(section_ids) > 0:
         sections = json.loads(section_ids[0])  # Parse the sections JSON
 
-    # Map the user's start semester to a specific format
-    sem_dic = {0: 5, 1: 9, 2: 1}  # Mapping for start semester month
-    start_sem = (user.started_year - 1900) * 10 + sem_dic[user.started_month]
-    print(f"sections: {sections}")
-    print(f"section_ids: {section_ids}")
     # Return the sections, start semester, and user path
     return jsonify({
         "sections": sections,
-        "start_sem": start_sem,
+        "start_sem": user.started_term,
         "path": translate_path(user.path)
     }), 200
 
@@ -74,41 +69,45 @@ def add_section_to_user():
     user = Users.query.filter_by(username=g.username).first()
     if not user or not term_id or not course_id or not class_number:
         return jsonify({"message": "please provide all fields"}), 400
-    return enrol_user_in_section(user,class_number, term_id)
+    return enrol_user_in_section(user,class_number, term_id, course_id)
 
-def enrol_user_in_section(user: Users, section_number: str, term_id: int):
+def enrol_user_in_section(user: Users, section_number: int, term_id: int, course_id: int):
     """
     Enroll a user in a specific course section for a given term.
 
     Args:
         user (Users): The user object representing the user to be enrolled.
-        section_number (str): The section number to enroll the user in.
+        section_number (int): The section number to enroll the user in.
+        course_id (int): The course id of the section.
         term_id (int): The term ID for which the enrollment is being made.
 
     Returns:
         Response: A Flask JSON response indicating the result of the operation.
     """
     # Retrieve the user's schedule for the specified term
-    available_section = [s for s in user.schedules if s.term_id == term_id]
+    # Update this to take course_ids as well
+    available_semester = [s for s in user.semesters if s.term_id == term_id]
     try:
         # If no schedule exists for the term, create a new one
-        if not len(available_section):
-            available_section = Schedule(term_id=term_id, user=user, sections=json.dumps([section_number]))
+        if not len(available_semester):
+            available_semester = Semester(term_id=term_id, user=user, sections=json.dumps([section_number]),courses=json.dumps([course_id]))
         else:
             # If a schedule exists, update it with the new section
-            available_section = available_section[0]
-            loSections: list[int] = json.loads(available_section.sections)
-            
+            available_semester = available_semester[0]
+            loSections: list[int] = json.loads(available_semester.sections)
+            loCourses: list[int] = json.loads(available_semester.courses)
             # Check if the user is already enrolled in the section
             if section_number in loSections:
                 return jsonify({"message": "user already enrolled in this semester"}), 409
             else:
                 # Add the new section to the user's schedule
                 loSections.append(section_number)
-                available_section.sections = json.dumps(loSections)
+                if course_id not in loCourses: loCourses.append(course_id)
+                available_semester.sections = json.dumps(loSections)
+                available_semester.courses = json.dumps(loCourses)
         
         # Save the updated schedule to the database
-        db.session.add(available_section)
+        db.session.add(available_semester)
         db.session.commit()
         return jsonify({"message": "user successfully enrolled"}), 200
     except Exception as e:
@@ -200,7 +199,8 @@ def add_batch():
                 
                 data = payload["data"]["course_section"]
                 if len(data) == 0: raise RuntimeError("invalid class_number")
-                _, code = enrol_user_in_section(user, class_number, term_id)
+                course_id = payload["data"]["couse_section"][0]["course_id"]
+                _, code = enrol_user_in_section(user, class_number, term_id, course_id)
                 if 200 <= code < 300:
                     added_sections.append(data[0]["course"]["name"] + " - " + data[0]["section_name"])
             except Exception as e:

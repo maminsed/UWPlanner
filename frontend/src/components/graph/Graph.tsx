@@ -1,8 +1,9 @@
 'use client'
-import { useEffect, useState } from "react";
+import { RefObject, useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { getTermName, termOperation } from "../utils/termUtils";
 import useGQL from "@/lib/useGQL";
+import { termIdInterface } from "../interface";
 
 function Semester({ semester, class_lst, course_dict }: { semester: string, class_lst: number[], course_dict: Map<number, string> }) {
     return (
@@ -21,7 +22,7 @@ function Semester({ semester, class_lst, course_dict }: { semester: string, clas
     )
 }
 
-export default function Graph() {
+export default function Graph({pathRef}:{pathRef: RefObject<termIdInterface[]>}) {
     // TODO: 
     //       get the prerequisite chain
     //       add an update view function so you can tell panel your ready to be centerd 
@@ -43,12 +44,16 @@ export default function Graph() {
             } else {
                 setPath(response.path);
                 setStartedTerm(response.started_term_id);
+                const termIds: termIdInterface[] = [];
                 const course_ids = new Set<number>();
-                response.path.forEach((semester: [string, number[]]) => {
+                response.path.forEach((semester: [string, number[]],i:number) => {
                     semester[1].forEach(course => {
                         if (!course_ids.has(course)) course_ids.add(course);
                     })
+                    const currTerm = termOperation(response.started_term_id,i)
+                    termIds.push({value:currTerm, display:`${semester[0]} - ${getTermName(currTerm)}`})
                 })
+                pathRef.current = termIds;
 
                 const GQL_QUERY = `
                     query Course($course_ids: [Int!]!) {

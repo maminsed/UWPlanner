@@ -5,7 +5,7 @@ import ExpandPanel from '@/components/utils/ExpandPanel'
 import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
 import { useRef, useState } from "react";
-import AddACourse from "@/components/semester/AddACourse";
+import AddACourse from "@/components/AddingCourses/AddACourse";
 import { termIdInterface } from "@/components/interface";
 
 function ControlPanel({setOverlay}:{setOverlay:(arg0:overlayInterface)=>void}) {

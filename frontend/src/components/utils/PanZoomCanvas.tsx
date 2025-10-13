@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect} from "react"
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(v, hi)) }
 
@@ -223,7 +223,9 @@ export default function PanZoomCanvas({ children, updatePan }: { children: React
                         transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
                     }}
                 >
-                    {children}
+                    <div className="w-full h-full relative top-0 left-0">
+                            {children}
+                    </div>
                 </div>
             </div>
         </div>

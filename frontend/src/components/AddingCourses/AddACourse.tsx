@@ -10,6 +10,7 @@ import { api } from "@/lib/useApi";
 import { LuMinus, LuPlus } from "react-icons/lu";
 import DropDown2 from "../utils/DropDown2";
 import { termIdInterface } from "../interface";
+import { getCurrentTermId, getTermDistance } from "../utils/termUtils";
 
 type OptionsInterface = {
     code: string;
@@ -45,13 +46,15 @@ function changeQuery(phrase: string): [number, string] {
     return [count, res + ":* "]
 }
 
+type statusInterface = 'idle'|'error'|'term_chosing'|'section_excempt'|'section_excempt_error'
 export default function AddACourse({ className, close, updatePage, termId, termOptions, ...props }: React.HTMLAttributes<HTMLDivElement> & { close: () => void, updatePage: () => void, termId?: number, termOptions?: termIdInterface[] }) {
     const [searchPhrase, setSearchPhrase] = useState<OptionsInterface>({ code: "", course_id: -1, name: "" });
     const [searchOptions, setSearchOptions] = useState<OptionsInterface[]>([])
 
     const [message, setMessage] = useState<string>("");
     const backend = api();
-
+    const currentTerm = getCurrentTermId();
+    const [status,setStatus] = useState<statusInterface>('idle')
     const [sectionOptions, setSectionOptions] = useState<SectionInterface[]>([])
     const [chosenSections, setChosenSections] = useState<(SectionInterface | undefined)[]>([undefined])
 
@@ -92,8 +95,10 @@ export default function AddACourse({ className, close, updatePage, termId, termO
     async function fetchIds() {
         if (searchPhrase.course_id == -1) {
             setMessage("Please choose a course first")
+            updateStatus("error")
             return;
         } else if (actualTermId.value == -1) {
+            updateStatus("error")
             setMessage("Please choose your term first");
             return;
         }
@@ -115,15 +120,16 @@ export default function AddACourse({ className, close, updatePage, termId, termO
         const response = (await gql(GQL_QUERY, { term_id: actualTermId.value, course_id: searchPhrase.course_id })).data.course_section;
         if (!response || response.length == 0) {
             setMessage("There are no available sections for this course this semster.")
+            updateStatus("error")
         }
         setSectionOptions(response);
     }
 
     function updateSearchPhrase(searchPhrase: OptionsInterface) {
-        if (searchPhrase.course_id != -1) setMessage("")
+        if (searchPhrase.course_id != -1) setMessage(""); updateStatus("idle");
         setSearchPhrase(searchPhrase);
         setSectionOptions([]);
-        setChosenSections((prev) => prev.map(() => undefined))
+        setChosenSections((prev) => prev.map(() => undefined));
     }
 
     function updateChosenSection(chosenSection: SectionInterface | string, index: number) {
@@ -153,19 +159,42 @@ export default function AddACourse({ className, close, updatePage, termId, termO
     }
 
     function filterTermId() {
-        return termOptions?.filter((value) => value.display.includes(actualTermId.display) || value.value == actualTermId.value) || []
+        const display = actualTermId.display.toLowerCase();
+        return termOptions?.filter((value) => value.display.toLowerCase().includes(display) || value.value == actualTermId.value) || []
+    }
+
+    function updateStatus(newStatus:statusInterface, termId:number=actualTermId.value) {
+        const secExceptMsg = "The term is too far away from the current term. Just enter the course."
+        const isTooFar = getTermDistance(currentTerm, termId) > 1;
+        if (newStatus == 'idle' && termId > 1 &&  isTooFar) newStatus = 'section_excempt';
+        if (newStatus == 'error' && termId > 1 && isTooFar) newStatus = 'section_excempt_error';
+        if (!isTooFar && newStatus.includes("section_excempt")) newStatus = newStatus === 'section_excempt' ? 'idle' : 'error';
+        
+        if (newStatus.includes('section_excempt') && chosenSections.length) setChosenSections([]);
+        if (newStatus == 'section_excempt') setMessage(secExceptMsg);
+        if (newStatus == 'idle' && message == secExceptMsg) setMessage("");
+        setStatus(newStatus);
     }
 
     async function handleSubmit() {
         const class_numbers = [];
-        for (const chosenSection of chosenSections) {
-            if (!chosenSection || searchPhrase.course_id == -1 || chosenSection.class_number == -1) {
-                setMessage("Please choose all the options first");
-                return;
+        if (status != 'section_excempt') {
+            for (const chosenSection of chosenSections) {
+                if (!chosenSection || chosenSection.class_number == -1) {
+                    setMessage("Please choose all the options first");
+                    updateStatus("error")
+                    return;
+                }
+                class_numbers.push(chosenSection.class_number);
             }
-            class_numbers.push(chosenSection.class_number);
         }
-        setMessage("Loading...")
+        if (searchPhrase.course_id == -1) {
+            setMessage("Please choose all the options first");
+            updateStatus("error")
+            return
+        }
+        setMessage("Loading...");
+        updateStatus("idle")
         const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add_single`, {
             method: "POST",
             headers: {
@@ -173,7 +202,7 @@ export default function AddACourse({ className, close, updatePage, termId, termO
             },
             body: JSON.stringify({
                 "term_id": actualTermId.value,
-                "class_numbers": class_numbers,
+                "class_numbers": status === 'section_excempt' ? [] : class_numbers ,
                 "course_id": searchPhrase.course_id,
             })
         })
@@ -182,6 +211,7 @@ export default function AddACourse({ className, close, updatePage, termId, termO
         if (!res.ok) {
             if (response.message) setMessage(response.message);
             else setMessage('error occured')
+            updateStatus("error");
             return;
         }
         updatePage();
@@ -213,7 +243,7 @@ export default function AddACourse({ className, close, updatePage, termId, termO
                             valueFunction={(v) => v.display}
                             options={filterTermId()}
                             updateInputFunction={(str) => setActualTermId({ value: -1, display: str })}
-                            updateSelectFunction={setActualTermId}
+                            updateSelectFunction={(termId)=>{updateStatus(status, termId.value); setActualTermId(termId)}}
                         />
                     </label>}
                 <label className="block text-lg">
@@ -226,6 +256,7 @@ export default function AddACourse({ className, close, updatePage, termId, termO
                         updateSelectFunction={(value) => updateSearchPhrase(value)}
                     />
                 </label>
+                {status.includes('section_excempt') ||
                 <label className="block text-lg mt-4" onFocus={fetchIds}>
                     Class Number: <IoIosInformationCircleOutline className="inline-block cursor-pointer" />
                     {chosenSections.map((section, i) => (
@@ -250,10 +281,11 @@ export default function AddACourse({ className, close, updatePage, termId, termO
                         className="mt-2 w-6 h-auto border-1 p-1 rounded-full cursor-pointer hover:bg-dark-green hover:text-light-green"
                         onClick={() => setChosenSections(prev => [...prev, undefined])}
                     />
-                </label>
+                </label>}
                 {message.length ?
-                    <p className={clsx(message == "Loading..." ? "text-dark-green" : "text-red-600", "my-2 max-w-75")}>{message}</p>
-                    : ""}
+                    <p className={clsx(!status.includes('error') ? "text-dark-green" : "text-red-600", "my-2 max-w-75")}>{message}</p>
+                    : ""
+                }
                 <RightSide className="my-2">
                     <button className="border-1 px-8 py-1 text-base mb-2 rounded-md cursor-pointer bg-dark-green text-light-green" onClick={handleSubmit} disabled={message === "Loading..."}>Add</button>
                 </RightSide>

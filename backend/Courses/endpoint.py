@@ -67,7 +67,7 @@ def add_section_to_user():
     course_id = data.get("course_id")
     class_numbers = data.get("class_numbers") or []
     user = Users.query.filter_by(username=g.username).first()
-    if not user or not term_id or not course_id or len(class_numbers) == 0:
+    if not user or not term_id or not course_id:
         return jsonify({"message": "please provide all fields"}), 400
     return enrol_user_in_section(user,class_numbers, term_id, course_id)
 

@@ -4,12 +4,15 @@ import RightSide from "../utils/RightSide";
 import Image from "next/image";
 import { useState, useRef } from "react";
 import { api } from "@/lib/useApi";
+import { termIdInterface } from "../interface";
+import DropDown2 from "../utils/DropDown2";
 
-export default function BatchAddCourses({ close, updatePage, termId }: { close: () => void, updatePage: () => void, termId: number }) {
+export default function BatchAddCourses({ close, updatePage, termId, termOptions }: { close: () => void, updatePage: () => void, termId?: number, termOptions?: termIdInterface[] }) {
     const zoneRef = useRef<HTMLDivElement>(null);
-    const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
-    const [message, setMessage] = useState<string>("")
-    const [text, setText] = useState<string>("")
+    const [status, setStatus] = useState<"term_choosing" | "idle" | "sending" | "done" | "error">(termId ? "idle" : "term_choosing");
+    const [actualTermId, setActualTermId] = useState<termIdInterface>({ value: termId || -1, display: "" })
+    const [message, setMessage] = useState<string>("");
+    const [text, setText] = useState<string>("");
 
     const [addedCourses, setAddedCourses] = useState<string[]>([])
     const backend = api()
@@ -39,12 +42,12 @@ export default function BatchAddCourses({ close, updatePage, termId }: { close: 
                         "Content-type": "application/json",
                     },
                     body: JSON.stringify({
-                        "term_id": termId,
+                        "term_id": actualTermId.value,
                         "html": html,
                     }),
                 }
             )
-            const response = await res.json().catch(() => {})
+            const response = await res.json().catch(() => { })
             if (!res.ok) {
                 setStatus("error")
                 setMessage(response.message ? response.message : "Error Occured")
@@ -59,6 +62,19 @@ export default function BatchAddCourses({ close, updatePage, termId }: { close: 
             setStatus("error");
             setMessage("Error occured. Please try again.")
         }
+    }
+
+    function filterTermId() {
+        const display = actualTermId.display.toLowerCase();
+        return termOptions?.filter((value) => value.display.toLowerCase().includes(display) || value.value == actualTermId.value) || []
+    }
+
+    function handleNext() {
+        if (actualTermId.value < 2) {
+            setMessage("Please Choose a Semester")
+            return
+        }
+        setStatus('idle')
     }
 
     return (
@@ -78,53 +94,75 @@ export default function BatchAddCourses({ close, updatePage, termId }: { close: 
                             ))}
                         </ul>
                     </div>
-                    :
-                    <>
-                        <div className="flex flex-col px-5 mb-8 sm:flex-row justify-center items-center sm:items-start gap-5 sm:justify-between">
-                            <div className="flex-1 shrink min-w-30 flex flex-col items-center">
-                                <p className="h-15 sm:text-base text-sm">
-                                    <a
-                                        href="https://quest.pecs.uwaterloo.ca/psp/SS/ACADEMIC/SA/?cmd=login&languageCd=ENG"
-                                        className="text-blue-800 underline"
-                                        target="blank"
-                                    > Log into Quest</a> and click "Class Schedule"
-                                </p>
-                                <Image src="/questPage.png" width={250} height={50} className="aspect-square bg-dark-green rounded-md" alt="please log into quest"></Image>
-                            </div>
-                            <div className="flex-1 shrink min-w-30 flex flex-col items-center">
-                                <p className="h-15 text-sm">
-                                    Pick your term then select All (Ctrl + A) and Copy (Ctrl + C)
-                                </p>
-                                <Image src="/printPage.png" width={250} height={50} className="aspect-square bg-dark-green rounded-md" alt="please log into quest"></Image>
-                            </div>
-                            <div className="flex-1 shrink min-w-30 flex flex-col items-center">
-                                <p className="h-15">
-                                    Paste it here (Ctrl + V)
-                                </p>
-                                <div
-                                    ref={zoneRef}
-                                    onPaste={onPaste}
-                                    tabIndex={0}
-                                    aria-label="Paste Zone"
-                                    className="border rounded-xl overflow-y-auto p-2 aspect-square w-full outline-none cursor-text focus:border-2"
-                                    // Prevent typing/dragging: we only accept paste
-                                    onDrop={(e) => e.preventDefault()}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onKeyDown={onKeyDown}
-                                    onBeforeInput={(e) => { e.preventDefault() }}
-                                    contentEditable={true}
+                    : status === "term_choosing" ?
+                        <div>
+                            <p className="">Please choose a term: (e.g. 1A)</p>
+                            <label className="block text-lg">
+                                Term Id:
+                                <DropDown2<termIdInterface>
+                                    currentValue={actualTermId}
+                                    valueFunction={(v) => v.display}
+                                    options={filterTermId()}
+                                    updateInputFunction={(str) => setActualTermId({ value: -1, display: str })}
+                                    updateSelectFunction={(e)=>{setActualTermId(e); setMessage("")}}
+                                />
+                            </label>
+                            <RightSide>
+                                <button 
+                                    className="mt-4 border-1 px-4 rounded-sm cursor-pointer hover:bg-dark-green hover:text-light-green duration-75 ease-in"
+                                    onClick={handleNext}
                                 >
-                                    <div className="opacity-70">
-                                        {text.length ? text : "Paste here!"}
+                                    Next
+                                </button>
+                            </RightSide>
+                        </div>
+                        :
+                        <>
+                            <div className="flex flex-col px-5 mb-8 sm:flex-row justify-center items-center sm:items-start gap-5 sm:justify-between">
+                                <div className="flex-1 shrink min-w-30 flex flex-col items-center">
+                                    <p className="h-15 sm:text-base text-sm">
+                                        <a
+                                            href="https://quest.pecs.uwaterloo.ca/psp/SS/ACADEMIC/SA/?cmd=login&languageCd=ENG"
+                                            className="text-blue-800 underline"
+                                            target="blank"
+                                        > Log into Quest</a> and click "Class Schedule"
+                                    </p>
+                                    <Image src="/questPage.png" width={250} height={50} className="aspect-square bg-dark-green rounded-md" alt="please log into quest"></Image>
+                                </div>
+                                <div className="flex-1 shrink min-w-30 flex flex-col items-center">
+                                    <p className="h-15 text-sm">
+                                        Pick your term then select All (Ctrl + A) and Copy (Ctrl + C)
+                                    </p>
+                                    <Image src="/printPage.png" width={250} height={50} className="aspect-square bg-dark-green rounded-md" alt="please log into quest"></Image>
+                                </div>
+                                <div className="flex-1 shrink min-w-30 flex flex-col items-center">
+                                    <p className="h-15">
+                                        Paste it here (Ctrl + V)
+                                    </p>
+                                    <div
+                                        ref={zoneRef}
+                                        onPaste={onPaste}
+                                        tabIndex={0}
+                                        aria-label="Paste Zone"
+                                        className="border rounded-xl overflow-y-auto p-2 aspect-square w-full outline-none cursor-text focus:border-2"
+                                        // Prevent typing/dragging: we only accept paste
+                                        onDrop={(e) => e.preventDefault()}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onKeyDown={onKeyDown}
+                                        onBeforeInput={(e) => { e.preventDefault() }}
+                                        contentEditable={true}
+                                    >
+                                        <div className="opacity-70">
+                                            {text.length ? text : "Paste here!"}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        {message.length ?
-                            <p className="text-red-700">{message}</p>
-                            : ""}
-                    </>
+                        </>
                 }
+                {message.length ?
+                    <p className="text-red-700">{message}</p>
+                    : ""}
             </div>
         </div>
     )

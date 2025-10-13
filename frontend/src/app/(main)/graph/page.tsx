@@ -6,7 +6,7 @@ import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
 import { useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
-import { Pair, termIdInterface } from "@/components/interface";
+import { Location, Pair, termIdInterface } from "@/components/interface";
 import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
 import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
 import Lines from "@/components/graph/Lines";
@@ -38,10 +38,14 @@ type overlayInterface = 'none' | 'add_single' | 'add_batch'
 
 export default function GraphPage() {
     const [overlay, setOverlay] = useState<overlayInterface>('none');
+    const [connections,setConnections] = useState<[Pair,Pair][]>([]);
+    
+    const [_,setVersion] = useState<number>(0); // version for locations
+    const [update,setUpdate] = useState<number>(0); // update for the graph's courses
+    const [updatePanRef,setUpdatePanRef] = useState<boolean>(true); // update Pan
+    
     const pathRef = useRef<termIdInterface[]>([]);
-    const [line,setLine] = useState<[Pair,Pair]>([{x:0,y:0},{x:0,y:0}])
-    const [update,setUpdate] = useState<number>(0);
-    const [updatePanRef,setUpdatePanRef] = useState<boolean>(true);
+    const locations = useRef<Map<string,Location[]>>(new Map())
 
     function updateCourse() {
         setOverlay("none");
@@ -65,8 +69,14 @@ export default function GraphPage() {
             }
             <PanZoomCanvas updatePan={updatePanRef}>
                 <>
-                    <Graph pathRef={pathRef} getUpdated={update} updatePan={()=>setUpdatePanRef(false)} setLine={setLine}/>
-                    {line && <Lines start={line[0]} end={line[1]}/>}
+                    <Graph 
+                        pathRef={pathRef} 
+                        getUpdated={update} 
+                        updatePan={()=>setUpdatePanRef(false)} 
+                        locations={locations}
+                        updateFunction={()=>setVersion(v=>v+1)}
+                    />
+                    <Lines connections={connections}/>
                 </>
             </PanZoomCanvas>
             <div className="fixed left-6 bottom-5">

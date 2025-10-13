@@ -4,11 +4,12 @@ import PanZoomCanvas from "@/components/utils/PanZoomCanvas";
 import ExpandPanel from '@/components/utils/ExpandPanel'
 import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
-import { termIdInterface } from "@/components/interface";
+import { Pair, termIdInterface } from "@/components/interface";
 import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
 import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
+import Lines from "@/components/graph/Lines";
 
 function ControlPanel({ setOverlay }: { setOverlay: (arg0: overlayInterface) => void }) {
 
@@ -38,6 +39,7 @@ type overlayInterface = 'none' | 'add_single' | 'add_batch'
 export default function GraphPage() {
     const [overlay, setOverlay] = useState<overlayInterface>('none');
     const pathRef = useRef<termIdInterface[]>([]);
+    const [line,setLine] = useState<[Pair,Pair]>([{x:0,y:0},{x:0,y:0}])
     const [update,setUpdate] = useState<number>(0);
     const [updatePanRef,setUpdatePanRef] = useState<boolean>(true);
 
@@ -62,7 +64,10 @@ export default function GraphPage() {
                 </div>
             }
             <PanZoomCanvas updatePan={updatePanRef}>
-                <Graph pathRef={pathRef} getUpdated={update} updatePan={()=>setUpdatePanRef(false)}/>
+                <>
+                    <Graph pathRef={pathRef} getUpdated={update} updatePan={()=>setUpdatePanRef(false)} setLine={setLine}/>
+                    {line && <Lines start={line[0]} end={line[1]}/>}
+                </>
             </PanZoomCanvas>
             <div className="fixed left-6 bottom-5">
                 <ExpandPanel>

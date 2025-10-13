@@ -7,13 +7,15 @@ import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu
 import { useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
 import { termIdInterface } from "@/components/interface";
+import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
+import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
 
-function ControlPanel({setOverlay}:{setOverlay:(arg0:overlayInterface)=>void}) {
-    
+function ControlPanel({ setOverlay }: { setOverlay: (arg0: overlayInterface) => void }) {
+
     return (
         <div className="text-light-green px-3 py-2 flex flex-col items-start text-sm gap-1">
-            <button className="cursor-pointer" onClick={()=>setOverlay('add_single')}><LuPlus className="inline-block" /> Add a course</button>
-            <button className="cursor-pointer"><LuImport className="inline-block mr-0.2" /> Import a Semester</button>
+            <button className="cursor-pointer" onClick={() => setOverlay('add_single')}><LuPlus className="inline-block" /> Add a course</button>
+            <button className="cursor-pointer" onClick={() => setOverlay('add_batch')}><LuImport className="inline-block mr-0.2" /> Import a Semester</button>
             <button className="cursor-pointer"><IoSwapHorizontalOutline className="inline-block" /> Reorder semesters</button>
             <button className="cursor-pointer"><LuCheckCheck className="inline-block mr-1" />Checklists</button>
             <button className="cursor-pointer"><LuMinus className="inline-block" /> Remove Prereqs</button>
@@ -30,24 +32,28 @@ function ClassPanel() {
     )
 }
 
-type overlayInterface = 'none'|'add_single'|'add_batch'
+type overlayInterface = 'none' | 'add_single' | 'add_batch'
+
 
 export default function GraphPage() {
-    const [overlay,setOverlay] = useState<overlayInterface>('none');
-    const pathRef= useRef<termIdInterface[]>([])
+    const [overlay, setOverlay] = useState<overlayInterface>('none');
+    const pathRef = useRef<termIdInterface[]>([])
 
+    function getOverLay() {
+        switch (overlay){
+            case 'add_single': return <AddACourse close={() => setOverlay('none')} updatePage={() => setOverlay('none')} termOptions={pathRef.current} />
+            case 'add_batch': return <BatchAddCourses close={() => setOverlay('none')} updatePage={() => setOverlay('none')} termOptions={pathRef.current.filter(term=>getTermDistance(term.value,getCurrentTermId()) < 2)}/>
+            default: return null
+        }
+    }
     return (
         <section>
             {overlay != 'none' &&
-            <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1">
-                <AddACourse 
-                    close={()=>setOverlay('none')} 
-                    updatePage={()=>setOverlay('none')}
-                    termOptions={pathRef.current}
-                />    
-            </div>}
+                <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1">
+                    {getOverLay()}
+                </div>}
             <PanZoomCanvas>
-                <Graph pathRef={pathRef}/>
+                <Graph pathRef={pathRef} />
             </PanZoomCanvas>
             <div className="fixed left-6 bottom-5">
                 <ExpandPanel>

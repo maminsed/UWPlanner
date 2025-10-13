@@ -21,6 +21,8 @@ export function getCurrentTermId() {
     return (date.getFullYear() - 1900) * 10 + term
 }
 
+export const termMap = {1:0,5:1,9:2};
+
 export function getTermName(termId: number) {
     let res = ""
     if (termId % 10 == 5) {
@@ -32,4 +34,11 @@ export function getTermName(termId: number) {
     }
     res += Math.floor(termId / 10) + 1900
     return res;
+}
+
+export function getTermDistance(termId1:number, termId2:number) {
+    if (termId2 < termId1) return getTermDistance(termId2, termId1);
+    const yearDiff = Math.floor(termId2 / 10) - Math.floor(termId1 / 10); 
+    const monthDiff = termMap[termId2 % 10 as keyof typeof termMap] - termMap[termId1 % 10 as keyof typeof termMap];
+    return yearDiff * 3 + monthDiff;
 }

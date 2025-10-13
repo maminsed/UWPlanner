@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react"
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(v, hi)) }
 
-export default function PanZoomCanvas({ children }: { children: React.JSX.Element }) {
+export default function PanZoomCanvas({ children, updatePan }: { children: React.JSX.Element, updatePan:boolean }) {
     // container and content ref
     const containerRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);
@@ -80,7 +80,7 @@ export default function PanZoomCanvas({ children }: { children: React.JSX.Elemen
         if (el) el.style.cursor = "grab";
         const id = requestAnimationFrame(() => fitToView())
         return () => cancelAnimationFrame(id);
-    }, [])
+    }, [updatePan])
 
     useEffect(() => {
         const el = containerRef.current;

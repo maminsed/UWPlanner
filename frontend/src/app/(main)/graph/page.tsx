@@ -4,7 +4,7 @@ import PanZoomCanvas from "@/components/utils/PanZoomCanvas";
 import ExpandPanel from '@/components/utils/ExpandPanel'
 import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
 import { termIdInterface } from "@/components/interface";
 import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
@@ -37,23 +37,32 @@ type overlayInterface = 'none' | 'add_single' | 'add_batch'
 
 export default function GraphPage() {
     const [overlay, setOverlay] = useState<overlayInterface>('none');
-    const pathRef = useRef<termIdInterface[]>([])
+    const pathRef = useRef<termIdInterface[]>([]);
+    const [update,setUpdate] = useState<number>(0);
+    const [updatePanRef,setUpdatePanRef] = useState<boolean>(true);
+
+    function updateCourse() {
+        setOverlay("none");
+        setUpdate(prev=>prev+1)
+    }
 
     function getOverLay() {
         switch (overlay){
-            case 'add_single': return <AddACourse close={() => setOverlay('none')} updatePage={() => setOverlay('none')} termOptions={pathRef.current} />
-            case 'add_batch': return <BatchAddCourses close={() => setOverlay('none')} updatePage={() => setOverlay('none')} termOptions={pathRef.current.filter(term=>getTermDistance(term.value,getCurrentTermId()) < 2)}/>
+            case 'add_single': return <AddACourse close={() => setOverlay('none')} updatePage={updateCourse} termOptions={pathRef.current} />
+            case 'add_batch': return <BatchAddCourses close={() => setOverlay('none')} updatePage={updateCourse} termOptions={pathRef.current.filter(term=>getTermDistance(term.value,getCurrentTermId()) < 2)}/>
             default: return null
         }
     }
+
     return (
         <section>
             {overlay != 'none' &&
                 <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1">
                     {getOverLay()}
-                </div>}
-            <PanZoomCanvas>
-                <Graph pathRef={pathRef} />
+                </div>
+            }
+            <PanZoomCanvas updatePan={updatePanRef}>
+                <Graph pathRef={pathRef} getUpdated={update} updatePan={()=>setUpdatePanRef(false)}/>
             </PanZoomCanvas>
             <div className="fixed left-6 bottom-5">
                 <ExpandPanel>

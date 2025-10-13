@@ -22,7 +22,7 @@ function Semester({ semester, class_lst, course_dict }: { semester: string, clas
     )
 }
 
-export default function Graph({pathRef}:{pathRef: RefObject<termIdInterface[]>}) {
+export default function Graph({pathRef, getUpdated, updatePan}:{pathRef: RefObject<termIdInterface[]>, getUpdated:number, updatePan:()=>void}) {
     // TODO: 
     //       get the prerequisite chain
     //       add an update view function so you can tell panel your ready to be centerd 
@@ -54,6 +54,7 @@ export default function Graph({pathRef}:{pathRef: RefObject<termIdInterface[]>})
                     termIds.push({value:currTerm, display:`${semester[0]} - ${getTermName(currTerm)}`})
                 })
                 pathRef.current = termIds;
+                updatePan();
 
                 const GQL_QUERY = `
                     query Course($course_ids: [Int!]!) {
@@ -78,7 +79,7 @@ export default function Graph({pathRef}:{pathRef: RefObject<termIdInterface[]>})
         }
 
         initialSetup()
-    }, [])
+    }, [getUpdated])
 
     return (
         <div className="flex gap-6 p-8">

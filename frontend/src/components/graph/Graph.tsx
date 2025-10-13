@@ -3,18 +3,19 @@ import { RefObject, useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { getTermName, termOperation } from "../utils/termUtils";
 import useGQL from "@/lib/useGQL";
-import { Location, termIdInterface } from "../interface";
+import { CourseInformation, Location, termIdInterface } from "../interface";
 import Semester from "./Semester";
 
 type GraphInterface = {
     pathRef: RefObject<termIdInterface[]>;
     getUpdated: number;
     updatePan: () => void;
-    locations: RefObject<Map<string,Location[]>>
-    updateFunction: ()=>void
+    locations: RefObject<Map<string, Location[]>>
+    updateFunction: () => void;
+    deleteCourse: (courseInfo: CourseInformation) => void
 }
 
-export default function Graph({ pathRef, getUpdated, updatePan, locations, updateFunction }: GraphInterface) {
+export default function Graph({ pathRef, getUpdated, updatePan, locations, updateFunction, deleteCourse }: GraphInterface) {
     // TODO: 
     //       get the prerequisite chain
     //       do something with the centering
@@ -74,16 +75,21 @@ export default function Graph({ pathRef, getUpdated, updatePan, locations, updat
 
     return (
         <div className="flex gap-6 p-8">
-            {path.map((semester, i) => (
-                <Semester
-                    key={i}
-                    semester={`${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`}
-                    class_lst={semester[1]}
-                    course_dict={courseDict}
-                    locations={locations}
-                    updateFunction={updateFunction}
-                />
-            ))}
+            {path.map((semester, i) => {
+                const termId = termOperation(startedTerm, i)
+                const termName = `${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`
+                return (
+                    <Semester
+                        key={i}
+                        semester={termName}
+                        class_lst={semester[1]}
+                        course_dict={courseDict}
+                        locations={locations}
+                        updateFunction={updateFunction}
+                        deleteCourse={(courseId, courseName) => deleteCourse({ courseId, courseName, termId, termName })}
+                    />
+                )
+            })}
         </div>
     )
 }

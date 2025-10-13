@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify,g, request
 from dotenv import load_dotenv
 
-from backend.utils.path import translate_path
+from backend.utils.path import term_distance, translate_path
 from .extraction import get_course_data
 from backend.Auth import verify as verify_jwt
 from ..Schema import Users, Semester, db
@@ -59,6 +59,71 @@ def get_user_sections():
         "start_sem": user.started_term,
         "path": translate_path(user.path)
     }), 200
+
+@courses_bp.route("/delete_single", methods=["POST"])
+def delete_course():
+    # Parse the incoming JSON request
+    data = request.get_json()
+    term_id = data.get("term_id")
+    course_id = data.get("course_id")
+    current_term = data.get("current_term")
+
+    # GraphQL query to fetch course section details
+    GQL_QUERY = """
+    query Course_section($term_id: Int!, $course_id: Int!) {
+        course_section(
+            limit: 10
+            where: { term_id: { _eq: $term_id }, course_id: { _eq: $course_id } }
+        ) {
+            class_number
+            course_id
+        }
+    }
+    """
+
+    try:
+        # Retrieve the user from the database
+        user = Users.query.filter_by(username=g.username).first()
+        # Retrieve the user's semesters for the specified term
+        sem = [sem for sem in user.semesters if sem.term_id == term_id][0]
+        # Check if the term is within the allowed range for deletion
+        if term_distance(term_id, current_term) < 2:
+            # Initialize a session for making HTTP requests
+            session = requests.Session()
+            resp = session.post(
+                GQL_URL, 
+                json={"query": GQL_QUERY, "variables": {"term_id": term_id, "course_id": course_id}}
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+
+            # Handle any errors returned by the GraphQL endpoint
+            if "errors" in payload:
+                raise RuntimeError(payload["errors"])
+            
+            # Extract the class numbers to be removed
+            removeSections: list[int] = [sec['class_number'] for sec in payload["data"]["course_section"]]
+
+            # Update the sections by removing the ones associated with the course
+            sections: list[int] = json.loads(sem.sections)
+            sections = [sec for sec in sections if sec not in removeSections]
+            sem.sections = json.dumps(sections)
+
+        # Update the courses by removing the specified course
+        courses = [course for course in json.loads(sem.courses) if course != course_id]
+        sem.courses = json.dumps(courses)
+
+        # Save the updated semester to the database
+        db.session.add(sem)
+        db.session.commit()
+
+        # Return a success response
+        return "", 204
+    except Exception as e:
+        # Handle any errors that occur during the process
+        print(e)
+        return jsonify({"message": "error in backend"}), 500
+
 
 @courses_bp.route("/add_single", methods=["POST"])
 def add_section_to_user():

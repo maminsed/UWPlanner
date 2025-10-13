@@ -6,10 +6,11 @@ import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
 import { useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
-import { Location, Pair, termIdInterface } from "@/components/interface";
+import { CourseInformation, Location, Pair, termIdInterface } from "@/components/interface";
 import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
 import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
 import Lines from "@/components/graph/Lines";
+import DeleteCourse from "@/components/AddingCourses/DeleteCourse";
 
 function ControlPanel({ setOverlay }: { setOverlay: (arg0: overlayInterface) => void }) {
 
@@ -33,19 +34,19 @@ function ClassPanel() {
     )
 }
 
-type overlayInterface = 'none' | 'add_single' | 'add_batch'
-
+type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv';
 
 export default function GraphPage() {
     const [overlay, setOverlay] = useState<overlayInterface>('none');
     const [connections,setConnections] = useState<[Pair,Pair][]>([]);
+    const [deleteCourse,setDeleteCourse] = useState<CourseInformation|undefined>(undefined)
     
     const [_,setVersion] = useState<number>(0); // version for locations
     const [update,setUpdate] = useState<number>(0); // update for the graph's courses
     const [updatePanRef,setUpdatePanRef] = useState<boolean>(true); // update Pan
     
     const pathRef = useRef<termIdInterface[]>([]);
-    const locations = useRef<Map<string,Location[]>>(new Map())
+    const locations = useRef<Map<string,Location[]>>(new Map());
 
     function updateCourse() {
         setOverlay("none");
@@ -53,9 +54,12 @@ export default function GraphPage() {
     }
 
     function getOverLay() {
+        const closeFn = () => setOverlay('none')
+
         switch (overlay){
-            case 'add_single': return <AddACourse close={() => setOverlay('none')} updatePage={updateCourse} termOptions={pathRef.current} />
-            case 'add_batch': return <BatchAddCourses close={() => setOverlay('none')} updatePage={updateCourse} termOptions={pathRef.current.filter(term=>getTermDistance(term.value,getCurrentTermId()) < 2)}/>
+            case 'add_single': return <AddACourse close={closeFn} updatePage={updateCourse} termOptions={pathRef.current} />
+            case 'add_batch': return <BatchAddCourses close={closeFn} updatePage={updateCourse} termOptions={pathRef.current.filter(term=>getTermDistance(term.value,getCurrentTermId()) < 2)}/>
+            case 'delete_indiv': return deleteCourse && <DeleteCourse courseInfo={deleteCourse} close={closeFn} updatePage={updateCourse}/>
             default: return null
         }
     }
@@ -63,7 +67,7 @@ export default function GraphPage() {
     return (
         <section>
             {overlay != 'none' &&
-                <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1">
+                <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1 flex justify-center items-center">
                     {getOverLay()}
                 </div>
             }
@@ -75,6 +79,7 @@ export default function GraphPage() {
                         updatePan={()=>setUpdatePanRef(false)} 
                         locations={locations}
                         updateFunction={()=>setVersion(v=>v+1)}
+                        deleteCourse={(courseInfo)=>{setDeleteCourse(courseInfo);setOverlay('delete_indiv')}}
                     />
                     <Lines connections={connections}/>
                 </>

@@ -45,3 +45,10 @@ def translate_to_id(path: str, started_term:int): # returns [1255,...]
         res[i] = curr_sem
         curr_sem=term_inc(curr_sem)
     return res
+
+termMap = {1:0,5:1,9:2}
+def term_distance(termId1:int,termId2:int):
+    if termId1 > termId2: return term_distance(termId2,termId1)
+    yearDiff = termId2 // 10 - termId1 // 10
+    monthDiff = termMap[termId2 % 10] - termMap[termId1 % 10]
+    return yearDiff * 3 + monthDiff

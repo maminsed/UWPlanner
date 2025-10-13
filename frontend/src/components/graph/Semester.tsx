@@ -8,9 +8,10 @@ type SemesterInterface = {
     course_dict: Map<number, string>;
     locations: RefObject<Map<string,Location[]>>
     updateFunction: ()=>void
+    deleteCourse: (courseId:number, course_name:string) => void
 }
 
-export default function Semester({ semester, class_lst, course_dict, locations, updateFunction }: SemesterInterface) {
+export default function Semester({ semester, class_lst, course_dict, locations, updateFunction,deleteCourse }: SemesterInterface) {
 
     return (
         <div className="flex flex-col text-xl gap-6 items-center">
@@ -31,6 +32,7 @@ export default function Semester({ semester, class_lst, course_dict, locations, 
                         newLocs.get(course)!.push(loc)
                         updateFunction();
                     }}
+                    deleteCourse={()=>deleteCourse(courseId,course_dict.get(courseId)!.toUpperCase())}
                 />
             ))}
         </div>

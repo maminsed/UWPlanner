@@ -8,6 +8,7 @@ import { termIdInterface } from "../interface";
 import DropDown2 from "../utils/DropDown2";
 
 export default function BatchAddCourses({ close, updatePage, termId, termOptions }: { close: () => void, updatePage: () => void, termId?: number, termOptions?: termIdInterface[] }) {
+    //TODO: disable when loading
     const zoneRef = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState<"term_choosing" | "idle" | "sending" | "done" | "error">(termId ? "idle" : "term_choosing");
     const [actualTermId, setActualTermId] = useState<termIdInterface>({ value: termId || -1, display: "" })

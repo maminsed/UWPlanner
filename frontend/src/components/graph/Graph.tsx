@@ -3,19 +3,20 @@ import { RefObject, useEffect, useState } from "react";
 import { api } from "@/lib/useApi";
 import { getTermName, termOperation } from "../utils/termUtils";
 import useGQL from "@/lib/useGQL";
-import { CourseInformation, Location, termIdInterface } from "../interface";
+import { ClassLocations, CourseInformation, gqlCourseSection, termIdInterface } from "../interface";
 import Semester from "./Semester";
 
 type GraphInterface = {
     pathRef: RefObject<termIdInterface[]>;
     getUpdated: number;
     updatePan: () => void;
-    locations: RefObject<Map<string, Location[]>>
+    locations: RefObject<ClassLocations>
     updateFunction: () => void;
     deleteCourse: (courseInfo: CourseInformation) => void
+    setCourseInformations: (arg0:gqlCourseSection[]) => void
 }
 
-export default function Graph({ pathRef, getUpdated, updatePan, locations, updateFunction, deleteCourse }: GraphInterface) {
+export default function Graph({ pathRef, getUpdated, updatePan, locations, updateFunction, deleteCourse,setCourseInformations }: GraphInterface) {
     // TODO: 
     //       get the prerequisite chain
     //       do something with the centering
@@ -52,11 +53,15 @@ export default function Graph({ pathRef, getUpdated, updatePan, locations, updat
                     query Course($course_ids: [Int!]!) {
                         course(where: { id: { _in: $course_ids } }) {
                             code
-                            coreqs
                             id
                             name
+                            coreqs
                             prereqs
                             antireqs
+                            prerequisites {
+                                prerequisite_id
+                                is_corequisite
+                            }
                         }
                     }
                 `
@@ -66,6 +71,7 @@ export default function Graph({ pathRef, getUpdated, updatePan, locations, updat
                 gql_response?.data?.course.forEach((course: any) => {
                     newMap.set(course.id, course.code);
                 })
+                setCourseInformations(gql_response.data.course);
                 setCourseDict(newMap);
             }
         }
@@ -82,6 +88,7 @@ export default function Graph({ pathRef, getUpdated, updatePan, locations, updat
                     <Semester
                         key={i}
                         semester={termName}
+                        termId={termId}
                         class_lst={semester[1]}
                         course_dict={courseDict}
                         locations={locations}

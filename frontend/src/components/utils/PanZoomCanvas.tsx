@@ -4,6 +4,7 @@ import { useRef, useState, useEffect} from "react"
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(v, hi)) }
 
 export default function PanZoomCanvas({ children, updatePan }: { children: React.JSX.Element, updatePan:boolean }) {
+    //TODO: put a max for how far the user can go left and right + add the recenter button?
     // container and content ref
     const containerRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);

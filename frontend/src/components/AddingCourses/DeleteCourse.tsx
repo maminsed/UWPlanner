@@ -11,6 +11,7 @@ type DeleteCourseInterface = {
 }
 
 export default function DeleteCourse({close, updatePage,courseInfo:{termId,termName,courseId,courseName}}:DeleteCourseInterface) {
+    //TODO: disable when loading
     const backend = api();
 
     async function handleDelete() {

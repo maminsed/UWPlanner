@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+'use client';
+import { RefObject, useLayoutEffect, useRef } from "react";
 import { Location } from "../interface";
 import { LuCircleX, LuMoveDiagonal } from "react-icons/lu";
 
@@ -25,8 +26,13 @@ export default function Course({setLocation, courseId, course_dict, deleteCourse
         }
         update()
         const ro = new ResizeObserver(update);
+        const id = setTimeout(update,100)
+        
         ro.observe(item)
-        return () => ro.disconnect()
+        return () => {
+            ro.disconnect();
+            clearTimeout(id);
+        }
     }, [])
 
     return (

@@ -4,13 +4,14 @@ import PanZoomCanvas from "@/components/utils/PanZoomCanvas";
 import ExpandPanel from '@/components/utils/ExpandPanel'
 import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddACourse from "@/components/AddingCourses/AddACourse";
-import { CourseInformation, Location, Pair, termIdInterface } from "@/components/interface";
+import { ClassLocations, CourseInformation, gqlCourseSection, Location, Pair, termIdInterface } from "@/components/interface";
 import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
 import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
 import Lines from "@/components/graph/Lines";
 import DeleteCourse from "@/components/AddingCourses/DeleteCourse";
+import { generateConnectionLines, preReq } from "@/components/utils/preReqUtils";
 
 function ControlPanel({ setOverlay }: { setOverlay: (arg0: overlayInterface) => void }) {
 
@@ -39,19 +40,25 @@ type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv';
 export default function GraphPage() {
     const [overlay, setOverlay] = useState<overlayInterface>('none');
     const [connections,setConnections] = useState<[Pair,Pair][]>([]);
-    const [deleteCourse,setDeleteCourse] = useState<CourseInformation|undefined>(undefined)
+    const [deleteCourse,setDeleteCourse] = useState<CourseInformation|undefined>(undefined);
+    const gqlCourseSections = useRef<gqlCourseSection[]|null>(null)
     
-    const [_,setVersion] = useState<number>(0); // version for locations
+    const [_,setVersion] = useState<number>(0); // version for locations and gqlCourseSection
     const [update,setUpdate] = useState<number>(0); // update for the graph's courses
     const [updatePanRef,setUpdatePanRef] = useState<boolean>(true); // update Pan
     
     const pathRef = useRef<termIdInterface[]>([]);
-    const locations = useRef<Map<string,Location[]>>(new Map());
+    const locations = useRef<ClassLocations>(new Map());
 
     function updateCourse() {
         setOverlay("none");
-        setUpdate(prev=>prev+1)
+        setUpdate(prev=>prev+1);
     }
+
+    useEffect(()=>{
+        if (!gqlCourseSections.current || !locations.current.size) return;
+        setConnections(generateConnectionLines(preReq(gqlCourseSections.current),locations.current));
+    },[gqlCourseSections.current])
 
     function getOverLay() {
         const closeFn = () => setOverlay('none')
@@ -80,7 +87,14 @@ export default function GraphPage() {
                         locations={locations}
                         updateFunction={()=>setVersion(v=>v+1)}
                         deleteCourse={(courseInfo)=>{setDeleteCourse(courseInfo);setOverlay('delete_indiv')}}
+                        setCourseInformations={(courseInfo)=>{gqlCourseSections.current=courseInfo; setVersion(v=>v+1)}}
                     />
+                    {/* {connections.map(([start,end],i)=>(
+                        <div key={i}>
+                            <div className="aspect-square w-2 z-20 rounded-full bg-amber-900 absolute" style={{left:start.x,top:start.y}}/>
+                            <div className="aspect-square w-2 z-20 rounded-full bg-amber-900 absolute" style={{left:end.x,top:end.y}}/>
+                        </div>
+                    ))} */}
                     <Lines connections={connections}/>
                 </>
             </PanZoomCanvas>

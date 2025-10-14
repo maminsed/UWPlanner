@@ -48,6 +48,7 @@ function changeQuery(phrase: string): [number, string] {
 
 type statusInterface = 'idle'|'error'|'term_chosing'|'section_excempt'|'section_excempt_error'
 export default function AddACourse({ className, close, updatePage, termId, termOptions, ...props }: React.HTMLAttributes<HTMLDivElement> & { close: () => void, updatePage: () => void, termId?: number, termOptions?: termIdInterface[] }) {
+    //TODO: disable when loading - allow the user to add multiple if the term is too faraway
     const [searchPhrase, setSearchPhrase] = useState<OptionsInterface>({ code: "", course_id: -1, name: "" });
     const [searchOptions, setSearchOptions] = useState<OptionsInterface[]>([])
 

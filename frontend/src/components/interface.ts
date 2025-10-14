@@ -4,7 +4,7 @@ export type termIdInterface = {
 }
 
 export type Pair = {
-    x: number; 
+    x: number;
     y: number;
 }
 
@@ -21,3 +21,18 @@ export type CourseInformation = {
     termId: number;
     courseId: number;
 }
+
+
+export type gqlCourseSection = {
+    id: number;
+    code: string;
+    prereqs: string;
+    coreqs: string;
+    antireqs:string;
+    prerequisites: {
+        prerequisite_id:number,
+        is_corequisite:boolean
+    }[]
+}
+
+export type ClassLocations = Map<number,Map<number,Location>>

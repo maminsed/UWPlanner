@@ -1,5 +1,5 @@
-from collections import defaultdict
 import json
+from collections import defaultdict
 from typing import Callable, Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
@@ -284,19 +284,19 @@ def get_all() -> tuple[str, int]:
 
 @update_info.route("/get_user_seq", methods=["GET"])
 def get_user_seq() -> tuple[str, int]:
-    include_courses:bool = request.args.get("include_courses") or False
+    include_courses: bool = request.args.get("include_courses") or False
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
     if include_courses == "true":
         term_ids = translate_to_id(user.path, user.started_term)
         semesters = user.semesters
-        for index,term in enumerate(term_ids):
+        for index, term in enumerate(term_ids):
             exists = [s for s in semesters if s.term_id == term]
             path[index] = (
                 path[index],
-                json.loads(exists[0].courses) if len(exists) != 0 else []
+                json.loads(exists[0].courses) if len(exists) != 0 else [],
             )
-    sem_dic = {5:"Summer", 9:"Fall", 1:"Winter"}
+    sem_dic = {5: "Summer", 9: "Fall", 1: "Winter"}
     return jsonify(
         {
             "current_sem": user.current_term,
@@ -308,6 +308,7 @@ def get_user_seq() -> tuple[str, int]:
             "path": path,
         }
     ), 200
+
 
 """
      profilePicture,

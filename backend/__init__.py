@@ -7,11 +7,11 @@ from flask import Flask
 from flask_cors import CORS
 
 from .Auth import auth_bp
+from .Courses import courses_bp
 from .Login_actions import update_info
 from .Schema import db, migrate
 from .School_info import school_info_bp
 from .Test import test_bp
-from .Courses import courses_bp
 
 load_dotenv()
 
@@ -35,7 +35,7 @@ def create_app() -> Flask:
 
     # get rid of
     app.register_blueprint(test_bp, url_prefix="/test")
-    app.register_blueprint(school_info_bp, url_prefix="/school_info") #?
+    app.register_blueprint(school_info_bp, url_prefix="/school_info")  # ?
 
     CORS(
         app,

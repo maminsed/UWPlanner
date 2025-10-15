@@ -1,4 +1,3 @@
-import json
 from ..Schema import db
 from ..Schema.db import Major, Minor, Sequence, Specialization
 

@@ -284,7 +284,7 @@ def scrape_math() -> tuple[list[str], list[str]]:
 
 
 # just ignore this one
-def scrape_eng() -> tuple[list[tuple[str,str]],list,list]:
+def scrape_eng() -> tuple[list[tuple[str, str]], list, list]:
     """Function to scrape engineering sequences."""
     driver = None
     errors = []

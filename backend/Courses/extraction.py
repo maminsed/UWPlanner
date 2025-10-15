@@ -1,12 +1,17 @@
-from ..Schema import Course, db
-from sqlalchemy import insert
-import requests
 import os
+
+import requests
 from dotenv import load_dotenv
+from sqlalchemy import insert
+
+from ..Schema import Course, db
+
 load_dotenv()
 
 GQL_URL = os.getenv("GQL_URL")
-def get_course_data(): # You can update this to use JSON
+
+
+def get_course_data():  # You can update this to use JSON
     GQL_QUERY = """
     query Course($limit: Int, $offset: Int) {
         course(limit: $limit, offset: $offset) {
@@ -26,21 +31,21 @@ def get_course_data(): # You can update this to use JSON
     errors = []
     while True:
         print(f"offset:{offset}")
-        resp = s.post(GQL_URL, json={"query": GQL_QUERY, "variables": {"limit": limit, "offset": offset}})
-        
+        resp = s.post(
+            GQL_URL,
+            json={"query": GQL_QUERY, "variables": {"limit": limit, "offset": offset}},
+        )
+
         resp.raise_for_status()
         payload = resp.json()
         if "errors" in payload:
             raise RuntimeError(payload["errors"])
-        
+
         rows = payload["data"]["course"]
         if not rows:
             break
         try:
-            db.session.execute(
-                insert(Course),
-                rows
-            )
+            db.session.execute(insert(Course), rows)
             db.session.commit()
         except Exception as e:
             print(str(e))
@@ -48,8 +53,9 @@ def get_course_data(): # You can update this to use JSON
 
         if len(rows) < limit:
             break
-        offset+=limit
+        offset += limit
     return errors
+
 
 """
 def get_course_data_backup():
@@ -131,4 +137,3 @@ def extract_prereq_backup():
     driver.quit()
     return errors
 """
-

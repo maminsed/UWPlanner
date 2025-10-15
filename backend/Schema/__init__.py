@@ -1,14 +1,14 @@
 """The database module for connecting with NeonDB."""
 
 from .db import (
+    Course,
     JwtToken,
     Link,
     LoginMethod,
     Major,
     Minor,
-    Course,
-    Sequence,
     Semester,
+    Sequence,
     Specialization,
     Users,
     db,

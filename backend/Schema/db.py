@@ -132,16 +132,18 @@ class Users(db.Model):
     started_term: Mapped[int] = mapped_column(db.Integer(), server_default=text("1255"))
     coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
     bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
-    # seprated with - 
+    # seprated with -
     path: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     links: Mapped[list["Link"]] = relationship(
         "Link", back_populates="user", cascade="all, delete-orphan, save-update"
     )
 
-    #Course paths: Follow UWFLOW ids!!
-    # A set of ids for the current sems courses seprated with - 
-    # section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="") 
-    semesters: Mapped[list["Semester"]] = relationship("Semester", back_populates="user", cascade="all, delete-orphan, save-update")
+    # Course paths: Follow UWFLOW ids!!
+    # A set of ids for the current sems courses seprated with -
+    # section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    semesters: Mapped[list["Semester"]] = relationship(
+        "Semester", back_populates="user", cascade="all, delete-orphan, save-update"
+    )
     # A set of Names for future semester courses, coruses seprated with - semesters seprated with //
     course_ids: Mapped[str] = mapped_column(db.String, default="", server_default="")
 
@@ -240,7 +242,7 @@ class Sequence(db.Model):
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )
-    plan: Mapped[str] = mapped_column(db.String(), nullable=False, default='[]')
+    plan: Mapped[str] = mapped_column(db.String(), nullable=False, default="[]")
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="sequences", secondary=major_sequence
     )
@@ -252,14 +254,15 @@ class Course(db.Model):
     __tablename__ = "courses"
     course_id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     offeredIn: Mapped[str] = mapped_column(db.String(), default="")
-    
-    code: Mapped[str] = mapped_column(db.String()) #e.g. MATH
-    name: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
+
+    code: Mapped[str] = mapped_column(db.String())  # e.g. MATH
+    name: Mapped[str] = mapped_column(db.String(), default="")  # e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
 
     prereqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     antireqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+
 
 class Semester(db.Model):
     """Database for Sections."""

@@ -42,13 +42,14 @@ export default function DeleteCourse({
   }
 
   return (
-    <div className="px-6 py-2 max-w-[96%] bg-white rounded-md">
+    <div className="px-6 py-2 max-w-[96%] bg-white rounded-xl shadow-2xl shadow-dark-green/10">
       <RightSide className="!mb-1 !mr-0">
         <LuX className="w-4 font-semibold h-auto cursor-pointer" onClick={close} />
       </RightSide>
       <h2 className="text-lg font-semibold ">Are you sure about deleting this course?</h2>
       <p className="text-sm mt-2 md:mt-0">
-        It will delete all sections of <b>{courseName}</b> from the <b>{termName}</b> semester
+        It will delete all sections of <b>{courseName || 'the course'}</b> from the{' '}
+        <b>{termName || ''}</b> semester
       </p>
       <RightSide className="mt-4">
         <button className="px-2 border rounded-sm cursor-pointer" onClick={close}>

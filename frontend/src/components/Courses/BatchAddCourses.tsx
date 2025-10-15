@@ -102,7 +102,7 @@ export default function BatchAddCourses({
 
   return (
     <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center mx-2">
-      <div className="w-[90vw] pb-4 max-w-200 bg-white max-h-full overflow-y-auto scroller rounded-lg shadow-2xl shadow-dark-green/60 flex flex-col items-center px-4">
+      <div className="w-[90vw] pb-4 max-w-200 bg-white max-h-full overflow-y-auto scroller rounded-xl shadow-2xl shadow-dark-green/10 flex flex-col items-center px-4">
         <RightSide className="mt-4 w-full">
           <AiOutlineClose
             className="w-6 font-semibold h-auto cursor-pointer hover:text-red-600 duration-150"

@@ -1,6 +1,6 @@
 'use client';
 import { useLayoutEffect, useRef } from 'react';
-import { LuCircleX, LuMoveDiagonal } from 'react-icons/lu';
+import { LuMoveDiagonal, LuTrash2 } from 'react-icons/lu';
 
 import { Location } from '../interface';
 
@@ -49,11 +49,11 @@ export default function Course({
       <div className="flex flex-col justify-between h-full py-1 pl-1">
         <LuMoveDiagonal
           onClick={viewCourse}
-          className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-75"
+          className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-150"
         />
-        <LuCircleX
+        <LuTrash2
           onClick={deleteCourse}
-          className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-75"
+          className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
         />
       </div>
       <span className="py-5 px-1 min-w-25">{course_dict.get(courseId)?.toUpperCase()}</span>

@@ -1,17 +1,14 @@
 {
   "lint-staged": {
-    "frontend/**/*.{js,jsx,ts,tsx,json,css,md,html,yaml,yml}": [
-      "bash -lc 'cd frontend && npm run lint:fix'",
-      "bash -lc 'cd frontend && npm run lint:pretty'",
-      "bash -lc 'cd frontend && npm run lint'"
-    ],
     "backend/**/*.py": [
-      "bash -lc 'cd backend && ruff format .'",
-      "bash -lc 'cd backend && ruff check . --fix || true'"
+      "npm run ruff:format",
+      "npm run ruff:check"
     ]
   },
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "ruff:format": "ruff format backend",
+    "ruff:check": "ruff check backend --fix --exit-zero"
   },
   "devDependencies": {
     "husky": "^9.1.7",

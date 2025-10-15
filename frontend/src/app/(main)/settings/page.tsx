@@ -1,10 +1,12 @@
 
-import { PublicProfileForm } from "@/components/settings/PublicProfileForm";
-import { SecuritySettings } from "@/components/settings/SecuritySettings";
-import { DiscussionsSettings } from "@/components/settings/DiscussionsSettings";
-import { SequenceSettings } from "@/components/settings/SequenceSettings";
-import { ReportingSettings } from "@/components/settings/ReportingSettings";
 import Link from "next/link";
+
+import { DiscussionsSettings } from "@/components/settings/DiscussionsSettings";
+import { PublicProfileForm } from "@/components/settings/PublicProfileForm";
+import { ReportingSettings } from "@/components/settings/ReportingSettings";
+import { SecuritySettings } from "@/components/settings/SecuritySettings";
+import { SequenceSettings } from "@/components/settings/SequenceSettings";
+
 
 export default function SettingsPage() {
     // TODO: figure out profile pictures 

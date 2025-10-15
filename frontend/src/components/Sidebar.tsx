@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuMessageSquare, LuBookOpen, LuCalendar, LuSettings, LuLogOut, LuUser } from "react-icons/lu";
 import { FiBarChart2 } from "react-icons/fi";
+import { LuMessageSquare, LuBookOpen, LuCalendar, LuSettings, LuLogOut, LuUser } from "react-icons/lu";
+
 import { useAuth } from "@/app/AuthProvider";
 
 const navItems = [

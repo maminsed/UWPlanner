@@ -1,17 +1,18 @@
 'use client';
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useContext, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form"
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthContext } from "@/app/AuthProvider";
-import { useRouter } from "next/navigation";
 
 //Logos
 import { FaGoogle } from "react-icons/fa";
 import { FaApple } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
+import { z } from "zod";
+
+import { AuthContext } from "@/app/AuthProvider";
 
 
 const schema = z.object({
@@ -52,9 +53,9 @@ export default function LogIn() {
                 console.log(response.status)
                 throw new Error(message || `Request Faild. Res: ${response.status}`)
             }
-
+ 
             const res = await response.json();
-            let { Access_Token, exp } = res;
+            const { Access_Token, exp } = res;
             setAccess(Access_Token)
             setExp(exp)
             const { username } = res;

@@ -6,9 +6,9 @@
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
-        "lint:pretty": "prettier --write ."
+        "lint": "eslint",
+        "lint:fix": "eslint --fix",
+        "lint:pretty": "prettier --write"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.0.1",

@@ -1,9 +1,13 @@
 'use client';
-import { MdArrowBackIosNew } from "react-icons/md";
-import { Fragment, useEffect, useState } from "react";
-import { api } from "@/lib/useApi";
 import clsx from "clsx";
+import { Fragment, useEffect, useState } from "react";
+import { MdArrowBackIosNew } from "react-icons/md";
+
 import { getTermName, termOperation } from "../utils/termUtils";
+
+import { api } from "@/lib/useApi";
+
+
 
 function groupK<T>(path: T[], k: number = 3): T[][] {
     const res: T[][] = []

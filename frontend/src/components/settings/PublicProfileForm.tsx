@@ -1,14 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import type { InputHTMLAttributes } from "react";
-import { useAuth } from "@/app/AuthProvider";
 import { FiPlusCircle, FiXCircle } from "react-icons/fi";
 import { LuCamera, LuUser } from "react-icons/lu";
 
-import { api } from "@/lib/useApi";
 import DropDown from "../DropDown";
-import { useRouter } from "next/navigation";
+
+import type { InputHTMLAttributes } from "react";
+
+import { useAuth } from "@/app/AuthProvider";
+import { api } from "@/lib/useApi";
+
 
 const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (
     <input

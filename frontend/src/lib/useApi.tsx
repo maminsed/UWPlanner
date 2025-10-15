@@ -1,5 +1,6 @@
-import { useAuth } from "@/app/AuthProvider";
 import useSafeRouter from "./safePush";
+
+import { useAuth } from "@/app/AuthProvider";
 
 export function isExpired(exp?:string) {
     if (!exp) { return true }
@@ -15,7 +16,7 @@ export function api() {
     return async (input: RequestInfo, init:RequestInit = {}, check_protection:boolean = true): Promise<Response> => {
         let token = access;
         if (check_protection) {
-            console.log(`expiration date: ${exp}`)
+            console.info(`expiration date: ${exp}`)
             if (isExpired(exp)) {
                 try {
                     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {

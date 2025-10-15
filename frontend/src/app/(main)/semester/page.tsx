@@ -1,7 +1,8 @@
-import Footer from "@/components/Footer";
-import ClassSchedule from "@/components/semester/ClassSchedule";
 import Link from "next/link";
 import { IoIosInformationCircleOutline } from "react-icons/io";
+
+import Footer from "@/components/Footer";
+import ClassSchedule from "@/components/semester/ClassSchedule";
 
 export default function SemesterPage() {
     return (

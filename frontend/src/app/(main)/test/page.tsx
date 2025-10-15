@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import { api } from "@/lib/useApi";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 import { useAuth } from "@/app/AuthProvider";
+import { api } from "@/lib/useApi";
 
 export default function Test() {
     const [message, setMessage] = useState<string>();

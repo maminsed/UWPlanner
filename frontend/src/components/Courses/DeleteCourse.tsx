@@ -1,8 +1,10 @@
 import { LuX } from "react-icons/lu";
-import RightSide from "../utils/RightSide";
-import { api } from "@/lib/useApi";
-import { getCurrentTermId } from "../utils/termUtils";
+
 import { CourseInformation } from "../interface";
+import RightSide from "../utils/RightSide";
+import { getCurrentTermId } from "../utils/termUtils";
+
+import { api } from "@/lib/useApi";
 
 type DeleteCourseInterface = {
     courseInfo: CourseInformation

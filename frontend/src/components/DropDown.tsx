@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect, useRef } from "react";
-import { FiSearch } from "react-icons/fi";
-import { Fragment } from "react";
-import HoverEffect from "./HoverEffect";
 import { clsx } from "clsx";
+import { useState, useEffect, useRef } from "react";
+import { Fragment } from "react";
+import { FiSearch } from "react-icons/fi";
+
+import HoverEffect from "./HoverEffect";
 
 /*
 Format:

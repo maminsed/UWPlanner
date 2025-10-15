@@ -1,11 +1,12 @@
 "use client";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { useAuth } from "../AuthProvider";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+
+import { useAuth } from "../AuthProvider";
 
 const Schema = z.object({
     code: z.string(),

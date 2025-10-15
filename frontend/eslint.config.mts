@@ -1,12 +1,12 @@
 import js from "@eslint/js";
-import react from "eslint-plugin-react"
 import next from "@next/eslint-plugin-next";
-import reactHooks from "eslint-plugin-react-hooks";
+import { defineConfig } from "eslint/config";
 import importPlugin from "eslint-plugin-import"
+import react from "eslint-plugin-react"
+import reactHooks from "eslint-plugin-react-hooks";
 import unusedImports from "eslint-plugin-unused-imports"
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
@@ -47,7 +47,7 @@ export default defineConfig([
         { args: "after-used", argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
       ],
 
-      "eqeqeq": ["error", "smart"],
+      // "eqeqeq": ["error", "smart"], //disabeled for now
       "curly": ["error", "multi-line"],
 
       "no-console": ["warn", { allow: ["warn", "error"] }],

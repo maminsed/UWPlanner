@@ -1,6 +1,7 @@
+import Image from "next/image";
+
 import AuthForm from "@/components/AuthForm-SignUp";
 import PublicNavbar from "@/components/PublicNavbar";
-import Image from "next/image";
 
 export default function Landing() {
     return (

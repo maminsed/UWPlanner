@@ -1,9 +1,9 @@
 "use client";
-import React from "react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import React from "react";
 import { MdAccountCircle } from "react-icons/md";
-
+ 
 const PublicNavbar: React.FC = () => {
     return (
         <nav className="top-0 left-0 right-0 z-50 flex flex-row justify-between items-center px-8 md:px-10 py-8 absolute w-full">

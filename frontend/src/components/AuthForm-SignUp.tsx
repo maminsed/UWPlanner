@@ -1,17 +1,19 @@
 'use client';
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form"
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 //Logos
 import { FaGoogle } from "react-icons/fa";
 import { FaApple } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 import { IoMdEye,IoMdEyeOff } from "react-icons/io";
+import { z } from "zod";
+
 import { useAuth } from "@/app/AuthProvider";
-import { useRouter } from "next/navigation";
+
 
 
 const schema = z.object({

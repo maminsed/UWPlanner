@@ -1,17 +1,19 @@
 'use client'
 import clsx from "clsx";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/useApi";
 import { Fragment } from "react";
+import { BiImport } from "react-icons/bi";
 import { IoIosInformationCircleOutline } from "react-icons/io";
 import { LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
-import HoverEffect from "../HoverEffect";
-import useGQL from "@/lib/useGQL";
+
 import AddACourse from "../Courses/AddACourse";
-import RightSide from "../utils/RightSide";
-import { BiImport } from "react-icons/bi";
 import BatchAddCourses from "../Courses/BatchAddCourses";
+import HoverEffect from "../HoverEffect";
+import RightSide from "../utils/RightSide";
 import { getCurrentTermId, getTermName, termOperation } from "../utils/termUtils";
+
+import { api } from "@/lib/useApi";
+import useGQL from "@/lib/useGQL";
 
 type ClassInterface = {
     sectionId: number;
@@ -358,7 +360,7 @@ export default function ClassSchedule() {
                 }
             })
             if (res !== null) {
-                const [Year, Month, Day] = (res as String).split("-").map(Number)
+                const [Year, Month, Day] = (res as string).split("-").map(Number)
                 const Obj = new Date(Year, Month - 1, Day)
                 setMondayDate(() => getMonday(new Date(Obj)))
             }

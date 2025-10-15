@@ -1,7 +1,8 @@
 'use client';
-import { RefObject, useLayoutEffect, useRef } from "react";
-import { Location } from "../interface";
+import { useLayoutEffect, useRef } from "react";
 import { LuCircleX, LuMoveDiagonal } from "react-icons/lu";
+
+import { Location } from "../interface";
 
 type CourseInterface = {
     setLocation: (arg0: Location) => void;

@@ -1,10 +1,15 @@
 'use client'
 import { RefObject, useEffect, useState } from "react";
-import { api } from "@/lib/useApi";
-import { getTermName, termOperation } from "../utils/termUtils";
-import useGQL from "@/lib/useGQL";
+
 import { ClassLocations, CourseInformation, gqlCourseSection, termIdInterface } from "../interface";
+import { getTermName, termOperation } from "../utils/termUtils";
+
 import Semester from "./Semester";
+
+import { api } from "@/lib/useApi";
+import useGQL from "@/lib/useGQL";
+
+
 
 type GraphInterface = {
     pathRef: RefObject<termIdInterface[]>;

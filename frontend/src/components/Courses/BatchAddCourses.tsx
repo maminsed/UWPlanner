@@ -1,11 +1,14 @@
 'use client';
-import { AiOutlineClose } from "react-icons/ai";
-import RightSide from "../utils/RightSide";
 import Image from "next/image";
 import { useState, useRef } from "react";
-import { api } from "@/lib/useApi";
+import { AiOutlineClose } from "react-icons/ai";
+
+
 import { termIdInterface } from "../interface";
 import DropDown2 from "../utils/DropDown2";
+import RightSide from "../utils/RightSide";
+
+import { api } from "@/lib/useApi";
 
 export default function BatchAddCourses({ close, updatePage, termId, termOptions }: { close: () => void, updatePage: () => void, termId?: number, termOptions?: termIdInterface[] }) {
     //TODO: disable when loading

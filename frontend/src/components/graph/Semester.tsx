@@ -1,6 +1,8 @@
 import { RefObject } from "react";
-import Course from "./Course";
+
 import { ClassLocations, Location } from "../interface";
+
+import Course from "./Course";
 
 type SemesterInterface = {
     semester: string;

@@ -1,14 +1,17 @@
 "use client";
-import { useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/AuthProvider";
-import Link from "next/link";
-import Image from "next/image";
-import { MdAccountCircle, MdExitToApp } from "react-icons/md";
-import HoverEffect from "./HoverEffect";
-import { IoMdSettings } from "react-icons/io";
 import {clsx} from "clsx";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useEffect } from "react";
+import { IoMdSettings } from "react-icons/io";
 import { LuMenu } from "react-icons/lu";
+import { MdAccountCircle, MdExitToApp } from "react-icons/md";
+
+import HoverEffect from "./HoverEffect";
+
+
+import { useAuth } from "@/app/AuthProvider";
 
 
 export default function LogedInNav() {
@@ -50,7 +53,7 @@ export default function LogedInNav() {
                 panelRef.current?.contains(e.target as Node) ||
                 buttonRef.current?.contains(e.target as Node)
             )
-                return;
+                {return;}
             setPanelOn(false);
         }
 

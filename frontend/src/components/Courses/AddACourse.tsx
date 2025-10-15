@@ -1,16 +1,18 @@
 'use client'
-import { AiOutlineClose } from "react-icons/ai";
-import HoverEffect from "../HoverEffect";
-import RightSide from "../utils/RightSide";
 import { clsx } from "clsx";
 import { useEffect, useState } from "react";
-import useGQL from "@/lib/useGQL";
+import { AiOutlineClose } from "react-icons/ai";
 import { IoIosInformationCircleOutline } from "react-icons/io";
-import { api } from "@/lib/useApi";
 import { LuMinus, LuPlus } from "react-icons/lu";
-import DropDown2 from "../utils/DropDown2";
+
+import HoverEffect from "../HoverEffect";
 import { termIdInterface } from "../interface";
+import DropDown2 from "../utils/DropDown2";
+import RightSide from "../utils/RightSide";
 import { getCurrentTermId, getTermDistance } from "../utils/termUtils";
+
+import { api } from "@/lib/useApi";
+import useGQL from "@/lib/useGQL";
 
 type OptionsInterface = {
     code: string;
@@ -142,8 +144,8 @@ export default function AddACourse({ className, close, updatePage, termId, termO
 
     function filterSectionOptions(sectionPhrase: string) {
         if (sectionPhrase === '') return sectionOptions;
-        let phraseList = sectionPhrase.replace(/[^A-Za-z0-9]/g, " ").replace(/\s+/g, " ").toLowerCase().trim().split(" ")
-        let res: SectionInterface[] = []
+        const phraseList = sectionPhrase.replace(/[^A-Za-z0-9]/g, " ").replace(/\s+/g, " ").toLowerCase().trim().split(" ")
+        const res: SectionInterface[] = []
         sectionOptions.forEach(section => {
             for (let i = 0; i < phraseList.length; ++i) {
                 const phrase = phraseList[i];

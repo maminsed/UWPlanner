@@ -57,7 +57,7 @@ export default function Semester({
             }
           }}
           viewCourse={() => {
-            viewCourse({ courseId, termId });
+            viewCourse({ courseId, termId, courseName: course_dict.get(courseId) || '' });
           }}
           deleteCourse={() => deleteCourse(courseId, course_dict.get(courseId)!.toUpperCase())}
         />

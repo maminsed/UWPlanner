@@ -45,8 +45,7 @@ def populate_courses():
 
 @courses_bp.route("/get_user_sections", methods=["POST"])
 def get_user_sections():
-    """Endpoint to retrieve the sections a user is enrolled in for a specific term.
-    """
+    """Endpoint to retrieve the sections a user is enrolled in for a specific term."""
     # Parse the incoming JSON request
     data = request.get_json()
     term_id = data.get("term_id")

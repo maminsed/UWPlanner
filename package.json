@@ -1,5 +1,10 @@
 {
   "lint-staged": {
+    "frontend/**/*.{js,jsx,ts,tsx,json,css,md,html,yaml,yml}": [
+      "npm --prefix frontend run lint:fix --",
+      "npm --prefix frontend run lint:pretty --",
+      "npm --prefix frontend run lint --"
+    ],
     "backend/**/*.py": [
       "npm run ruff:format",
       "npm run ruff:check"

@@ -16,8 +16,8 @@ export type Location = {
 };
 
 export type CourseInformation = {
-  termName: string;
-  courseName: string;
+  termName?: string;
+  courseName?: string;
   termId: number;
   courseId: number;
 };

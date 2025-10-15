@@ -5,6 +5,7 @@ import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from 'react-icons/lu
 
 import AddACourse from '@/components/Courses/AddACourse';
 import BatchAddCourses from '@/components/Courses/BatchAddCourses';
+import CourseInfoPage from '@/components/Courses/CourseInfoPage';
 import DeleteCourse from '@/components/Courses/DeleteCourse';
 import Graph from '@/components/graph/Graph';
 import Lines from '@/components/graph/Lines';
@@ -51,12 +52,14 @@ function ClassPanel() {
   return <div className="">Hi</div>;
 }
 
-type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv';
+type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv' | 'course_info';
 
 export default function GraphPage() {
   const [overlay, setOverlay] = useState<overlayInterface>('none');
   const [connections, setConnections] = useState<[Pair, Pair][]>([]);
-  const [deleteCourse, setDeleteCourse] = useState<CourseInformation | undefined>(undefined);
+  const [overlayedCourseInfo, setOverlayedCourseInfo] = useState<CourseInformation | undefined>(
+    undefined,
+  );
   const gqlCourseSections = useRef<GQLCoursePreReq[] | null>(null);
 
   const [_, setVersion] = useState<number>(0); // version for locations and GQLCoursePreReq
@@ -96,9 +99,17 @@ export default function GraphPage() {
         );
       case 'delete_indiv':
         return (
-          deleteCourse && (
-            <DeleteCourse courseInfo={deleteCourse} close={closeFn} updatePage={updateCourse} />
+          overlayedCourseInfo && (
+            <DeleteCourse
+              courseInfo={overlayedCourseInfo}
+              close={closeFn}
+              updatePage={updateCourse}
+            />
           )
+        );
+      case 'course_info':
+        return (
+          overlayedCourseInfo && <CourseInfoPage close={closeFn} courseInfo={overlayedCourseInfo} />
         );
       default:
         return null;
@@ -119,14 +130,20 @@ export default function GraphPage() {
             getUpdated={update}
             updatePan={() => setUpdatePanRef(false)}
             locations={locations}
-            updateFunction={() => setVersion((v) => v + 1)}
+            updatePreReqs={() => {
+              setVersion((v) => v + 1);
+            }}
             deleteCourse={(courseInfo) => {
-              setDeleteCourse(courseInfo);
+              setOverlayedCourseInfo(courseInfo);
               setOverlay('delete_indiv');
             }}
             setCourseInformations={(courseInfo) => {
               gqlCourseSections.current = courseInfo;
               setVersion((v) => v + 1);
+            }}
+            viewCourse={(ci) => {
+              setOverlayedCourseInfo(ci);
+              setOverlay('course_info');
             }}
           />
           {/* {connections.map(([start,end],i)=>(

@@ -1,6 +1,6 @@
 import { RefObject } from 'react';
 
-import { ClassLocations, Location } from '../interface';
+import { ClassLocations, CourseInformation, Location } from '../interface';
 
 import Course from './Course';
 
@@ -10,8 +10,9 @@ type SemesterInterface = {
   class_lst: number[];
   course_dict: Map<number, string>;
   locations: RefObject<ClassLocations>;
-  updateFunction: () => void;
+  updatePreReqs: () => void;
   deleteCourse: (courseId: number, course_name: string) => void;
+  viewCourse: (ci: CourseInformation) => void;
 };
 
 function isLocEqual(loc1: Location | undefined, loc2: Location) {
@@ -30,8 +31,9 @@ export default function Semester({
   class_lst,
   course_dict,
   locations,
-  updateFunction,
+  updatePreReqs,
   deleteCourse,
+  viewCourse,
 }: SemesterInterface) {
   return (
     <div className="flex flex-col text-xl gap-6 items-center">
@@ -51,8 +53,11 @@ export default function Semester({
             const course = newLocs.get(courseId)!;
             if (!isLocEqual(course.get(termId), loc)) {
               course.set(termId, loc);
-              updateFunction();
+              updatePreReqs();
             }
+          }}
+          viewCourse={() => {
+            viewCourse({ courseId, termId });
           }}
           deleteCourse={() => deleteCourse(courseId, course_dict.get(courseId)!.toUpperCase())}
         />

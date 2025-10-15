@@ -9,6 +9,7 @@ type CourseInterface = {
   course_dict: Map<number, string>;
   courseId: number;
   deleteCourse: () => void;
+  viewCourse: () => void;
 };
 
 export default function Course({
@@ -16,6 +17,7 @@ export default function Course({
   courseId,
   course_dict,
   deleteCourse,
+  viewCourse,
 }: CourseInterface) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -45,7 +47,10 @@ export default function Course({
     <div ref={ref} className="rounded-r-xl bg-[#8AD5DF]/60 text-dark-green flex items-center">
       <div className="bg-dark-green h-full w-2" />
       <div className="flex flex-col justify-between h-full py-1 pl-1">
-        <LuMoveDiagonal className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-75" />
+        <LuMoveDiagonal
+          onClick={viewCourse}
+          className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-75"
+        />
         <LuCircleX
           onClick={deleteCourse}
           className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-75"

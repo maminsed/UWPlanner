@@ -14,9 +14,10 @@ type GraphInterface = {
   getUpdated: number;
   updatePan: () => void;
   locations: RefObject<ClassLocations>;
-  updateFunction: () => void;
+  updatePreReqs: () => void;
   deleteCourse: (courseInfo: CourseInformation) => void;
   setCourseInformations: (arg0: GQLCoursePreReq[]) => void;
+  viewCourse: (ci: CourseInformation) => void;
 };
 
 export default function Graph({
@@ -24,9 +25,10 @@ export default function Graph({
   getUpdated,
   updatePan,
   locations,
-  updateFunction,
+  updatePreReqs,
   deleteCourse,
   setCourseInformations,
+  viewCourse,
 }: GraphInterface) {
   // TODO:
   //       get the prerequisite chain
@@ -103,10 +105,11 @@ export default function Graph({
             class_lst={semester[1]}
             course_dict={courseDict}
             locations={locations}
-            updateFunction={updateFunction}
+            updatePreReqs={updatePreReqs}
             deleteCourse={(courseId, courseName) =>
               deleteCourse({ courseId, courseName, termId, termName })
             }
+            viewCourse={viewCourse}
           />
         );
       })}

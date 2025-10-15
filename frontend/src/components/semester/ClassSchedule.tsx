@@ -42,8 +42,9 @@ function translateSecToHour(time: number, checkBoxes: [string, boolean][][]) {
 function getVal(value: string, checkBoxes: [string, boolean][][]) {
   for (let r = 0; r < checkBoxes.length; ++r) {
     for (let c = 0; c < checkBoxes[r].length; ++c) {
-      if (checkBoxes[r][c][0].toLocaleLowerCase() == value.toLocaleLowerCase())
-        {return checkBoxes[r][c][1];}
+      if (checkBoxes[r][c][0].toLocaleLowerCase() == value.toLocaleLowerCase()) {
+        return checkBoxes[r][c][1];
+      }
     }
   }
   return true;

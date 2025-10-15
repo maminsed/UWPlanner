@@ -1,3 +1,3 @@
 export default function DiscussionsPage() {
-    return <div>Discussions Page</div>;
+  return <div>Discussions Page</div>;
 }

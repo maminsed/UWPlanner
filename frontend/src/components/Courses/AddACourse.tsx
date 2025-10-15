@@ -210,8 +210,9 @@ export default function AddACourse({
     const isTooFar = getTermDistance(currentTerm, termId) > 1;
     if (newStatus == 'idle' && termId > 1 && isTooFar) newStatus = 'section_excempt';
     if (newStatus == 'error' && termId > 1 && isTooFar) newStatus = 'section_excempt_error';
-    if (!isTooFar && newStatus.includes('section_excempt'))
-      {newStatus = newStatus === 'section_excempt' ? 'idle' : 'error';}
+    if (!isTooFar && newStatus.includes('section_excempt')) {
+      newStatus = newStatus === 'section_excempt' ? 'idle' : 'error';
+    }
 
     if (newStatus.includes('section_excempt') && chosenSections.length) setChosenSections([]);
     if (newStatus == 'section_excempt') setMessage(secExceptMsg);

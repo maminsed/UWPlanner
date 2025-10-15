@@ -5,12 +5,12 @@ import ExpandPanel from '@/components/utils/ExpandPanel'
 import { IoSwapHorizontalOutline } from "react-icons/io5";
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from "react-icons/lu";
 import { useEffect, useRef, useState } from "react";
-import AddACourse from "@/components/AddingCourses/AddACourse";
+import AddACourse from "@/components/Courses/AddACourse";
 import { ClassLocations, CourseInformation, gqlCourseSection, Location, Pair, termIdInterface } from "@/components/interface";
-import BatchAddCourses from "@/components/AddingCourses/BatchAddCourses";
+import BatchAddCourses from "@/components/Courses/BatchAddCourses";
 import { getCurrentTermId, getTermDistance } from "@/components/utils/termUtils";
 import Lines from "@/components/graph/Lines";
-import DeleteCourse from "@/components/AddingCourses/DeleteCourse";
+import DeleteCourse from "@/components/Courses/DeleteCourse";
 import { generateConnectionLines, preReq } from "@/components/utils/preReqUtils";
 
 function ControlPanel({ setOverlay }: { setOverlay: (arg0: overlayInterface) => void }) {

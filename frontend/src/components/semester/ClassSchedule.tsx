@@ -7,10 +7,10 @@ import { IoIosInformationCircleOutline } from "react-icons/io";
 import { LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from "react-icons/lu";
 import HoverEffect from "../HoverEffect";
 import useGQL from "@/lib/useGQL";
-import AddACourse from "../AddingCourses/AddACourse";
+import AddACourse from "../Courses/AddACourse";
 import RightSide from "../utils/RightSide";
 import { BiImport } from "react-icons/bi";
-import BatchAddCourses from "../AddingCourses/BatchAddCourses";
+import BatchAddCourses from "../Courses/BatchAddCourses";
 import { getCurrentTermId, getTermName, termOperation } from "../utils/termUtils";
 
 type ClassInterface = {

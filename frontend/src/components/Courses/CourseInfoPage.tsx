@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { LuTrash2, LuX } from 'react-icons/lu';
 
 import { CourseInformation } from '../interface';
+import { getTermName } from '../utils/termUtils';
 
 import useGQL from '@/lib/useGQL';
-
 
 type CourseInfoPageProps = {
   close: () => void;
@@ -14,11 +14,19 @@ type CourseInfoPageProps = {
   courseInfo: CourseInformation;
 };
 
+type PreReqInterface = {
+  is_corequisite: boolean;
+  prerequisite: {
+    code: string;
+    id: number;
+  };
+};
+
 type SectionInterface = {
   class_number: number;
   enrollment_capacity: number;
   enrollment_total: number;
-  termId: number;
+  term_id: number;
 };
 
 type detailedInfoType = {
@@ -33,12 +41,16 @@ type detailedInfoType = {
     filled_count?: number;
   };
   sections: SectionInterface[];
+  prerequisites: PreReqInterface[];
 };
 
 function Percentage({ value }: { value: number }) {
   return (
     <div className="w-full max-w-50 rounded-md h-4 border border-dark-green overflow-clip">
-      <div className="h-full bg-dark-green" style={{ width: `${value * 100}%` }} />
+      <div
+        className={clsx('h-full', value < 0.4 ? 'bg-red-900' : 'bg-dark-green')}
+        style={{ width: `${value * 100}%` }}
+      />
     </div>
   );
 }
@@ -60,12 +72,24 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
 
       <h3 className={subHeaderClsx}>Prerequisites: </h3>
       <ul className={pClsx}>
-        <li className={liClsx}>ello</li>
+        {detailedInfo.prerequisites.map((preReq) =>
+          !preReq.is_corequisite ? (
+            <li className={liClsx} key={preReq.prerequisite.id}>
+              {preReq.prerequisite.code.toUpperCase()}
+            </li>
+          ) : null,
+        )}
       </ul>
 
       <h3 className={subHeaderClsx}>Corequisites: </h3>
       <ul className={pClsx}>
-        <li className={liClsx}>ello</li>
+        {detailedInfo.prerequisites.map((preReq) =>
+          preReq.is_corequisite ? (
+            <li className={liClsx} key={preReq.prerequisite.id}>
+              {preReq.prerequisite.code.toUpperCase()}
+            </li>
+          ) : null,
+        )}
       </ul>
 
       <h3 className={subHeaderClsx}>Antirequisites: </h3>
@@ -73,9 +97,13 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
         <li className={liClsx}>ello</li>
       </ul>
 
-      <h3 className={subHeaderClsx}>Offerings: </h3>
+      <h3 className={subHeaderClsx}>Current Offerings: </h3>
       <ul className={pClsx}>
-        <li className={liClsx}>ello</li>
+        {detailedInfo.sections.map((sec) => (
+          <li className={liClsx} key={sec.term_id}>
+            {getTermName(sec.term_id)}
+          </li>
+        ))}
       </ul>
 
       <h3 className={subHeaderClsx}>UWFLOW Info: </h3>
@@ -113,9 +141,11 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           )}
         >
           <span>
-            Usefull{' '}
-            {detailedInfo.rating.useful ? `(${Math.round(detailedInfo.rating.useful * 100)}%)` : ''}
-            :{' '}
+            Usefull
+            {detailedInfo.rating.useful
+              ? ` (${Math.round(detailedInfo.rating.useful * 100)}%)`
+              : ''}
+            :
           </span>
           {detailedInfo.rating.liked ? <Percentage value={detailedInfo.rating.liked} /> : 'no info'}
         </div>
@@ -130,7 +160,8 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           <a
             className="underline"
             target="_blank"
-            href={`https://uwflow.com/course/${detailedInfo.name}`} rel="noreferrer"
+            href={`https://uwflow.com/course/${detailedInfo.name}`}
+            rel="noreferrer"
           >
             UWFLOW
           </a>
@@ -139,7 +170,8 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           <a
             className="underline"
             target="_blank"
-            href={`https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses`} rel="noreferrer"
+            href={`https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses`}
+            rel="noreferrer"
           >
             Undergraduate Calendar
           </a>
@@ -158,6 +190,9 @@ function LoadingVersion() {
 }
 
 export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProps) {
+  //TODO: get the actual prereqs from the correct websites
+  //      get as much links as you can
+  //      delete functionality
   const gql = useGQL();
   const [detailedInfo, setDetailedInfo] = useState<detailedInfoType>();
   const [status, setStatus] = useState<'Loading' | 'error' | 'idle'>('Loading');
@@ -185,6 +220,13 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
                   term_id
                   class_number
               }
+              prerequisites {
+                  is_corequisite
+                  prerequisite {
+                      code
+                      id
+                  }
+              }
           }
       }
       `;
@@ -194,7 +236,9 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
         setMessage('error in recieving course information');
         console.info(response);
       } else {
-        setDetailedInfo(response.data.course[0]);
+        const data: detailedInfoType = response.data.course[0];
+        data.sections = data.sections.sort((a, b) => b.term_id - a.term_id);
+        setDetailedInfo(data);
         setStatus('idle');
         setMessage('');
       }
@@ -211,7 +255,11 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
   return (
     <div className="bg-white py-4 px-4 rounded-xl shadow-2xl shadow-dark-green/10 max-w-180 w-[95%] max-h-[calc(100%-45*var(--spacing))] overflow-y-auto scroller overflow-x-clip">
       <div className="bg-white flex gap-1 px-1 rounded-md sticky top-0 right-0 justify-end max-w-max ml-auto">
-        <a target="_blank" href={`https://uwflow.com/course/${courseInfo.courseName}`} rel="noreferrer">
+        <a
+          target="_blank"
+          href={`https://uwflow.com/course/${courseInfo.courseName}`}
+          rel="noreferrer"
+        >
           FLOW
         </a>
         <LuTrash2 className="w-4 font-semibold h-auto cursor-pointer text-red-900" />

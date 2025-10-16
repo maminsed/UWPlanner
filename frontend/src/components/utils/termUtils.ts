@@ -24,6 +24,7 @@ export function getCurrentTermId() {
 export const termMap = { 1: 0, 5: 1, 9: 2 };
 
 export function getTermName(termId: number) {
+  // Outputs in: '<Season> <Year>'
   let res = '';
   if (termId % 10 == 5) {
     res += 'Spring ';

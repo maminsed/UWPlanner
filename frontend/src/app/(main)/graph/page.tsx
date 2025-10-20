@@ -134,6 +134,7 @@ export default function GraphPage() {
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
   const [connections, setConnections] = useState<LineType[]>([]);
   const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map());
+  const colourMap = useRef<Map<string, { bg: string; text: string }>>(new Map()); // map for course colours
   const gqlCourseSections = useRef<GQLCoursePreReq[] | null>(null);
 
   const [overlayedCourseInfo, setOverlayedCourseInfo] = useState<CourseInformation | undefined>(
@@ -229,10 +230,11 @@ export default function GraphPage() {
       <PanZoomCanvas updatePan={updatePanRef}>
         <CourseContext.Provider
           value={{
+            courseDict,
+            colourMap,
             isHidden: (termId, courseId) =>
               courseHiddenStatus.current.get(courseId)?.get(termId) || false,
 
-            courseDict,
             updateLocation: updateLocation,
             deleteCourse: (courseInfo) => {
               setOverlayedCourseInfo(courseInfo);

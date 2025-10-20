@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { LuEye, LuEyeOff, LuMoveDiagonal, LuTrash2 } from 'react-icons/lu';
 
 import { CourseInformation } from '../interface';
+import { generateRandomColours } from '../utils/colour';
 
 import { useCourseCtx } from './CourseCtx';
 
@@ -22,6 +23,7 @@ export default function Course({ courseId, termId }: CourseInterface) {
     deleteCourse,
     courseDict,
     updateLocation,
+    colourMap,
   } = useCourseCtx();
 
   useLayoutEffect(() => {
@@ -54,16 +56,26 @@ export default function Course({ courseId, termId }: CourseInterface) {
   const hiddenStat = isHidden(termId, courseId);
   const courseName = courseDict.get(courseId) || '';
   const courseInfo: CourseInformation = { courseId, termId, courseName };
+
+  const firstNonLetter = courseName.search(/[^a-zA-Z]/);
+  const striped = firstNonLetter === -1 ? courseName : courseName.slice(0, firstNonLetter);
+
+  if (!colourMap.current.has(striped)) {
+    colourMap.current.set(striped, generateRandomColours());
+  }
+  const bg = colourMap.current.get(striped)!.bg;
+  const text = colourMap.current.get(striped)!.text;
   return (
     <div
       ref={ref}
-      className={clsx(
-        'rounded-r-xl bg-[#8AD5DF]/70 text-dark-green',
-        hiddenStat ? 'opacity-40' : '',
-      )}
+      className={clsx('rounded-r-xl text-dark-green', hiddenStat ? 'opacity-40' : '')}
+      style={{
+        backgroundColor: bg,
+        color: text,
+      }}
     >
       <div className="w-full h-full flex items-center relative">
-        <div className="bg-dark-green h-full w-2" />
+        <div className="h-full w-2" style={{ background: text }} />
         <div className="flex flex-col justify-between h-full py-1 pl-1">
           <LuMoveDiagonal
             onClick={() => viewCourse(courseInfo)}
@@ -74,7 +86,9 @@ export default function Course({ courseId, termId }: CourseInterface) {
             className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
           />
         </div>
-        <span className="py-5 px-1 min-w-25">{courseName.toUpperCase()}</span>
+        <span className="py-5 px-1 min-w-25" style={{ color: text }}>
+          {courseName.toUpperCase()}
+        </span>
         {!hiddenStat ? (
           <LuEye
             onClick={() => setIsHidden(termId, courseId, true)}

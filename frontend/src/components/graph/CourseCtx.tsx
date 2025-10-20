@@ -1,9 +1,11 @@
-import { createContext, useContext } from 'react';
+import { createContext, RefObject, useContext } from 'react';
 
 import { CourseInformation, Location } from '../interface';
 
 type CourseCtx = {
   courseDict: Map<number, string>;
+  colourMap: RefObject<Map<string, { bg: string; text: string }>>;
+
   isHidden: (termId: number, courseId: number) => boolean;
   updateLocation: number;
 
@@ -18,6 +20,8 @@ type CourseCtx = {
 export const CourseContext = createContext<CourseCtx>({
   // Course Informatoin
   courseDict: new Map(),
+  colourMap: { current: new Map() },
+
   isHidden: () => false,
   updateLocation: -1,
   // Cuorse Operations

@@ -282,7 +282,7 @@ export default function AddACourse({
         </p>
         {!termId && termOptions && (
           <label className="block text-lg">
-            Term Id:
+            Term:
             <DropDown2<termIdInterface>
               currentValue={actualTermId}
               valueFunction={(v) => v.display}

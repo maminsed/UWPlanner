@@ -8,6 +8,13 @@ export type Pair = {
   y: number;
 };
 
+export type LineType = {
+  startLoc: Pair;
+  endLoc: Pair;
+  startCourse: CourseInformation;
+  endCourse: CourseInformation;
+};
+
 export type Location = {
   left: number;
   top: number;
@@ -17,7 +24,7 @@ export type Location = {
 
 export type CourseInformation = {
   termName?: string;
-  courseName: string;
+  courseName?: string;
   termId: number;
   courseId: number;
 };

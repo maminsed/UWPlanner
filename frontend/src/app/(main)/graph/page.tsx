@@ -14,8 +14,8 @@ import {
   ClassLocations,
   CourseInformation,
   GQLCoursePreReq,
+  LineType,
   Location,
-  Pair,
   termIdInterface,
 } from '@/components/interface';
 import ExpandPanel from '@/components/utils/ExpandPanel';
@@ -126,7 +126,7 @@ export default function GraphPage() {
   //       the user can choose which course prereqs to see
   const [overlay, setOverlay] = useState<overlayInterface>('none');
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
-  const [connections, setConnections] = useState<[Pair, Pair][]>([]);
+  const [connections, setConnections] = useState<LineType[]>([]);
   const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map());
   const gqlCourseSections = useRef<GQLCoursePreReq[] | null>(null);
 
@@ -272,7 +272,7 @@ export default function GraphPage() {
                     <div className="aspect-square w-2 z-20 rounded-full bg-amber-900 absolute" style={{left:end.x,top:end.y}}/>
                 </div>
             ))} */
-            <Lines connections={connections} />
+            <Lines connections={connections} hiddenStatus={courseHiddenStatus.current} />
           ) : (
             ''
           )}

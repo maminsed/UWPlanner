@@ -30,7 +30,6 @@ export default function Course({ courseId, termId }: CourseInterface) {
     const item = ref.current;
     if (!item) return;
     const update = () => {
-      console.log('HI');
       setLocation(
         {
           left: item!.offsetLeft,

@@ -85,12 +85,29 @@ export default function Graph({
     initialSetup();
   }, [getUpdated]);
 
+  function canSwapRight(i: number) {
+    if (i < 0 || i + 1 >= path.length) return false;
+    const currSem = path[i][0].toLowerCase();
+    const nextSem = path[i + 1][0].toLowerCase();
+    return currSem.includes('wt') || currSem == 'off' || nextSem.includes('wt') || nextSem == 'off';
+  }
+
   return (
     <div className="flex gap-6 p-8">
       {path.map((semester, i) => {
         const termId = termOperation(startedTerm, i);
         const termName = `${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`;
-        return <Semester key={i} semester={termName} termId={termId} class_lst={semester[1]} />;
+
+        return (
+          <Semester
+            key={i}
+            semester={termName}
+            termId={termId}
+            class_lst={semester[1]}
+            canSwapRight={canSwapRight(i)}
+            canSwapLeft={canSwapRight(i - 1)}
+          />
+        );
       })}
     </div>
   );

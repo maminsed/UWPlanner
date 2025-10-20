@@ -1,63 +1,85 @@
 'use client';
+import { clsx } from 'clsx';
 import { useLayoutEffect, useRef } from 'react';
-import { LuMoveDiagonal, LuTrash2 } from 'react-icons/lu';
+import { LuEye, LuEyeOff, LuMoveDiagonal, LuTrash2 } from 'react-icons/lu';
 
-import { Location } from '../interface';
+import { CourseInformation } from '../interface';
+
+import { useCourseCtx } from './CourseCtx';
 
 type CourseInterface = {
-  setLocation: (arg0: Location) => void;
-  course_dict: Map<number, string>;
   courseId: number;
-  deleteCourse: () => void;
-  viewCourse: () => void;
+  termId: number;
 };
 
-export default function Course({
-  setLocation,
-  courseId,
-  course_dict,
-  deleteCourse,
-  viewCourse,
-}: CourseInterface) {
+export default function Course({ courseId, termId }: CourseInterface) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const { setLocation, isHidden, setIsHidden, viewCourse, deleteCourse, courseDict } =
+    useCourseCtx();
 
   useLayoutEffect(() => {
     const item = ref.current;
     if (!item) return;
     const update = () => {
-      setLocation({
-        left: item!.offsetLeft,
-        top: item!.offsetTop,
-        width: item!.offsetWidth,
-        height: item!.offsetHeight,
-      });
+      setLocation(
+        {
+          left: item!.offsetLeft,
+          top: item!.offsetTop,
+          width: item!.offsetWidth,
+          height: item!.offsetHeight,
+        },
+        termId,
+        courseId,
+      );
     };
     update();
     const ro = new ResizeObserver(update);
-    const id = setTimeout(update, 100);
+    // const id = setTimeout(update, 100);
 
     ro.observe(item);
     return () => {
       ro.disconnect();
-      clearTimeout(id);
+      // clearTimeout(id);
     };
   }, []);
 
+  const hiddenStat = isHidden(termId, courseId);
+  const courseName = courseDict.get(courseId) || '';
+  const courseInfo: CourseInformation = { courseId, termId, courseName };
   return (
-    <div ref={ref} className="rounded-r-xl bg-[#8AD5DF]/60 text-dark-green flex items-center">
-      <div className="bg-dark-green h-full w-2" />
-      <div className="flex flex-col justify-between h-full py-1 pl-1">
-        <LuMoveDiagonal
-          onClick={viewCourse}
-          className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-150"
-        />
-        <LuTrash2
-          onClick={deleteCourse}
-          className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
-        />
+    <div
+      ref={ref}
+      className={clsx(
+        'rounded-r-xl bg-[#8AD5DF]/70 text-dark-green',
+        hiddenStat ? 'opacity-40' : '',
+      )}
+    >
+      <div className="w-full h-full flex items-center relative">
+        <div className="bg-dark-green h-full w-2" />
+        <div className="flex flex-col justify-between h-full py-1 pl-1">
+          <LuMoveDiagonal
+            onClick={() => viewCourse(courseInfo)}
+            className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-150"
+          />
+          <LuTrash2
+            onClick={() => deleteCourse(courseInfo)}
+            className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
+          />
+        </div>
+        <span className="py-5 px-1 min-w-25">{courseName.toUpperCase()}</span>
+        {!hiddenStat ? (
+          <LuEye
+            onClick={() => setIsHidden(termId, courseId, true)}
+            className="h-auto w-[0.9rem] absolute top-1 right-2 hover:text-teal-950 cursor-pointer duration-150"
+          />
+        ) : (
+          <LuEyeOff
+            onClick={() => setIsHidden(termId, courseId, false)}
+            className="h-auto w-[0.9rem] absolute top-1 right-2 hover:text-teal-950 cursor-pointer duration-150"
+          />
+        )}
+        <div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />
       </div>
-      <span className="py-5 px-1 min-w-25">{course_dict.get(courseId)?.toUpperCase()}</span>
-      <div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />
     </div>
   );
 }

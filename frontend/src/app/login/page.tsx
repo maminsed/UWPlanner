@@ -4,6 +4,7 @@ import AuthForm from '@/components/AuthForm-Login';
 import PublicNavbar from '@/components/PublicNavbar';
 
 export default function Landing() {
+  // TODO: if they are already logged in, then there is no need to get their credentials
   return (
     <section className="overflow-x-hidden flex justify-center items-center h-dvh w-dvw relative">
       <Image

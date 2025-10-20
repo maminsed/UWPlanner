@@ -34,7 +34,7 @@ export type GQLCoursePreReq = {
   }[];
 };
 
-export type ClassLocations = Map<number, Map<number, Location>>;
+export type ClassLocations = Map<number, Map<number, Location>>; // CourseId, termId, Location
 
 export type DaysOfWeek = 'M' | 'T' | 'W' | 'Th' | 'F';
 

@@ -1,7 +1,7 @@
 'use client';
 import { RefObject, useEffect, useState } from 'react';
 
-import { ClassLocations, CourseInformation, GQLCoursePreReq, termIdInterface } from '../interface';
+import { GQLCoursePreReq, termIdInterface } from '../interface';
 import { getTermName, termOperation } from '../utils/termUtils';
 
 import Semester from './Semester';
@@ -13,22 +13,16 @@ type GraphInterface = {
   pathRef: RefObject<termIdInterface[]>;
   getUpdated: number;
   updatePan: () => void;
-  locations: RefObject<ClassLocations>;
-  updatePreReqs: () => void;
-  deleteCourse: (courseInfo: CourseInformation) => void;
   setCourseInformations: (arg0: GQLCoursePreReq[]) => void;
-  viewCourse: (ci: CourseInformation) => void;
+  setCourseDict: (newMap: Map<number, string>) => void;
 };
 
 export default function Graph({
   pathRef,
   getUpdated,
   updatePan,
-  locations,
-  updatePreReqs,
-  deleteCourse,
   setCourseInformations,
-  viewCourse,
+  setCourseDict,
 }: GraphInterface) {
   // TODO:
   //       get the prerequisite chain
@@ -37,7 +31,6 @@ export default function Graph({
   const gql = useGQL();
   const [path, setPath] = useState<[string, number[]][]>([]);
   const [startedTerm, setStartedTerm] = useState<number>(0);
-  const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     async function initialSetup() {
@@ -53,6 +46,7 @@ export default function Graph({
         const termIds: termIdInterface[] = [];
         const course_ids = new Set<number>();
         response.path.forEach((semester: [string, number[]], i: number) => {
+          // [1A, CourseName]
           semester[1].forEach((course) => {
             if (!course_ids.has(course)) course_ids.add(course);
           });
@@ -97,21 +91,7 @@ export default function Graph({
       {path.map((semester, i) => {
         const termId = termOperation(startedTerm, i);
         const termName = `${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`;
-        return (
-          <Semester
-            key={i}
-            semester={termName}
-            termId={termId}
-            class_lst={semester[1]}
-            course_dict={courseDict}
-            locations={locations}
-            updatePreReqs={updatePreReqs}
-            deleteCourse={(courseId, courseName) =>
-              deleteCourse({ courseId, courseName, termId, termName })
-            }
-            viewCourse={viewCourse}
-          />
-        );
+        return <Semester key={i} semester={termName} termId={termId} class_lst={semester[1]} />;
       })}
     </div>
   );

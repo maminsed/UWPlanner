@@ -1,7 +1,7 @@
 'use client';
 import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { IoSwapHorizontalOutline } from 'react-icons/io5';
-import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuShare } from 'react-icons/lu';
+import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuRefreshCcw, LuShare } from 'react-icons/lu';
 
 import AddACourse from '@/components/Courses/AddACourse';
 import BatchAddCourses from '@/components/Courses/BatchAddCourses';
@@ -26,9 +26,11 @@ import { getCurrentTermId, getTermDistance } from '@/components/utils/termUtils'
 function ControlPanel({
   setOverlay,
   preReq,
+  reloadCourses,
 }: {
   setOverlay: (arg0: overlayInterface) => void;
   preReq: { isHidden: boolean; changeSatus: () => void };
+  reloadCourses: () => void;
 }) {
   return (
     <div className="text-light-green px-3 py-2 flex flex-col items-start text-sm gap-1">
@@ -47,6 +49,10 @@ function ControlPanel({
       </button>
       <button className="cursor-pointer" onClick={preReq.changeSatus}>
         <LuMinus className="inline-block" /> {preReq.isHidden ? 'Show' : 'Hide'} Prereqs
+      </button>
+      <button className="cursor-pointer" onClick={reloadCourses}>
+        <LuRefreshCcw className="inline-block mr-1" />
+        Reload Courses
       </button>
       <button className="cursor-pointer">
         <LuShare className="inline-block mr-1" />
@@ -139,13 +145,14 @@ export default function GraphPage() {
   const [_1, setVersion] = useState<number>(0); // version for locations and GQLCoursePreReq
   const [update, setUpdate] = useState<number>(0); // update for the graph's courses
   const [updatePanRef, setUpdatePanRef] = useState<boolean>(true); // update Pan
+  const [updateLocation, setUpdateLocation] = useState<number>(0);
 
   const pathRef = useRef<termIdInterface[]>([]);
   const locations = useRef<ClassLocations>(new Map()); // courseId: termId: Location
 
   function updateCourse() {
     setOverlay('none');
-    setUpdate((prev) => prev + 1);
+    setUpdate((v) => v + 1);
   }
 
   useEffect(() => {
@@ -172,6 +179,7 @@ export default function GraphPage() {
     });
     courseHiddenStatus.current = newCourseHiddenStatus;
     setClassPanelVersion((v) => v + 1);
+    setUpdateLocation((v) => v + 1);
   }, [gqlCourseSections.current]);
 
   function getOverLay() {
@@ -225,6 +233,7 @@ export default function GraphPage() {
               courseHiddenStatus.current.get(courseId)?.get(termId) || false,
 
             courseDict,
+            updateLocation: updateLocation,
             deleteCourse: (courseInfo) => {
               setOverlayedCourseInfo(courseInfo);
               setOverlay('delete_indiv');
@@ -285,6 +294,9 @@ export default function GraphPage() {
             preReq={{
               isHidden: !showPreReq,
               changeSatus: () => setShowPreReq((v) => !v),
+            }}
+            reloadCourses={() => {
+              setUpdate((v) => v + 1);
             }}
           />
         </ExpandPanel>

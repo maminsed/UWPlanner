@@ -14,13 +14,21 @@ type CourseInterface = {
 
 export default function Course({ courseId, termId }: CourseInterface) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const { setLocation, isHidden, setIsHidden, viewCourse, deleteCourse, courseDict } =
-    useCourseCtx();
+  const {
+    setLocation,
+    isHidden,
+    setIsHidden,
+    viewCourse,
+    deleteCourse,
+    courseDict,
+    updateLocation,
+  } = useCourseCtx();
 
   useLayoutEffect(() => {
     const item = ref.current;
     if (!item) return;
     const update = () => {
+      console.log('HI');
       setLocation(
         {
           left: item!.offsetLeft,
@@ -41,7 +49,7 @@ export default function Course({ courseId, termId }: CourseInterface) {
       ro.disconnect();
       // clearTimeout(id);
     };
-  }, []);
+  }, [updateLocation]);
 
   const hiddenStat = isHidden(termId, courseId);
   const courseName = courseDict.get(courseId) || '';

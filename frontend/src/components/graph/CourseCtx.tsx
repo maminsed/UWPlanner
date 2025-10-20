@@ -3,9 +3,10 @@ import { createContext, useContext } from 'react';
 import { CourseInformation, Location } from '../interface';
 
 type CourseCtx = {
-  isHidden: (termId: number, courseId: number) => boolean;
-
   courseDict: Map<number, string>;
+  isHidden: (termId: number, courseId: number) => boolean;
+  updateLocation: number;
+
   deleteCourse: (courseInformation: CourseInformation) => void;
   viewCourse: (courseInformation: CourseInformation) => void;
   setIsHidden: (termId: number, courseId: number, value: boolean) => void;
@@ -18,6 +19,7 @@ export const CourseContext = createContext<CourseCtx>({
   // Course Informatoin
   courseDict: new Map(),
   isHidden: () => false,
+  updateLocation: -1,
   // Cuorse Operations
   setCourseDict: () => {},
   deleteCourse: () => {},

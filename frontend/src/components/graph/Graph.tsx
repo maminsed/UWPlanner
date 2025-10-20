@@ -25,7 +25,6 @@ export default function Graph({
   setCourseDict,
 }: GraphInterface) {
   // TODO:
-  //       get the prerequisite chain
   //       do something with the centering
   const backend = useApi();
   const gql = useGQL();
@@ -57,21 +56,21 @@ export default function Graph({
         updatePan();
 
         const GQL_QUERY = `
-                    query Course($course_ids: [Int!]!) {
-                        course(where: { id: { _in: $course_ids } }) {
-                            code
-                            id
-                            name
-                            coreqs
-                            prereqs
-                            antireqs
-                            prerequisites {
-                                prerequisite_id
-                                is_corequisite
-                            }
-                        }
-                    }
-                `;
+          query Course($course_ids: [Int!]!) {
+              course(where: { id: { _in: $course_ids } }) {
+                  code
+                  id
+                  name
+                  coreqs
+                  prereqs
+                  antireqs
+                  prerequisites {
+                      prerequisite_id
+                      is_corequisite
+                  }
+              }
+          }
+      `;
 
         const gql_response = await gql(GQL_QUERY, { course_ids: Array.from(course_ids) });
         const newMap = new Map<number, string>();

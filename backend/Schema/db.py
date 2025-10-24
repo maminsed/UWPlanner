@@ -258,6 +258,7 @@ class Course(db.Model):
     code: Mapped[str] = mapped_column(db.String())  # e.g. MATH
     name: Mapped[str] = mapped_column(db.String(), default="")  # e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
+    url: Mapped[str] = mapped_column(db.String(), nullable=True)
 
     prereqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")

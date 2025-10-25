@@ -57,6 +57,29 @@ def get_course_data():  # You can update this to use JSON
     return errors
 
 
+# def get_course_reqs():
+#     classGroupCSS = "div.style__collapsibleBox___15waq"
+#     expandButtonCSS = "h2.style__title___3KgQi"
+#     originalClassCSS = "style__columns___1xpfv"
+
+#     service = Service(ChromeDriverManager().install())
+#     driver = webdriver.Chrome(service=service)
+#     driver.get("https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses")
+#     time.sleep(2)
+#     classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
+#     counter = 1
+#     for cg in classGroups:
+#         expandButton = cg.find_element(By.CSS_SELECTOR, expandButtonCSS)
+#         expandButton.click()
+#         groupName = expandButton.text()
+#         print(groupName)
+#         time.sleep(0.1)
+#         counter+=1
+#         if counter >= 3:
+#             break
+#     driver.quit()
+
+
 """
 def get_course_data_backup():
     response = requests.get(f"{os.getenv("UW_API_URL")}/Courses/1255", headers={"X-API-KEY": os.getenv("UW_API_KEY")})

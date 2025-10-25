@@ -11,7 +11,6 @@ from backend.Auth import verify as verify_jwt
 from backend.utils.path import term_distance, translate_path
 
 from ..Schema import Semester, Users, db
-from .extraction import get_course_data
 
 load_dotenv()
 courses_bp = Blueprint("Courses", __name__)
@@ -39,7 +38,7 @@ def verify():
 def populate_courses():
     """Endpoint to populate the courses database. It's used in case UWFLOW is down"""
     return "", 204  # remove this incase anything broke
-    errors = get_course_data()
+    # errors = get_course_data()
     return jsonify({"errors": errors}), 200
 
 

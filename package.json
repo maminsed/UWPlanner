@@ -5,7 +5,7 @@
       "npm --prefix frontend run lint:fix --"
     ],
     "backend/**/*.py": [
-      "npm run ruff:format",
+      "ruff format",
       "npm run ruff:check"
     ]
   },

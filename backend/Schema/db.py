@@ -259,6 +259,8 @@ class Course(db.Model):
     name: Mapped[str] = mapped_column(db.String(), default="")  # e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
     url: Mapped[str] = mapped_column(db.String(), nullable=True)
+    groupName: Mapped[str] = mapped_column(db.String(), server_default="")
+    groupCode: Mapped[str] = mapped_column(db.String(), server_default="")
 
     courseInfo: Mapped[str] = mapped_column(db.String(), default="", server_default="")
 

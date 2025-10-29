@@ -1,3 +1,4 @@
+import json
 import re
 import time
 
@@ -13,14 +14,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from backend.Schema import Course
+from backend.Schema import Course, db
 
 delayAmount = 15
 
 
 def bringIntoView(driver: WebDriver, element: WebElement):
     driver.execute_script(
-        "window.scrollTo({top: arguments[0].getBoundingClientRect().top});",  # , behavior: 'smooth'  # "arguments[0].scrollIntoView({block:'start'});",
+        "window.scrollTo({top: arguments[0].getBoundingClientRect().top + window.pageYOffset + 4, behavior: 'instant' });",  # , behavior: 'smooth'  # "arguments[0].scrollIntoView({block:'start'});",
         element,
     )
     time.sleep(1)
@@ -55,6 +56,7 @@ conditionDict: dict[str, tuple[str, str]] = {
         "both",
     ),
     "must have completed the following": ("all", "complete"),
+    "must have completed at least 2 of the following": ("two", "complete"),
     "complete all of the following": ("all", "complete"),
     "completed or concurrently enrolled in the following": ("all", "both"),
     "completed or concurrently enrolled in": ("all", "both"),
@@ -67,6 +69,10 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
     ),
     (
         r"^earned a minimum grade of ([0-9]*)% in any of the following",
+        ("any", "complete"),
+    ),
+    (
+        r"^earned a minimum grade of ([0-9]*)% in at least 1 of the following",
         ("any", "complete"),
     ),
 ]
@@ -186,7 +192,7 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
     """return:
     ListInfo: {
         containerType: str #only if it's first level and e.g. Prerequisite
-        conditionedOn: 'all' | 'any' | 'not_all' | 'not_any' | 'final' | 'unclassified',
+        conditionedOn: 'all' | 'any' | 'two' | 'not_all' | 'not_any' | 'final' | 'unclassified',
         conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none'
         conditionText: str,
         appliesTo: ListInfo[]
@@ -321,16 +327,16 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
                 course_json = extract_non_ul_container_info(container, course.code)
             courseInfo[header] = course_json
         # Adding course information to db
-        # course.courseInfo = json.dumps(courseInfo)
-        # course.url = curr["url"]
-        # course.groupName = group_name
-        # course.groupCode = group_code
-        # db.session.add(course)
-        # db.session.flush()
+        course.courseInfo = json.dumps(courseInfo)
+        course.url = curr["url"]
+        course.groupName = group_name
+        course.groupCode = group_code
+        db.session.add(course)
+        db.session.flush()
 
         driver.close()
         driver.switch_to.window(main_window)
-    # db.session.commit()
+    db.session.commit()
 
 
 def get_course_reqs():
@@ -373,8 +379,8 @@ def get_course_reqs():
     )
     # classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
     print(f"Hi, were starting with {len(classGroups)} cgs")
-    offset = 1
-    limit = 1
+    offset = 50
+    limit = 25
     i = 0
     groups = {}
     try:
@@ -436,5 +442,5 @@ def get_course_reqs():
             "differentConditionText": differentConditionText,
             "differntHeaders": differentHeaders,
             "differentErrors": differentErrors,
-            "i": i,
+            "i": i + offset,
         }

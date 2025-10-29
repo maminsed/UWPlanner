@@ -1,4 +1,3 @@
-import json
 import re
 import time
 
@@ -14,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from backend.Schema import Course, db
+from backend.Schema import Course
 
 delayAmount = 15
 
@@ -40,14 +39,14 @@ def getLinkAttr(link: WebElement):
 # conditionText: (conditionedOn, conditionStatus)
 conditionDict: dict[str, tuple[str, str]] = {
     "not completed any of the following": ("not_any", "complete"),
-    "Earned a minimum grade of 60% in each of the following": ("all", "complete"),
     "not completed nor concurrently enrolled in": ("not_any", "both"),
     "not completed nor concurrently enrolled in the following": ("not_any", "both"),
     "not completed nor concurrently enrolled in any of the following": (
         "not_any",
         "both",
     ),
-    "Earned a minimum grade of 60% in any of the following": ("any", "complete"),
+    "not completed or concurrently enrolled in the following": ("not_any", "both"),
+    "not completed": ("not_any", "complete"),
     "must have completed 1 of the following": ("any", "complete"),
     "must have completed at least 1 of the following": ("any", "complete"),
     "complete 1 of the following": ("any", "complete"),
@@ -60,6 +59,17 @@ conditionDict: dict[str, tuple[str, str]] = {
     "completed or concurrently enrolled in the following": ("all", "both"),
     "completed or concurrently enrolled in": ("all", "both"),
 }
+
+conditionRegExList: list[tuple[str, tuple[str, str]]] = [
+    (
+        r"^earned a minimum grade of ([0-9]*)% in each of the following",
+        ("all", "complete"),
+    ),
+    (
+        r"^earned a minimum grade of ([0-9]*)% in any of the following",
+        ("any", "complete"),
+    ),
+]
 
 
 def safe_find_element(element: WebElement, by, value):
@@ -139,8 +149,15 @@ def extractNested(startPoint: WebElement, courseCode: str, containerType: str):
             )
             currRes["conditionText"] = conditionText
             # extract status and type
-            differentSectionTypes[currRes["conditionText"]] = courseCode
-            if conditionText.lower() in conditionDict:
+            differentSectionTypes[conditionText] = courseCode
+            found = []
+            for regex, condition in conditionRegExList:
+                if re.match(regex, conditionText.lower()):
+                    found = condition
+                    break
+            if len(found):
+                currRes["conditionedOn"], currRes["conditionStatus"] = found
+            elif conditionText.lower() in conditionDict:
                 currRes["conditionedOn"], currRes["conditionStatus"] = conditionDict[
                     conditionText.lower()
                 ]
@@ -304,16 +321,16 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
                 course_json = extract_non_ul_container_info(container, course.code)
             courseInfo[header] = course_json
         # Adding course information to db
-        course.courseInfo = json.dumps(courseInfo)
-        course.url = curr["url"]
-        course.groupName = group_name
-        course.groupCode = group_code
-        db.session.add(course)
-        db.session.flush()
+        # course.courseInfo = json.dumps(courseInfo)
+        # course.url = curr["url"]
+        # course.groupName = group_name
+        # course.groupCode = group_code
+        # db.session.add(course)
+        # db.session.flush()
 
         driver.close()
         driver.switch_to.window(main_window)
-    db.session.commit()
+    # db.session.commit()
 
 
 def get_course_reqs():
@@ -357,7 +374,7 @@ def get_course_reqs():
     # classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
     print(f"Hi, were starting with {len(classGroups)} cgs")
     offset = 1
-    limit = 4
+    limit = 1
     i = 0
     groups = {}
     try:

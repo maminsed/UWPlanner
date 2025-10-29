@@ -260,9 +260,7 @@ class Course(db.Model):
     description: Mapped[str] = mapped_column(db.String(), default="")
     url: Mapped[str] = mapped_column(db.String(), nullable=True)
 
-    prereqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
-    coreqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
-    antireqs: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    courseInfo: Mapped[str] = mapped_column(db.String(), default="", server_default="")
 
 
 class Semester(db.Model):

@@ -57,6 +57,8 @@ conditionDict: dict[str, tuple[str, str]] = {
     ),
     "must have completed the following": ("all", "complete"),
     "must have completed at least 2 of the following": ("two", "complete"),
+    "must have completed at least 3 of the following": ("three", "complete"),
+    "must have completed at least 4 of the following": ("four", "complete"),
     "complete all of the following": ("all", "complete"),
     "completed or concurrently enrolled in the following": ("all", "both"),
     "completed or concurrently enrolled in": ("all", "both"),
@@ -192,7 +194,7 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
     """return:
     ListInfo: {
         containerType: str #only if it's first level and e.g. Prerequisite
-        conditionedOn: 'all' | 'any' | 'two' | 'not_all' | 'not_any' | 'final' | 'unclassified',
+        conditionedOn: 'all' | 'any' | 'two' | 'three' | 'four' | 'not_all' | 'not_any' | 'final' | 'unclassified',
         conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none'
         conditionText: str,
         appliesTo: ListInfo[]
@@ -379,8 +381,8 @@ def get_course_reqs():
     )
     # classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
     print(f"Hi, were starting with {len(classGroups)} cgs")
-    offset = 50
-    limit = 25
+    offset = 100
+    limit = 27
     i = 0
     groups = {}
     try:

@@ -29,11 +29,20 @@ def bringIntoView(driver: WebDriver, element: WebElement):
 
 def getLinkAttr(link: WebElement):
     url = link.get_attribute("href") or ""
-    urlPrefix = "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/"
+    urlPrefixUnderGrad = (
+        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
+    )
+    urlPrefixGrad = "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/"
     linkType = "external"
-    if url.startswith(urlPrefix):
-        typeEndIndex = url.find("/", len(urlPrefix))
-        linkType = url[len(urlPrefix) : typeEndIndex]
+
+    if url.startswith(urlPrefixUnderGrad):
+        typeEndIndex = url.find("/", len(urlPrefixUnderGrad))
+        linkType = url[len(urlPrefixUnderGrad) : typeEndIndex]
+
+    if url.startswith(urlPrefixGrad):
+        typeEndIndex = url.find("/", len(urlPrefixGrad))
+        linkType = url[len(urlPrefixGrad) : typeEndIndex]
+
     return {"value": link.text, "url": url, "linkType": linkType}
 
 
@@ -232,6 +241,10 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
     # if we werent then we are one of the children
     else:
         results = extractNested(section, courseCode, containerType)
+        if len(results) == 0:
+            results = extract_non_ul_container_info(
+                section, courseCode
+            )  # TODO: test MSE121
         if len(results) == 1:
             res = results[0]
         else:
@@ -249,6 +262,7 @@ differentSectionTypes = {}
 differentHeaders = {}
 differentErrors = []
 differentConditionText = {}
+# differentCourseJsons = {}
 
 
 def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriver):
@@ -330,6 +344,7 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
             courseInfo[header] = course_json
         # Adding course information to db
         course.courseInfo = json.dumps(courseInfo)
+        # differentCourseJsons[course.code] = courseInfo
         course.url = curr["url"]
         course.groupName = group_name
         course.groupCode = group_code
@@ -349,7 +364,7 @@ def get_course_reqs():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
     driver.get(
-        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
+        "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/courses"
     )
     driver.maximize_window()
     wait = WebDriverWait(driver, delayAmount)
@@ -381,12 +396,12 @@ def get_course_reqs():
     )
     # classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
     print(f"Hi, were starting with {len(classGroups)} cgs")
-    offset = 100
-    limit = 27
+    offset = 50
+    limit = 40
     i = 0
     groups = {}
     try:
-        while i < min(limit, len(classGroupCSS)):
+        while i < min(limit, len(classGroupCSS) - offset):
             cg = classGroups[offset + i]
             i += 1
             updateGroup = {}
@@ -444,5 +459,6 @@ def get_course_reqs():
             "differentConditionText": differentConditionText,
             "differntHeaders": differentHeaders,
             "differentErrors": differentErrors,
+            # "differentCourseJsons": differentCourseJsons,
             "i": i + offset,
         }

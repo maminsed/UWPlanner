@@ -30,7 +30,7 @@ def bringIntoView(driver: WebDriver, element: WebElement):
 def getLinkAttr(link: WebElement):
     url = link.get_attribute("href") or ""
     urlPrefixUnderGrad = (
-        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
+        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/"
     )
     urlPrefixGrad = "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/"
     linkType = "external"
@@ -46,6 +46,11 @@ def getLinkAttr(link: WebElement):
     return {"value": link.text, "url": url, "linkType": linkType}
 
 
+"""
+NOTE:
+- additional conditionText: The following antirequisites are only for students in the Faculty of Mathematics: commst228
+
+"""
 # conditionText: (conditionedOn, conditionStatus)
 conditionDict: dict[str, tuple[str, str]] = {
     "not completed any of the following": ("not_any", "complete"),
@@ -56,6 +61,7 @@ conditionDict: dict[str, tuple[str, str]] = {
         "both",
     ),
     "not completed or concurrently enrolled in the following": ("not_any", "both"),
+    "not complete nor concurrently enrolled in the following": ("not_any", "both"),
     "not completed": ("not_any", "complete"),
     "must have completed 1 of the following": ("any", "complete"),
     "must have completed at least 1 of the following": ("any", "complete"),
@@ -64,6 +70,7 @@ conditionDict: dict[str, tuple[str, str]] = {
         "any",
         "both",
     ),
+    "must have completed": ("all", "complete"),
     "must have completed the following": ("all", "complete"),
     "must have completed at least 2 of the following": ("two", "complete"),
     "must have completed at least 3 of the following": ("three", "complete"),
@@ -144,8 +151,9 @@ def extract_non_ul_container_info(element: WebElement, courseCode: str):
     return res
 
 
+# startpoint has to be the ul
 def extractNested(startPoint: WebElement, courseCode: str, containerType: str):
-    listItemsCSS = ":scope > li"
+    listItemsCSS = ":scope li:not(:scope li li)"
 
     listItems = startPoint.find_elements(By.CSS_SELECTOR, listItemsCSS)
     res = []
@@ -194,6 +202,8 @@ def extractNested(startPoint: WebElement, courseCode: str, containerType: str):
         else:
             currRes = extract_non_ul_container_info(listItem, courseCode)
         res.append(currRes)
+    if not len(listItems):
+        differentErrors.append(f"{courseCode}-{containerType} does not have any nested")
     return res
 
 
@@ -202,7 +212,6 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
     # section has to be a top level ul
     """return:
     ListInfo: {
-        containerType: str #only if it's first level and e.g. Prerequisite
         conditionedOn: 'all' | 'any' | 'two' | 'three' | 'four' | 'not_all' | 'not_any' | 'final' | 'unclassified',
         conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none'
         conditionText: str,
@@ -263,6 +272,8 @@ differentHeaders = {}
 differentErrors = []
 differentConditionText = {}
 # differentCourseJsons = {}
+differentUpdated = []
+total = 0
 
 
 def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriver):
@@ -295,7 +306,7 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
         "cross-listed courses",
     ]
     main_window = driver.current_window_handle
-
+    counter = 0
     for course in courses:
         # getting course values
         curr = course_dict[course.code]
@@ -332,7 +343,7 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
                 links = container.find_elements(By.TAG_NAME, "a")
                 courseInfo[header] = [getLinkAttr(l) for l in links]
                 continue
-
+            counter += 1
             listVersion = safe_find_element(container, By.CSS_SELECTOR, sectionsTextCSS)
 
             if listVersion:
@@ -343,13 +354,18 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
                 course_json = extract_non_ul_container_info(container, course.code)
             courseInfo[header] = course_json
         # Adding course information to db
-        course.courseInfo = json.dumps(courseInfo)
         # differentCourseJsons[course.code] = courseInfo
-        course.url = curr["url"]
-        course.groupName = group_name
-        course.groupCode = group_code
-        db.session.add(course)
-        db.session.flush()
+        courseInfo = json.dumps(courseInfo)
+        global total
+        total += 1
+        if courseInfo != course.courseInfo:
+            differentUpdated.append(course.code)
+            course.courseInfo = courseInfo
+            db.session.add(course)
+            db.session.flush()
+        # course.url = curr["url"]
+        # course.groupName = group_name
+        # course.groupCode = group_code
 
         driver.close()
         driver.switch_to.window(main_window)
@@ -361,11 +377,16 @@ def get_course_reqs():
     expandButtonCSS = 'h2[class*="style__title___"]'
     linkContainerCSS = 'div[class*="style__columns___"]'
 
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service)
-    driver.get(
+    UNDERGRAD_LINK = (
+        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
+    )
+    GRAD_LINK = (
         "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/courses"
     )
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service)
+    driver.get(UNDERGRAD_LINK)
     driver.maximize_window()
     wait = WebDriverWait(driver, delayAmount)
     time.sleep(1)
@@ -395,19 +416,18 @@ def get_course_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
     # classGroups = driver.find_elements(By.CSS_SELECTOR, classGroupCSS)
-    print(f"Hi, were starting with {len(classGroups)} cgs")
-    offset = 50
-    limit = 40
+    offset = 100
+    limit = 27
     i = 0
     groups = {}
+    print(
+        f"Hi, were starting with {len(classGroups)} cgs - going up to {min(limit, len(classGroups) - offset)}"
+    )
     try:
-        while i < min(limit, len(classGroupCSS) - offset):
+        while i < min(limit, len(classGroups) - offset):
             cg = classGroups[offset + i]
             i += 1
             updateGroup = {}
-            # expandButton = WebDriverWait(cg, delayAmount).until(
-            #     EC.element_to_be_clickable((By.CSS_SELECTOR, expandButtonCSS))
-            # )
             expandButton = cg.find_element(By.CSS_SELECTOR, expandButtonCSS)
             # bringing the button into view
             bringIntoView(driver, expandButton)
@@ -447,18 +467,22 @@ def get_course_reqs():
             except Exception:
                 pass
             groups[group_name] = "close"
+        print("Done")
     except Exception as e:
         print(e)
         print("error occured")
     finally:
         if driver:
             driver.quit()
+        global total
         return {
             "groups": groups,
             "differentSectionTypes": differentSectionTypes,
             "differentConditionText": differentConditionText,
             "differntHeaders": differentHeaders,
-            "differentErrors": differentErrors,
+            "_differentErrors": differentErrors,
             # "differentCourseJsons": differentCourseJsons,
+            "differentUpdated": differentUpdated,
+            "_info": f"updated: {len(differentUpdated)} of {total} courses",
             "i": i + offset,
         }

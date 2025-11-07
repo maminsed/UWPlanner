@@ -6,7 +6,16 @@ from flask import Blueprint, g, jsonify, make_response, request
 
 from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
-from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
+from backend.Schema import (
+    Course,
+    Link,
+    Major,
+    Minor,
+    Sequence,
+    Specialization,
+    Users,
+    db,
+)
 from backend.utils.path import translate_path, translate_to_id
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
@@ -280,6 +289,24 @@ def get_all() -> tuple[str, int]:
             "specializations": specs,
         }
     ), 200
+
+
+@update_info.route("/get_course_reqs", methods=["POST"])
+def get_course_reqs() -> tuple[str, int]:
+    data = request.get_json()
+    course_codes: list[int] = data.get("course_codes") or []
+    print(course_codes)
+    db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
+    res = {}
+    for course in db_courses:
+        url = course.url or ""
+        try:
+            courseInfo = json.loads(course.courseInfo) if course.courseInfo else {}
+        except:
+            print("error in loading courseInfo")
+            courseInfo = {}
+        res[course.code] = {"url": url, "courseInfo": courseInfo}
+    return jsonify({"courses": res}), 200
 
 
 @update_info.route("/get_user_seq", methods=["GET"])

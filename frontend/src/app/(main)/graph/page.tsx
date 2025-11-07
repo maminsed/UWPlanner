@@ -161,7 +161,9 @@ export default function GraphPage() {
     if (!gqlCourseSections.current || !locations.current.size) return;
 
     // Generate connection lines for prerequisites and update the connections state
-    setConnections(generateConnectionLines(preReq(gqlCourseSections.current), locations.current));
+    setConnections(
+      generateConnectionLines(preReq(gqlCourseSections.current, courseDict), locations.current),
+    );
 
     // Clear the current hidden status map for courses
     const newCourseHiddenStatus: Map<number, Map<number, boolean>> = new Map();
@@ -213,10 +215,19 @@ export default function GraphPage() {
         );
       case 'course_info':
         return (
-          overlayedCourseInfo && <CourseInfoPage close={closeFn} courseInfo={overlayedCourseInfo} />
+          overlayedCourseInfo &&
+          gqlCourseSections.current && (
+            <CourseInfoPage
+              close={closeFn}
+              courseInfo={{
+                ...overlayedCourseInfo,
+                ...gqlCourseSections.current.find((sec) => sec.id == overlayedCourseInfo.courseId)!,
+              }}
+            />
+          )
         );
       default:
-        return null;
+        return undefined;
     }
   }
 

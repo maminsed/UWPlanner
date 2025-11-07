@@ -1,19 +1,31 @@
-import { ClassLocations, GQLCoursePreReq, LineType } from '../interface';
+import { ClassLocations, GQLCoursePreReq, LineType, Requirement } from '../interface';
 
 // This function takes an array of course information and extracts prerequisite relationships.
 // It returns an array of pairs where each pair represents a prerequisite relationship
 // in the form [prerequisite_id, course_id].
-export function preReq(courseInformations: GQLCoursePreReq[]) {
-  const res: [number, number][] = [];
-  for (const ci of courseInformations) {
-    for (const pq of ci.prerequisites) {
-      if (!pq.is_corequisite) {
-        // Only include prerequisites, not corequisites.
-        res.push([pq.prerequisite_id, ci.id]);
-      }
+export function preReq(courseInformations: GQLCoursePreReq[], courseDict: Map<number, string>) {
+  const preReqs: [number, number][] = [];
+  const courseDictInverted: Map<string, number> = new Map(
+    courseDict.entries().map(([k, v]) => [v, k]),
+  );
+  let currId: number;
+  function recursiveLoading(req: Requirement) {
+    if (req.conditionedOn == 'final' || req.conditionedOn == 'unclassified') {
+      req.relatedLinks.forEach((link) => {
+        if (link.linkType == 'courses' && courseDictInverted.has(link.value.toLowerCase())) {
+          preReqs.push([courseDictInverted.get(link.value.toLowerCase())!, currId]);
+        }
+      });
+      return;
     }
+    req.appliesTo.forEach((req) => recursiveLoading(req));
   }
-  return res;
+
+  for (const ci of courseInformations) {
+    currId = courseDictInverted.get(ci.code)!;
+    if (ci.courseInfo.prerequisites) recursiveLoading(ci.courseInfo.prerequisites);
+  }
+  return preReqs;
 }
 
 // This function generates connection lines between courses and their prerequisites.

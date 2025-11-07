@@ -29,16 +29,40 @@ export type CourseInformation = {
   courseId: number;
 };
 
+type LinkType = {
+  value: string;
+  url: string;
+  linkType: 'courses' | 'programs' | 'external';
+};
+
+export type Requirement = {
+  conditionText: string;
+  conditionedOn:
+    | 'any'
+    | 'two'
+    | 'three'
+    | 'four'
+    | 'all'
+    | 'not_all'
+    | 'not_any'
+    | 'final'
+    | 'unclassified';
+  conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none';
+  relatedLinks: LinkType[];
+  appliesTo: Requirement[];
+};
+
 export type GQLCoursePreReq = {
   id: number;
   code: string;
-  prereqs: string;
-  coreqs: string;
-  antireqs: string;
-  prerequisites: {
-    prerequisite_id: number;
-    is_corequisite: boolean;
-  }[];
+  name: string;
+  url: string;
+  courseInfo: {
+    prerequisites?: Requirement;
+    antirequisites?: Requirement;
+    corequisites?: Requirement;
+    'cross-listed courses'?: LinkType[];
+  };
 };
 
 export type ClassLocations = Map<number, Map<number, Location>>; // CourseId, termId, Location

@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { LuTrash2, LuX } from 'react-icons/lu';
 
-import { CourseInformation } from '../interface';
+import { CourseInformation, GQLCoursePreReq, Requirement } from '../interface';
 import { getTermName } from '../utils/termUtils';
 
 import useGQL from '@/lib/useGQL';
@@ -11,15 +11,7 @@ import useGQL from '@/lib/useGQL';
 type CourseInfoPageProps = {
   close: () => void;
   updatePage?: () => void;
-  courseInfo: CourseInformation;
-};
-
-type PreReqInterface = {
-  is_corequisite: boolean;
-  prerequisite: {
-    code: string;
-    id: number;
-  };
+  courseInfo: CourseInformation & GQLCoursePreReq;
 };
 
 type SectionInterface = {
@@ -41,8 +33,7 @@ type detailedInfoType = {
     filled_count?: number;
   };
   sections: SectionInterface[];
-  prerequisites: PreReqInterface[];
-};
+} & GQLCoursePreReq;
 
 function Percentage({ value }: { value: number }) {
   return (
@@ -52,6 +43,47 @@ function Percentage({ value }: { value: number }) {
         style={{ width: `${value * 100}%` }}
       />
     </div>
+  );
+}
+
+function ShowReqs({ requirement }: { requirement: Requirement }) {
+  const textBroken = [];
+  let start = 0;
+  let i = 0;
+  for (const link of requirement.relatedLinks) {
+    const end = requirement.conditionText.indexOf(link.value, start);
+    const substr = requirement.conditionText.substring(start, end);
+    if (substr) {
+      textBroken.push(<span key={i}>{substr[0].toUpperCase() + substr.substring(1)}</span>);
+    }
+    textBroken.push(
+      <a href={link.url} target="_blank" key={i + 1} className="underline" rel="noreferrer">
+        {link.value}
+      </a>,
+    );
+    start = end + link.value.length;
+    i += 2;
+  }
+  const substr = requirement.conditionText.substring(start);
+  if (substr != '') {
+    textBroken.push(<span key={i}>{substr[0].toUpperCase() + substr.substring(1)}</span>);
+  }
+
+  return (
+    <li className="list-disc list-inside">
+      <span
+        className={clsx(requirement.conditionedOn == 'final' ? 'font-normal' : 'font-semibold')}
+      >
+        {...textBroken}
+      </span>
+      <ul className="ml-5">
+        {requirement.appliesTo.map((req, id) => (
+          <div key={id}>
+            <ShowReqs requirement={req} />
+          </div>
+        ))}
+      </ul>
+    </li>
   );
 }
 
@@ -70,32 +102,45 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
       <h3 className={subHeaderClsx}>Course Description: </h3>
       <p className={pClsx}>{detailedInfo.description || 'No description'}</p>
 
-      <h3 className={subHeaderClsx}>Prerequisites: </h3>
-      <ul className={pClsx}>
-        {detailedInfo.prerequisites.map((preReq) =>
-          !preReq.is_corequisite ? (
-            <li className={liClsx} key={preReq.prerequisite.id}>
-              {preReq.prerequisite.code.toUpperCase()}
-            </li>
-          ) : null,
-        )}
-      </ul>
+      {detailedInfo?.courseInfo['cross-listed courses'] && (
+        <div>
+          <h3 className={subHeaderClsx}>cross-listed courses: </h3>
+          <ul>
+            {detailedInfo.courseInfo['cross-listed courses'].map(({ value, url }, index) => (
+              <li key={index}>
+                <a href={url}>{value}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <h3 className={subHeaderClsx}>Corequisites: </h3>
-      <ul className={pClsx}>
-        {detailedInfo.prerequisites.map((preReq) =>
-          preReq.is_corequisite ? (
-            <li className={liClsx} key={preReq.prerequisite.id}>
-              {preReq.prerequisite.code.toUpperCase()}
-            </li>
-          ) : null,
-        )}
-      </ul>
+      {detailedInfo.courseInfo.prerequisites && (
+        <div>
+          <h3 className={subHeaderClsx}>Prerequisites: </h3>
+          <ul className="ml-2">
+            <ShowReqs requirement={detailedInfo.courseInfo.prerequisites} />
+          </ul>
+        </div>
+      )}
 
-      <h3 className={subHeaderClsx}>Antirequisites: </h3>
-      <ul className={pClsx}>
-        <li className={liClsx}>ello</li>
-      </ul>
+      {detailedInfo.courseInfo.antirequisites && (
+        <div>
+          <h3 className={subHeaderClsx}>Antirequisites: </h3>
+          <ul className="ml-2">
+            <ShowReqs requirement={detailedInfo.courseInfo.antirequisites} />
+          </ul>
+        </div>
+      )}
+
+      {detailedInfo.courseInfo.corequisites && (
+        <div>
+          <h3 className={subHeaderClsx}>Corequisites: </h3>
+          <ul className="ml-2">
+            <ShowReqs requirement={detailedInfo.courseInfo.corequisites} />
+          </ul>
+        </div>
+      )}
 
       <h3 className={subHeaderClsx}>Current Offerings: </h3>
       <ul className={pClsx}>
@@ -154,7 +199,10 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
         </div>
       </ul>
 
-      <h3 className={subHeaderClsx}>Related Links: </h3>
+      <p className="mt-6 font-normal text-[0.9rem] text-red-600">
+        Confirm all details with the official Undergraduate Calendar
+      </p>
+      <h3 className={clsx(subHeaderClsx, '!mt-0')}>Related Links: </h3>
       <ul className={pClsx}>
         <li className={liClsx}>
           <a
@@ -167,12 +215,7 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           </a>
         </li>
         <li className={liClsx}>
-          <a
-            className="underline"
-            target="_blank"
-            href={`https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses`}
-            rel="noreferrer"
-          >
+          <a className="underline" target="_blank" href={detailedInfo.url} rel="noreferrer">
             Undergraduate Calendar
           </a>
         </li>
@@ -220,13 +263,6 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
                   term_id
                   class_number
               }
-              prerequisites {
-                  is_corequisite
-                  prerequisite {
-                      code
-                      id
-                  }
-              }
           }
       }
       `;
@@ -238,7 +274,7 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
       } else {
         const data: detailedInfoType = response.data.course[0];
         data.sections = data.sections.sort((a, b) => b.term_id - a.term_id);
-        setDetailedInfo(data);
+        setDetailedInfo({ ...data, ...courseInfo });
         setStatus('idle');
         setMessage('');
       }

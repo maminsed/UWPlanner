@@ -55,29 +55,44 @@ export default function Graph({
         pathRef.current = termIds;
         updatePan();
 
+        // Getting GQL data
         const GQL_QUERY = `
           query Course($course_ids: [Int!]!) {
               course(where: { id: { _in: $course_ids } }) {
                   code
                   id
                   name
-                  coreqs
-                  prereqs
-                  antireqs
-                  prerequisites {
-                      prerequisite_id
-                      is_corequisite
-                  }
               }
           }
       `;
 
-        const gql_response = await gql(GQL_QUERY, { course_ids: Array.from(course_ids) });
+        const gql_response: GQLCoursePreReq[] =
+          (await gql(GQL_QUERY, { course_ids: Array.from(course_ids) }))?.data?.course || [];
         const newMap = new Map<number, string>();
-        gql_response?.data?.course.forEach((course: GQLCoursePreReq) => {
+        const course_codes: string[] = [];
+        gql_response.forEach((course) => {
           newMap.set(course.id, course.code);
+          course_codes.push(course.code);
         });
-        setCourseInformations(gql_response.data.course);
+
+        //Getting Backend Reqs:
+        const req_res = await backend(
+          `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_course_reqs`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_codes: Array.from(course_codes) }),
+          },
+        );
+        if (req_res.ok) {
+          const course_reqs = (await req_res.json().catch(() => {})).courses;
+          gql_response.forEach((course) => {
+            course.courseInfo = course_reqs[course.code]?.courseInfo || {};
+            course.url = course_reqs[course.code]?.url || '';
+          });
+        }
+
+        setCourseInformations(gql_response);
         setCourseDict(newMap);
       }
     }

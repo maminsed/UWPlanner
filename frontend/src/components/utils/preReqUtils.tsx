@@ -28,6 +28,92 @@ export function preReq(courseInformations: GQLCoursePreReq[], courseDict: Map<nu
   return preReqs;
 }
 
+const levelConditionList = [
+  /Students must be in level ([1-5][AB])( or higher)?/,
+  /Not open to(.*) students in level ([1-5][AB])( or [1-5][AB])?( or higher)?/,
+];
+
+export function singleRequirementStatus(
+  courseInfo: Requirement,
+  termId: number, // e.g. 1255
+  termName: string, //e.g. 1A
+  courseMap: Map<string, number[]>, // courseCode: termId
+  status: Requirement['conditionStatus'],
+) {
+  if (courseInfo.conditionedOn == 'final') {
+    let decision = true;
+    for (const link of courseInfo.relatedLinks) {
+      // Checking courses
+      if (link.linkType == 'courses' || link.linkType == 'course') {
+        if (courseMap.has(link.value.toLowerCase())) {
+          switch (status) {
+            case 'none':
+            case 'complete':
+              decision =
+                decision && courseMap.get(link.value.toLowerCase())!.some((term) => term < termId);
+              break;
+            case 'currently_enrolled':
+              decision =
+                decision &&
+                courseMap.get(link.value.toLowerCase())!.some((term) => term === termId);
+              break;
+            case 'both':
+              decision =
+                decision && courseMap.get(link.value.toLowerCase())!.some((term) => term <= termId);
+              break;
+          }
+        } else {
+          decision = false;
+        }
+        // checking programs
+      } else if (link.linkType == 'programs') {
+        //TODO: complete
+      }
+    }
+    // checking year requirements
+    for (const levelCondition of levelConditionList) {
+      const match = courseInfo.conditionText.match(levelCondition);
+      if (match) {
+        const semesters = courseInfo.conditionText.match(/([1-5][AB])/g) || [];
+        let isEnroled =
+          semesters.filter((sem) => sem.toLowerCase() == termName.toLowerCase()).length != 0;
+        if (courseInfo.conditionText.includes(' or higher')) {
+          const biggestSem = semesters.reduceRight((prev, curr) => (prev > curr ? prev : curr), '');
+          isEnroled = termName >= biggestSem;
+        }
+        decision = decision && isEnroled;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function totalRequirementStatus(
+  courseInfo: GQLCoursePreReq['courseInfo'],
+  termId: number, // e.g. 1255
+  termName: string, //e.g. 1A
+  courseMap: Map<string, number[]>, // courseCode: termId
+): boolean {
+  let finalResult = true;
+  if (courseInfo.prerequisites) {
+    finalResult =
+      finalResult &&
+      singleRequirementStatus(courseInfo.prerequisites, termId, termName, courseMap, 'none');
+  }
+  if (courseInfo.antirequisites) {
+    finalResult =
+      finalResult &&
+      singleRequirementStatus(courseInfo.antirequisites, termId, termName, courseMap, 'none');
+  }
+  if (courseInfo.corequisites) {
+    finalResult =
+      finalResult &&
+      singleRequirementStatus(courseInfo.corequisites, termId, termName, courseMap, 'none');
+  }
+  return finalResult;
+}
+
 // This function generates connection lines between courses and their prerequisites.
 // It takes a prerequisite graph and course locations as input and returns an array of line segments.
 export function generateConnectionLines(

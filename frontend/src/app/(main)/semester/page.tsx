@@ -5,6 +5,8 @@ import Footer from '@/components/Footer';
 import ClassSchedule from '@/components/semester/ClassSchedule';
 
 export default function SemesterPage() {
+  //TODO:   add checks for reqs
+  //        fix the fuck you haha...
   return (
     <section className="flex flex-col items-center mt-10 px-2">
       <h2 className="text-2xl lg:text-4xl text-slate-800 text-center">Semester Planner</h2>

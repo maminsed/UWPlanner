@@ -128,12 +128,16 @@ function isLocEqual(loc1: Location | undefined, loc2: Location) {
 type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv' | 'course_info';
 
 export default function GraphPage() {
-  // TODO: add at the top left corner + - and reload (for prereqs) buttons
+  // TODO: add checks to see if users meet their reqs
+  //       add crosslisted section
+  //       add the swaping functionality
+  //       add at the top left corner + - and reload (for prereqs) buttons
   //       the user can choose which course prereqs to see
+  //       add a report issue button
   const [overlay, setOverlay] = useState<overlayInterface>('none');
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
   const [connections, setConnections] = useState<LineType[]>([]);
-  const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map());
+  const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map()); //courseId: courseCode
   const colourMap = useRef<Map<string, { bg: string; text: string }>>(new Map()); // map for course colours
   const gqlCourseSections = useRef<GQLCoursePreReq[] | null>(null);
 

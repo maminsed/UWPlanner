@@ -32,7 +32,7 @@ export type CourseInformation = {
 type LinkType = {
   value: string;
   url: string;
-  linkType: 'courses' | 'programs' | 'external';
+  linkType: 'courses' | 'programs' | 'external' | 'course';
 };
 
 export type Requirement = {

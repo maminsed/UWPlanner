@@ -292,12 +292,6 @@ export default function GraphPage() {
             setCourseDict={setCourseDict}
           />
           {showPreReq ? (
-            /* {connections.map(([start,end],i)=>(
-                <div key={i}>
-                    <div className="aspect-square w-2 z-20 rounded-full bg-amber-900 absolute" style={{left:start.x,top:start.y}}/>
-                    <div className="aspect-square w-2 z-20 rounded-full bg-amber-900 absolute" style={{left:end.x,top:end.y}}/>
-                </div>
-            ))} */
             <Lines connections={connections} hiddenStatus={courseHiddenStatus.current} />
           ) : (
             ''

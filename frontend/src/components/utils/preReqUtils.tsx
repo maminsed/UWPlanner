@@ -33,83 +33,98 @@ const levelConditionList = [
   /Not open to(.*) students in level ([1-5][AB])( or [1-5][AB])?( or higher)?/,
 ];
 
-export function singleRequirementStatus(
-  courseInfo: Requirement,
-  termId: number, // e.g. 1255
-  termName: string, //e.g. 1A
-  courseMap: Map<string, number[]>, // courseCode: termId
-  status: Requirement['conditionStatus'],
-) {
-  if (courseInfo.conditionedOn == 'final') {
-    let decision = true;
-    for (const link of courseInfo.relatedLinks) {
-      // Checking courses
-      if (link.linkType == 'courses' || link.linkType == 'course') {
-        if (courseMap.has(link.value.toLowerCase())) {
-          switch (status) {
-            case 'none':
-            case 'complete':
-              decision =
-                decision && courseMap.get(link.value.toLowerCase())!.some((term) => term < termId);
-              break;
-            case 'currently_enrolled':
-              decision =
-                decision &&
-                courseMap.get(link.value.toLowerCase())!.some((term) => term === termId);
-              break;
-            case 'both':
-              decision =
-                decision && courseMap.get(link.value.toLowerCase())!.some((term) => term <= termId);
-              break;
-          }
-        } else {
-          decision = false;
-        }
-        // checking programs
-      } else if (link.linkType == 'programs') {
-        //TODO: complete
-      }
-    }
-    // checking year requirements
-    for (const levelCondition of levelConditionList) {
-      const match = courseInfo.conditionText.match(levelCondition);
-      if (match) {
-        const semesters = courseInfo.conditionText.match(/([1-5][AB])/g) || [];
-        let isEnroled =
-          semesters.filter((sem) => sem.toLowerCase() == termName.toLowerCase()).length != 0;
-        if (courseInfo.conditionText.includes(' or higher')) {
-          const biggestSem = semesters.reduceRight((prev, curr) => (prev > curr ? prev : curr), '');
-          isEnroled = termName >= biggestSem;
-        }
-        decision = decision && isEnroled;
-      }
-    }
-  }
-
-  return false;
-}
-
 export function totalRequirementStatus(
   courseInfo: GQLCoursePreReq['courseInfo'],
   termId: number, // e.g. 1255
   termName: string, //e.g. 1A
   courseMap: Map<string, number[]>, // courseCode: termId
 ): boolean {
+  function singleRequirementStatus(
+    courseInfo: Requirement,
+    status: Requirement['conditionStatus'],
+  ) {
+    if (courseInfo.conditionedOn == 'final' || courseInfo.conditionedOn == 'unclassified') {
+      let decision = true;
+      for (const link of courseInfo.relatedLinks) {
+        // Checking courses
+        if (link.linkType == 'courses' || link.linkType == 'course') {
+          if (courseMap.has(link.value.toLowerCase())) {
+            switch (status) {
+              case 'none':
+              case 'complete':
+                decision =
+                  decision &&
+                  courseMap.get(link.value.toLowerCase())!.some((term) => term < termId);
+                break;
+              case 'currently_enrolled':
+                decision =
+                  decision &&
+                  courseMap.get(link.value.toLowerCase())!.some((term) => term === termId);
+                break;
+              case 'both':
+                decision =
+                  decision &&
+                  courseMap.get(link.value.toLowerCase())!.some((term) => term <= termId);
+                break;
+            }
+          } else {
+            decision = false;
+          }
+          // checking programs
+        } else if (link.linkType == 'programs') {
+          //TODO: complete
+        }
+      }
+      // checking year requirements
+      for (const levelCondition of levelConditionList) {
+        const match = courseInfo.conditionText.match(levelCondition);
+        if (match) {
+          const semesters = courseInfo.conditionText.match(/([1-5][AB])/g) || [];
+          let isEnroled =
+            semesters.filter((sem) => sem.toLowerCase() == termName.toLowerCase()).length != 0;
+          if (courseInfo.conditionText.includes(' or higher')) {
+            const biggestSem = semesters.reduceRight(
+              (prev, curr) => (prev > curr ? prev : curr),
+              '',
+            );
+            isEnroled = termName >= biggestSem;
+          }
+          decision = decision && isEnroled;
+        }
+      }
+      return decision;
+    }
+    const conditionsMet: number = courseInfo.appliesTo.filter((req) =>
+      singleRequirementStatus(req, courseInfo.conditionStatus),
+    ).length;
+
+    switch (courseInfo.conditionedOn) {
+      case 'all':
+        return conditionsMet === courseInfo.appliesTo.length;
+      case 'any':
+        return conditionsMet >= 1;
+      case 'two':
+        return conditionsMet >= 2;
+      case 'three':
+        return conditionsMet >= 3;
+      case 'four':
+        return conditionsMet >= 4;
+      case 'not_all':
+        return conditionsMet < courseInfo.appliesTo.length;
+      case 'not_any':
+        return conditionsMet === 0;
+    }
+  }
+
   let finalResult = true;
   if (courseInfo.prerequisites) {
-    finalResult =
-      finalResult &&
-      singleRequirementStatus(courseInfo.prerequisites, termId, termName, courseMap, 'none');
+    finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none');
   }
   if (courseInfo.antirequisites) {
-    finalResult =
-      finalResult &&
-      singleRequirementStatus(courseInfo.antirequisites, termId, termName, courseMap, 'none');
+    finalResult = finalResult && singleRequirementStatus(courseInfo.antirequisites, 'none');
   }
   if (courseInfo.corequisites) {
-    finalResult =
-      finalResult &&
-      singleRequirementStatus(courseInfo.corequisites, termId, termName, courseMap, 'none');
+    finalResult = finalResult && singleRequirementStatus(courseInfo.corequisites, 'none');
   }
   return finalResult;
 }

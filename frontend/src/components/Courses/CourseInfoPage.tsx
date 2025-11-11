@@ -33,7 +33,8 @@ type detailedInfoType = {
     filled_count?: number;
   };
   sections: SectionInterface[];
-} & GQLCoursePreReq;
+} & GQLCoursePreReq &
+  CourseInformation;
 
 function Percentage({ value }: { value: number }) {
   return (
@@ -114,7 +115,8 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           </ul>
         </div>
       )}
-
+      {/* TODO: compelete */}
+      {/* <p>{totalRequirementStatus(detailedInfo,detailedInfo.termId,detailedInfo.termName)}</p> */}
       {detailedInfo.courseInfo.prerequisites && (
         <div>
           <h3 className={subHeaderClsx}>Prerequisites: </h3>

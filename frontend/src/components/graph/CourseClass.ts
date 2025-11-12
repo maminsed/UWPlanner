@@ -71,33 +71,52 @@ type TermInformation = {
 };
 
 export class AllCourseInformation {
-  #courseIds: number[];
+  // user Info
+  #startingTermId: number;
+  // maps and sets
+  #courseIds: Set<number>;
   #courseInfoMap: Map<number, CourseInformation>;
   #path: TermInformation[];
-  #startingTermId: number;
   #colourMap: Map<string, { bg: string; text: string }>; // CS: {bg: yellow, text: blue}
+  //Update functions
+  #updatePage: () => void;
+  #updateReqLines: () => void;
+  // hooks
+  #gql: ReturnType<typeof useGQL>;
+  #backend: ReturnType<typeof useApi>;
 
+  // initializers:
   constructor(
     studentPath: [string, number[]][], //[1A, courseId[]][]
     startingTermId: number,
+    updatePage: () => void,
+    updateReqLines: () => void,
+    gql: ReturnType<typeof useGQL>,
+    backend: ReturnType<typeof useApi>,
   ) {
-    this.#courseIds = [];
-    studentPath.forEach(([, courseIds]) => this.#courseIds.push(...courseIds));
+    this.#courseIds = new Set();
+    studentPath.forEach(([, courseIds]) =>
+      courseIds.forEach((courseId) => this.#courseIds.add(courseId)),
+    );
     this.#courseInfoMap = new Map();
     this.#startingTermId = startingTermId;
     this.#path = this.#extractPath(studentPath);
     this.#colourMap = new Map();
+    this.#updatePage = updatePage;
+    this.#updateReqLines = updateReqLines;
+    this.#gql = gql;
+    this.#backend = backend;
   }
 
-  async init(gql: ReturnType<typeof useGQL>, backend: ReturnType<typeof useApi>) {
+  async init() {
     // Fetch UWF course info (includes id, code, name, rating, and sections)
-    const uwfResponse = await this.#extractFromUWF(gql);
+    const uwfResponse = await this.#extractFromUWF();
 
     // Build an array of course codes to request BK requirements in bulk
     const courseCodes = uwfResponse.map((course) => course.code);
 
     // Kick off BK request concurrently while we compute colours/other mappings
-    const bkResponsePromise = this.#extractFromBK(courseCodes, backend);
+    const bkResponsePromise = this.#extractFromBK(courseCodes);
 
     // Generate or reuse a colour for each course based on its subject prefix.
     // Example: "CS135" => "CS". This keeps all CS courses with the same palette.
@@ -153,11 +172,9 @@ export class AllCourseInformation {
     });
   }
 
-  async #extractFromUWF(
-    gql: ReturnType<typeof useGQL>,
-  ): Promise<(UWFCourseInfo & { sections: { termId: number }[] })[]> {
-    if (!this.#courseIds.length) return [];
-    // const gql = useGQL();
+  async #extractFromUWF(): Promise<(UWFCourseInfo & { sections: { termId: number }[] })[]> {
+    if (!this.#courseIds.size) return [];
+
     const GQL_QUERY = `
         query Course($course_id: Int!) {
           course(where: { id: { _in: $course_ids } }) {
@@ -177,23 +194,87 @@ export class AllCourseInformation {
           }
       }
       `;
-    const response = await gql(GQL_QUERY, { course_ids: this.#courseIds });
+    const response = await this.#gql(GQL_QUERY, { course_ids: Array.from(this.#courseIds) });
     if (!response?.data?.course) {
       throw new Error('could not get information from GQL');
     }
     return response.data.course;
   }
 
-  async #extractFromBK(courseCodes: string[], backend: ReturnType<typeof useApi>) {
-    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/get_course_reqs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ course_codes: courseCodes }),
-    });
+  async #extractFromBK(courseCodes: string[]) {
+    const res = await this.#backend(
+      `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_course_reqs`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course_codes: courseCodes }),
+      },
+    );
     if (!res.ok) {
       throw new Error('Error in backend for fetching requirements');
     }
     const course_reqs: Record<string, BKCourseInfo> = (await res.json().catch(() => {})).courses;
     return course_reqs;
+  }
+  // getters and setters
+  getCoruseInfo(courseId: number) {
+    return this.#courseInfoMap.get(courseId);
+  }
+
+  getTermsInfo(termId?: number, termName?: string) {
+    if (termId === undefined && termName === undefined)
+      throw new Error('neither termId nor termName provided');
+    return this.#path.find((term) => term.termId === termId || term.termName === termName);
+  }
+
+  getVisibility(courseId: number, termId: number) {
+    return this.#courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible;
+  }
+
+  setVisibility(courseId: number, termId: number, value?: boolean) {
+    const course = this.#courseInfoMap.get(courseId)?.termInfo.get(termId);
+    if (course) {
+      course.visible = value === undefined ? !course.visible : value;
+    } else {
+      throw new Error('course does not exist');
+    }
+    this.#updateReqLines();
+  }
+
+  setLocation(loc: Location, courseId: number, termId: number) {
+    const course = this.#courseInfoMap.get(courseId)?.termInfo.get(termId);
+    if (course) {
+      course.location = loc;
+    } else {
+      throw new Error('course does not exist');
+    }
+    this.#updateReqLines();
+  }
+
+  addCoruse(courseId: number, termId: number) {
+    const courseExists = this.#courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
+    if (courseExists) return;
+    this.#courseIds.add(courseId);
+    this.#courseInfoMap = new Map();
+    const term = this.#path.find((term) => term.termId === termId)!;
+    term.courseIds.push(courseId);
+
+    this.init();
+    this.#updatePage();
+  }
+
+  removeCoruse(courseId: number, termId: number) {
+    const courseExists = this.#courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
+    if (!courseExists) throw new Error('Course did not exist');
+    const course = this.#courseInfoMap.get(courseId)!;
+    if (course.termInfo.size == 1) {
+      this.#courseIds.delete(courseId);
+    }
+    this.#courseInfoMap = new Map();
+    const term = this.#path.find((term) => term.termId === termId)!;
+    term.courseIds = term.courseIds.filter((ci) => courseId != ci);
+
+    this.init();
+    this.#updatePage();
   }
 }

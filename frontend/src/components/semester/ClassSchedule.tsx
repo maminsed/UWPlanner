@@ -11,7 +11,7 @@ import BatchAddCourses from '../Courses/BatchAddCourses';
 import HoverEffect from '../HoverEffect';
 import { DaysOfWeek, GQLCourseSection } from '../interface';
 import RightSide from '../utils/RightSide';
-import { getCurrentTermId, getTermName, termOperation } from '../utils/termUtils';
+import { getCurrentTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
@@ -504,7 +504,7 @@ export default function ClassSchedule() {
         >
           {path.map((p, i) => (
             <option value={termOperation(startedTerm, i)} key={i}>
-              {getTermName(termOperation(startedTerm, i))} - {p}
+              {getTermSeason(termOperation(startedTerm, i))} - {p}
             </option>
           ))}
         </select>

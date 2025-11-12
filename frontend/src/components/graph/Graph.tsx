@@ -2,7 +2,7 @@
 import { RefObject, useEffect, useState } from 'react';
 
 import { GQLCoursePreReq, termIdInterface } from '../interface';
-import { getTermName, termOperation } from '../utils/termUtils';
+import { getTermSeason, termOperation } from '../utils/termUtils';
 
 import Semester from './Semester';
 
@@ -50,7 +50,7 @@ export default function Graph({
             if (!course_ids.has(course)) course_ids.add(course);
           });
           const currTerm = termOperation(response.started_term_id, i);
-          termIds.push({ value: currTerm, display: `${semester[0]} - ${getTermName(currTerm)}` });
+          termIds.push({ value: currTerm, display: `${semester[0]} - ${getTermSeason(currTerm)}` });
         });
         pathRef.current = termIds;
         updatePan();
@@ -111,7 +111,7 @@ export default function Graph({
     <div className="flex gap-6 p-8">
       {path.map((semester, i) => {
         const termId = termOperation(startedTerm, i);
-        const termName = `${getTermName(termOperation(startedTerm, i))} - ${semester[0]}`;
+        const termName = `${getTermSeason(termOperation(startedTerm, i))} - ${semester[0]}`;
 
         return (
           <Semester

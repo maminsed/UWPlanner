@@ -2,7 +2,7 @@ import { LuX } from 'react-icons/lu';
 
 import { CourseInformation } from '../interface';
 import RightSide from '../utils/RightSide';
-import { getCurrentTermId, getTermName } from '../utils/termUtils';
+import { getCurrentTermId, getTermSeason } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 
@@ -49,7 +49,7 @@ export default function DeleteCourse({
       <h2 className="text-lg font-semibold ">Are you sure about deleting this course?</h2>
       <p className="text-sm mt-2 md:mt-0">
         It will delete all sections of <b>{courseName?.toUpperCase() || 'the course'}</b> from the{' '}
-        <b>{termName || getTermName(termId)}</b> semester
+        <b>{termName || getTermSeason(termId)}</b> semester
       </p>
       <RightSide className="mt-4">
         <button className="px-2 border rounded-sm cursor-pointer" onClick={close}>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { LuTrash2, LuX } from 'react-icons/lu';
 
 import { CourseInformation, GQLCoursePreReq, Requirement } from '../interface';
-import { getTermName } from '../utils/termUtils';
+import { getTermSeason } from '../utils/termUtils';
 
 import useGQL from '@/lib/useGQL';
 
@@ -148,7 +148,7 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
       <ul className={pClsx}>
         {detailedInfo.sections.map((sec) => (
           <li className={liClsx} key={sec.term_id}>
-            {getTermName(sec.term_id)}
+            {getTermSeason(sec.term_id)}
           </li>
         ))}
       </ul>

@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { Fragment, useEffect, useState } from 'react';
 import { MdArrowBackIosNew } from 'react-icons/md';
 
-import { getTermName, termOperation } from '../utils/termUtils';
+import { getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 
@@ -37,8 +37,8 @@ export function SequenceSettings() {
       } else {
         setCurrentSem(response.current_sem);
         setSeq(response.sequence);
-        setStartedTerm(getTermName(response.started_term_id));
-        setGradTerm(getTermName(termOperation(response.started_term_id, response.path.length)));
+        setStartedTerm(getTermSeason(response.started_term_id));
+        setGradTerm(getTermSeason(termOperation(response.started_term_id, response.path.length)));
         setCoop(response.coop);
         setPath(response.path);
       }

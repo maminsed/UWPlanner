@@ -80,62 +80,70 @@ def get_user_sections():
 def delete_course():
     # Parse the incoming JSON request
     data = request.get_json()
-    term_id = data.get("term_id")
-    course_id = data.get("course_id")
+    courses = data.get("courses")
     current_term = data.get("current_term")
 
     # GraphQL query to fetch course section details
     GQL_QUERY = """
-    query Course_section($term_id: Int!, $course_id: Int!) {
+    query Course_section($term_id: Int!, $course_ids: [Int!]) {
         course_section(
             limit: 10
-            where: { term_id: { _eq: $term_id }, course_id: { _eq: $course_id } }
+            where: { term_id: { _eq: $term_id }, course_id: { _in: $course_ids } }
         ) {
             class_number
             course_id
         }
     }
     """
-
+    courseDict = {}
+    for course in courses:
+        if course["termId"] not in courseDict:
+            courseDict[course["termId"]] = []
+        courseDict[course["termId"]].append(course["courseId"])
     try:
         # Retrieve the user from the database
         user = Users.query.filter_by(username=g.username).first()
-        # Retrieve the user's semesters for the specified term
-        sem = [sem for sem in user.semesters if sem.term_id == term_id][0]
-        # Check if the term is within the allowed range for deletion
-        if term_distance(term_id, current_term) < 2:
-            # Initialize a session for making HTTP requests
-            session = requests.Session()
-            resp = session.post(
-                GQL_URL,
-                json={
-                    "query": GQL_QUERY,
-                    "variables": {"term_id": term_id, "course_id": course_id},
-                },
-            )
-            resp.raise_for_status()
-            payload = resp.json()
+        for term_id in courseDict:
+            course_ids = courseDict[term_id]
+            # Retrieve the user's semesters for the specified term
+            sem = [sem for sem in user.semesters if sem.term_id == term_id][0]
+            # Check if the term is within the allowed range for deletion
+            if term_distance(term_id, current_term) < 2:
+                # Initialize a session for making HTTP requests
+                session = requests.Session()
+                resp = session.post(
+                    GQL_URL,
+                    json={
+                        "query": GQL_QUERY,
+                        "variables": {"term_id": term_id, "course_ids": course_ids},
+                    },
+                )
+                resp.raise_for_status()
+                payload = resp.json()
 
-            # Handle any errors returned by the GraphQL endpoint
-            if "errors" in payload:
-                raise RuntimeError(payload["errors"])
+                # Handle any errors returned by the GraphQL endpoint
+                if "errors" in payload:
+                    raise RuntimeError(payload["errors"])
 
-            # Extract the class numbers to be removed
-            removeSections: list[int] = [
-                sec["class_number"] for sec in payload["data"]["course_section"]
+                # Extract the class numbers to be removed
+                removeSections: list[int] = [
+                    sec["class_number"] for sec in payload["data"]["course_section"]
+                ]
+
+                # Update the sections by removing the ones associated with the course
+                sections: list[int] = json.loads(sem.sections)
+                sections = [sec for sec in sections if sec not in removeSections]
+                sem.sections = json.dumps(sections)
+
+            # Update the courses by removing the specified course
+            courses = [
+                course for course in json.loads(sem.courses) if course not in course_ids
             ]
+            sem.courses = json.dumps(courses)
 
-            # Update the sections by removing the ones associated with the course
-            sections: list[int] = json.loads(sem.sections)
-            sections = [sec for sec in sections if sec not in removeSections]
-            sem.sections = json.dumps(sections)
-
-        # Update the courses by removing the specified course
-        courses = [course for course in json.loads(sem.courses) if course != course_id]
-        sem.courses = json.dumps(courses)
-
-        # Save the updated semester to the database
-        db.session.add(sem)
+            # Save the updated semester to the database
+            db.session.add(sem)
+            db.session.flush()
         db.session.commit()
 
         # Return a success response

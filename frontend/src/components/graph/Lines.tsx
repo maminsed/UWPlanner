@@ -1,4 +1,4 @@
-import { CourseInformation, LineType } from '../interface';
+import { LineType } from '../interface';
 
 import { AllCourseInformation } from './CourseClass';
 
@@ -12,7 +12,7 @@ export default function Lines({ connections, allCourses }: LinesProps) {
     return !allCourses.getVisibility(courseId, termId);
   }
 
-  function getColour(end: CourseInformation) {
+  function getColour(end: { courseId: number; termId: number }) {
     if (isHidden(end.termId, end.courseId)) {
       return '#34d9ef61';
     }

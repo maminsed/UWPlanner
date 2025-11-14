@@ -1,13 +1,15 @@
 import { CourseInformation, LineType } from '../interface';
 
+import { AllCourseInformation } from './CourseClass';
+
 type LinesProps = {
   connections: LineType[];
-  hiddenStatus: Map<number, Map<number, boolean>>;
+  allCourses: AllCourseInformation;
 };
 
-export default function Lines({ connections, hiddenStatus }: LinesProps) {
+export default function Lines({ connections, allCourses }: LinesProps) {
   function isHidden(termId: number, courseId: number) {
-    return !hiddenStatus.has(courseId) || hiddenStatus.get(courseId)!.get(termId);
+    return !allCourses.getVisibility(courseId, termId);
   }
 
   function getColour(end: CourseInformation) {

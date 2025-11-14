@@ -1,19 +1,19 @@
-import { ClassLocations, GQLCoursePreReq, LineType, Requirement } from '../interface';
+import { AllCourseInformation } from '../graph/CourseClass';
+import { BKCourseInfo, LineType, Requirement } from '../interface';
 
-// This function takes an array of course information and extracts prerequisite relationships.
 // It returns an array of pairs where each pair represents a prerequisite relationship
 // in the form [prerequisite_id, course_id].
-export function preReq(courseInformations: GQLCoursePreReq[], courseDict: Map<number, string>) {
+export function preReq(allCourses: AllCourseInformation) {
   const preReqs: [number, number][] = [];
-  const courseDictInverted: Map<string, number> = new Map(
-    courseDict.entries().map(([k, v]) => [v, k]),
-  );
   let currId: number;
   function recursiveLoading(req: Requirement) {
     if (req.conditionedOn == 'final' || req.conditionedOn == 'unclassified') {
       req.relatedLinks.forEach((link) => {
-        if (link.linkType == 'courses' && courseDictInverted.has(link.value.toLowerCase())) {
-          preReqs.push([courseDictInverted.get(link.value.toLowerCase())!, currId]);
+        if (link.linkType == 'courses') {
+          const courseInfo = allCourses.getCourseInfoCode(link.value.toLowerCase());
+          if (courseInfo) {
+            preReqs.push([courseInfo.id, currId]);
+          }
         }
       });
       return;
@@ -21,9 +21,10 @@ export function preReq(courseInformations: GQLCoursePreReq[], courseDict: Map<nu
     req.appliesTo.forEach((req) => recursiveLoading(req));
   }
 
-  for (const ci of courseInformations) {
-    currId = courseDictInverted.get(ci.code)!;
-    if (ci.courseInfo.prerequisites) recursiveLoading(ci.courseInfo.prerequisites);
+  for (const cid of allCourses.courseIds) {
+    currId = cid;
+    const course = allCourses.getCourseInfoId(cid)!;
+    if (course.courseInfo.prerequisites) recursiveLoading(course.courseInfo.prerequisites);
   }
   return preReqs;
 }
@@ -34,10 +35,9 @@ const levelConditionList = [
 ];
 
 export function totalRequirementStatus(
-  courseInfo: GQLCoursePreReq['courseInfo'],
+  courseInfo: BKCourseInfo['courseInfo'],
   termId: number, // e.g. 1255
-  termName: string, //e.g. 1A
-  courseMap: Map<string, number[]>, // courseCode: termId
+  allCourses: AllCourseInformation,
 ): boolean {
   function singleRequirementStatus(
     courseInfo: Requirement,
@@ -48,23 +48,18 @@ export function totalRequirementStatus(
       for (const link of courseInfo.relatedLinks) {
         // Checking courses
         if (link.linkType == 'courses' || link.linkType == 'course') {
-          if (courseMap.has(link.value.toLowerCase())) {
+          const course = allCourses.getCourseInfoCode(link.value.toLowerCase());
+          if (course) {
             switch (status) {
               case 'none':
               case 'complete':
-                decision =
-                  decision &&
-                  courseMap.get(link.value.toLowerCase())!.some((term) => term < termId);
+                decision = decision && [...course.termInfo.keys()].some((term) => term < termId);
                 break;
               case 'currently_enrolled':
-                decision =
-                  decision &&
-                  courseMap.get(link.value.toLowerCase())!.some((term) => term === termId);
+                decision = decision && [...course.termInfo.keys()].some((term) => term === termId);
                 break;
               case 'both':
-                decision =
-                  decision &&
-                  courseMap.get(link.value.toLowerCase())!.some((term) => term <= termId);
+                decision = decision && [...course.termInfo.keys()].some((term) => term <= termId);
                 break;
             }
           } else {
@@ -115,7 +110,7 @@ export function totalRequirementStatus(
         return conditionsMet === 0;
     }
   }
-
+  const termName = allCourses.getTermsInfo({ termId })!.termName;
   let finalResult = true;
   if (courseInfo.prerequisites) {
     finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none');
@@ -133,20 +128,22 @@ export function totalRequirementStatus(
 // It takes a prerequisite graph and course locations as input and returns an array of line segments.
 export function generateConnectionLines(
   courseReqGraph: [number, number][],
-  locations: ClassLocations,
+  allCourses: AllCourseInformation,
 ) {
   const res: LineType[] = [];
   for (const [preReqCourseId, courseId] of courseReqGraph) {
-    const preReqLocations = locations.get(preReqCourseId); // Get locations of the prerequisite course.
-    const courseLocations = locations.get(courseId); // Get locations of the current course.
+    const preReqLocations = allCourses.getAllCourseLocations(preReqCourseId); // Get locations of the prerequisite course.
+    const courseLocations = allCourses.getAllCourseLocations(courseId); // Get locations of the current course.
     if (preReqLocations && courseLocations) {
-      for (const [termId, courseLoc] of courseLocations.entries()) {
+      for (const [termId, { location: courseLoc }] of courseLocations.entries()) {
+        if (!courseLoc) continue;
         // Find the rightmost prerequisite term that is earlier than the current term.
         const rightMostPreReqTermId = preReqLocations
           .keys()
           .reduce((best, cur) => (cur > best && termId > cur ? cur : best));
         if (rightMostPreReqTermId < termId) {
-          const rightMostPreReq = preReqLocations.get(rightMostPreReqTermId)!;
+          const rightMostPreReq = preReqLocations.get(rightMostPreReqTermId)!.location;
+          if (!rightMostPreReq) continue;
           // Add a line segment connecting the prerequisite to the course.
           res.push({
             startLoc: {

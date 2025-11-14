@@ -1,114 +1,56 @@
-import { Location } from '../interface';
+import {
+  BKCourseInfo,
+  CourseInformation,
+  CourseLocation,
+  Location,
+  TermInformation,
+  UWFCourseInfo,
+} from '../interface';
 import { generateRandomColours } from '../utils/colour';
 import { getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
 
-type CourseLocation = {
-  location?: Location;
-  visible: boolean;
-};
-
-type LinkType = {
-  value: string;
-  url: string;
-  linkType: 'courses' | 'programs' | 'external' | 'course';
-};
-
-export type Requirement = {
-  conditionText: string;
-  conditionedOn:
-    | 'any'
-    | 'two'
-    | 'three'
-    | 'four'
-    | 'all'
-    | 'not_all'
-    | 'not_any'
-    | 'final'
-    | 'unclassified';
-  conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none';
-  relatedLinks: LinkType[];
-  appliesTo: Requirement[];
-};
-
-type UWFCourseInfo = {
-  id: number;
-  code: string; // e.g. CS135
-  name: string; // e.g. Functional Programming
-  description?: string; // e.g. in this course we...
-  rating: {
-    easy?: number; //less than 1
-    liked?: number; //less than 1
-    useful?: number; //less than 1
-    filled_count?: number;
-  };
-};
-
-type BKCourseInfo = {
-  url: string; // e.g uwaterloo.ca./academi...
-  courseInfo: {
-    prerequisites?: Requirement;
-    antirequisites?: Requirement;
-    corequisites?: Requirement;
-    'cross-listed courses'?: LinkType[];
-  };
-};
-
-type CourseInformation = {
-  termInfo: Map<number, CourseLocation>; // termId: CourseLocation
-  bgColour: string;
-  textColour: string;
-} & BKCourseInfo &
-  UWFCourseInfo;
-
-type TermInformation = {
-  termId: number; //e.g. 1255
-  termName: string; //e.g. 1A
-  termSeason: string; //e.g. Fall 2025
-  courseIds: number[]; //courseId[]
-};
-
 export class AllCourseInformation {
   // user Info
   #startingTermId: number;
   // maps and sets
-  #courseIds: Set<number>;
-  #courseInfoMap: Map<number, CourseInformation>;
-  #path: TermInformation[];
+  courseIds: Set<number>;
+  courseInfoMap: Map<number, CourseInformation>;
+  path: TermInformation[];
   #colourMap: Map<string, { bg: string; text: string }>; // CS: {bg: yellow, text: blue}
   //Update functions
-  #updatePage: () => void;
-  #updateReqLines: () => void;
+  #updateCourseVisibility: () => void;
+  #updateCourseLocations: () => void;
+  #updatePanRef: () => void;
   // hooks
   #gql: ReturnType<typeof useGQL>;
   #backend: ReturnType<typeof useApi>;
 
   // initializers:
   constructor(
-    studentPath: [string, number[]][], //[1A, courseId[]][]
-    startingTermId: number,
-    updatePage: () => void,
-    updateReqLines: () => void,
+    updateCourseVisibility: () => void,
+    updateCourseLocations: () => void,
+    updatePanRef: () => void,
     gql: ReturnType<typeof useGQL>,
     backend: ReturnType<typeof useApi>,
   ) {
-    this.#courseIds = new Set();
-    studentPath.forEach(([, courseIds]) =>
-      courseIds.forEach((courseId) => this.#courseIds.add(courseId)),
-    );
-    this.#courseInfoMap = new Map();
-    this.#startingTermId = startingTermId;
-    this.#path = this.#extractPath(studentPath);
+    this.courseIds = new Set();
+    this.courseInfoMap = new Map();
+    this.#startingTermId = 0;
+    this.path = [];
     this.#colourMap = new Map();
-    this.#updatePage = updatePage;
-    this.#updateReqLines = updateReqLines;
+    this.#updateCourseVisibility = updateCourseVisibility;
+    this.#updateCourseLocations = updateCourseLocations;
+    this.#updatePanRef = updatePanRef;
     this.#gql = gql;
     this.#backend = backend;
   }
 
   async init() {
+    //TODO: wrap this whole thing in a try catch and if it failing anywhere just send it to a 500 page
+    await this.#extractPath();
     // Fetch UWF course info (includes id, code, name, rating, and sections)
     const uwfResponse = await this.#extractFromUWF();
 
@@ -139,44 +81,66 @@ export class AllCourseInformation {
 
     // Merge UWF + BK info and initialise termInfo for each course
     uwfResponse.forEach((course, index) => {
-      this.#courseInfoMap.set(course.id, {
+      this.courseInfoMap.set(course.id, {
         ...course,
         ...bkResponse[course.code]!, // BK info keyed by course code
         bgColour: colours[index]!.bg,
         textColour: colours[index]!.text,
-        termInfo: new Map(), // populated below based on this.#path
+        termInfo: new Map(), // populated below based on this.path
       });
     });
 
     // For each term in the student's path, mark the course as visible in that term
-    this.#path.forEach(({ termId, courseIds }) => {
+    this.path.forEach(({ termId, courseIds }) => {
       courseIds.map((courseId) => {
-        const courseInfo = this.#courseInfoMap.get(courseId)!;
+        const courseInfo = this.courseInfoMap.get(courseId)!;
         // Set term presence; visible defaults to true here
         courseInfo.termInfo.set(termId, { visible: true });
       });
     });
+
+    this.#updateCourseVisibility();
+    this.#updateCourseLocations();
+    this.#updatePanRef();
   }
 
-  #extractPath(studentPath: [string, number[]][]) {
-    let currTerm = this.#startingTermId;
-    return studentPath.map(([termName, courseIds]) => {
-      const termId = currTerm;
-      currTerm = termOperation(termId, 1);
-      return {
-        termId,
-        termSeason: getTermSeason(termId),
-        termName,
-        courseIds,
-      };
-    });
+  async #extractPath() {
+    try {
+      const res = await this.#backend(
+        `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_seq?include_courses=true`,
+      );
+      if (!res.ok) throw new Error('error occured while retreiving student information');
+      const response = await res.json().catch(() => {});
+
+      const studentPath: [string, number[]][] = response.path;
+      this.#startingTermId = response.started_term_id;
+
+      let currTerm = this.#startingTermId;
+      this.path = studentPath.map(([termName, courseIds]) => {
+        const termId = currTerm;
+        currTerm = termOperation(termId, 1);
+        return {
+          termId,
+          termSeason: getTermSeason(termId),
+          termName,
+          courseIds,
+        };
+      });
+      this.courseIds = new Set();
+      studentPath.forEach(([, courseIds]) =>
+        courseIds.forEach((courseId) => this.courseIds.add(courseId)),
+      );
+    } catch (err) {
+      console.error(`error in #extractPath: ${err}`);
+      throw err;
+    }
   }
 
   async #extractFromUWF(): Promise<(UWFCourseInfo & { sections: { termId: number }[] })[]> {
-    if (!this.#courseIds.size) return [];
+    if (!this.courseIds.size) return [];
 
     const GQL_QUERY = `
-        query Course($course_id: Int!) {
+        query Course($course_ids: [Int!]) {
           course(where: { id: { _in: $course_ids } }) {
               code
               id
@@ -194,87 +158,143 @@ export class AllCourseInformation {
           }
       }
       `;
-    const response = await this.#gql(GQL_QUERY, { course_ids: Array.from(this.#courseIds) });
-    if (!response?.data?.course) {
-      throw new Error('could not get information from GQL');
+    try {
+      const response = await this.#gql(GQL_QUERY, { course_ids: Array.from(this.courseIds) });
+      if (!response?.data?.course) {
+        throw new Error('could not get information from GQL');
+      }
+      return response.data.course;
+    } catch (err) {
+      console.error(`error occured in #extractFromUWF: ${err}`);
+      throw err;
     }
-    return response.data.course;
   }
 
   async #extractFromBK(courseCodes: string[]) {
-    const res = await this.#backend(
-      `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_course_reqs`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ course_codes: courseCodes }),
-      },
-    );
-    if (!res.ok) {
-      throw new Error('Error in backend for fetching requirements');
+    try {
+      const res = await this.#backend(
+        `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_course_reqs`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ course_codes: courseCodes }),
+        },
+      );
+      if (!res.ok) {
+        throw new Error('Error in backend for fetching requirements');
+      }
+      const course_reqs: Record<string, BKCourseInfo> = (await res.json().catch(() => {})).courses;
+      return course_reqs;
+    } catch (err) {
+      console.error(`error occured in #extractFromBk: ${err}`);
+      throw err;
     }
-    const course_reqs: Record<string, BKCourseInfo> = (await res.json().catch(() => {})).courses;
-    return course_reqs;
   }
   // getters and setters
-  getCoruseInfo(courseId: number) {
-    return this.#courseInfoMap.get(courseId);
+  getCourseInfoId(courseId: number) {
+    return this.courseInfoMap.get(courseId);
   }
 
-  getTermsInfo(termId?: number, termName?: string) {
-    if (termId === undefined && termName === undefined)
+  getCourseInfoCode(courseCode: string) {
+    const course = [...this.courseInfoMap.entries()].find(
+      ([, course]) => course.code === courseCode,
+    );
+    return course ? course[1] : undefined;
+  }
+
+  getTermsInfo(term: { termId?: number; termName?: string; position?: number }) {
+    const { termId, termName, position } = term;
+    if (termId === undefined && termName === undefined && position === undefined) {
       throw new Error('neither termId nor termName provided');
-    return this.#path.find((term) => term.termId === termId || term.termName === termName);
+    }
+    if (position !== undefined) return this.path[position];
+    return this.path.find((term) => term.termId === termId || term.termName === termName);
+  }
+
+  getPath() {
+    return this.path;
   }
 
   getVisibility(courseId: number, termId: number) {
-    return this.#courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible;
+    return this.courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible;
+  }
+
+  getAllCourseLocations(courseId: number) {
+    return this.courseInfoMap.get(courseId)?.termInfo || new Map<number, CourseLocation>();
+  }
+
+  setVisibilityGrouped(courseIds: number[], value: boolean) {
+    for (const courseId of courseIds) {
+      const course = this.courseInfoMap.get(courseId);
+      if (course) course.termInfo.forEach((termInfo) => (termInfo.visible = value));
+    }
+    this.#updateCourseVisibility();
   }
 
   setVisibility(courseId: number, termId: number, value?: boolean) {
-    const course = this.#courseInfoMap.get(courseId)?.termInfo.get(termId);
+    const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course) {
       course.visible = value === undefined ? !course.visible : value;
     } else {
       throw new Error('course does not exist');
     }
-    this.#updateReqLines();
+    this.#updateCourseVisibility();
+  }
+
+  #locationsEqual(loc1: Location, loc2?: Location) {
+    if (!loc2) return false;
+    return (
+      loc1.height === loc2.height &&
+      loc1.top === loc2.top &&
+      loc1.left === loc2.left &&
+      loc1.width === loc2.width
+    );
   }
 
   setLocation(loc: Location, courseId: number, termId: number) {
-    const course = this.#courseInfoMap.get(courseId)?.termInfo.get(termId);
-    if (course) {
+    const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
+    if (course && !this.#locationsEqual(loc, course.location)) {
       course.location = loc;
-    } else {
-      throw new Error('course does not exist');
+    } else if (!course) {
+      console.error(`course does not exist: ${courseId}`);
     }
-    this.#updateReqLines();
   }
 
-  addCoruse(courseId: number, termId: number) {
-    const courseExists = this.#courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
+  async updateAllCourses() {
+    //TODO: improve this with better version
+    this.courseIds = new Set();
+    this.courseInfoMap = new Map();
+    await this.init();
+    this.#updateCourseLocations();
+  }
+
+  /* 
+  addCourses(courseId:number,termId:number) {
+    const courseExists = this.courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
     if (courseExists) return;
-    this.#courseIds.add(courseId);
-    this.#courseInfoMap = new Map();
-    const term = this.#path.find((term) => term.termId === termId)!;
+    this.courseIds.add(courseId);
+    this.courseInfoMap = new Map();
+    const term = this.path.find((term) => term.termId === termId)!;
     term.courseIds.push(courseId);
-
+    
     this.init();
-    this.#updatePage();
+    this.#updateCourseVisibility();
   }
-
+  */
+  /*
   removeCoruse(courseId: number, termId: number) {
-    const courseExists = this.#courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
+    const courseExists = this.courseInfoMap.get(courseId)?.termInfo.has(termId) || false;
     if (!courseExists) throw new Error('Course did not exist');
-    const course = this.#courseInfoMap.get(courseId)!;
+    const course = this.courseInfoMap.get(courseId)!;
     if (course.termInfo.size == 1) {
-      this.#courseIds.delete(courseId);
+      this.courseIds.delete(courseId);
     }
-    this.#courseInfoMap = new Map();
-    const term = this.#path.find((term) => term.termId === termId)!;
+    this.courseInfoMap = new Map();
+    const term = this.path.find((term) => term.termId === termId)!;
     term.courseIds = term.courseIds.filter((ci) => courseId != ci);
 
     this.init();
-    this.#updatePage();
+    this.#updateCourseVisibility();
   }
+  */
 }

@@ -5,24 +5,25 @@ import { LuSettings } from 'react-icons/lu';
 import { getCurrentTermId } from '../utils/termUtils';
 
 import Course from './Course';
-
+import { AllCourseInformation } from './CourseClass';
 
 type SemesterInterface = {
-  semester: string;
+  // semester: string;
   termId: number;
-  class_lst: number[];
+  allCourses: AllCourseInformation;
+  // class_lst: number[];
   canSwapRight: boolean;
   canSwapLeft: boolean;
 };
 
 export default function Semester({
-  semester,
   termId,
-  class_lst,
+  allCourses,
   canSwapRight,
   canSwapLeft,
 }: SemesterInterface) {
   const [settingOpen, setSettingOpen] = useState<boolean>(false);
+  const term = allCourses.getTermsInfo({ termId: termId })!;
 
   // TODO: add a delete and + button at the buttom of each semester
   return (
@@ -33,10 +34,10 @@ export default function Semester({
           termId == getCurrentTermId() && 'ring ring-dark-green',
         )}
       >
-        {semester}
+        {term.termName} - {term.termSeason}
       </div>
-      {class_lst.map((courseId, i) => (
-        <Course key={i} courseId={courseId} termId={termId} />
+      {term.courseIds.map((courseId, i) => (
+        <Course key={i} courseId={courseId} termId={termId} allCourses={allCourses} />
       ))}
       <div className="flex flex-col items-center gap-2">
         <LuSettings

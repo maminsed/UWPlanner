@@ -1,40 +1,20 @@
 'use client';
 import clsx from 'clsx';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { LuTrash2, LuX } from 'react-icons/lu';
 
-import { CourseInformation, GQLCoursePreReq, Requirement } from '../interface';
+import { AllCourseInformation } from '../graph/CourseClass';
+import { CourseInformation, Requirement } from '../interface';
+import { totalRequirementStatus } from '../utils/preReqUtils';
 import { getTermSeason } from '../utils/termUtils';
-
-import useGQL from '@/lib/useGQL';
 
 type CourseInfoPageProps = {
   close: () => void;
   updatePage?: () => void;
-  courseInfo: CourseInformation & GQLCoursePreReq;
+  allCourses: AllCourseInformation;
+  courseId: number;
+  termId: number;
 };
-
-type SectionInterface = {
-  class_number: number;
-  enrollment_capacity: number;
-  enrollment_total: number;
-  term_id: number;
-};
-
-type detailedInfoType = {
-  code: string;
-  id: number;
-  name: string;
-  description?: string;
-  rating: {
-    easy?: number;
-    liked?: number;
-    useful?: number;
-    filled_count?: number;
-  };
-  sections: SectionInterface[];
-} & GQLCoursePreReq &
-  CourseInformation;
 
 function Percentage({ value }: { value: number }) {
   return (
@@ -88,26 +68,34 @@ function ShowReqs({ requirement }: { requirement: Requirement }) {
   );
 }
 
-function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
+function NormalVersion({
+  allCourses,
+  course,
+  termId,
+}: {
+  allCourses: AllCourseInformation;
+  course: CourseInformation;
+  termId: number;
+}) {
   const subHeaderClsx = 'text-lg md:text-xl mt-6 text-gray-950';
   const pClsx = 'text-md text-zinc-900 font-light';
   const liClsx = 'list-disc list-inside';
 
   return (
     <div>
-      <h2 className="text-2xl text-center">{detailedInfo!.code.toUpperCase()}</h2>
+      <h2 className="text-2xl text-center">{course.code.toUpperCase()}</h2>
 
       <h3 className={clsx(subHeaderClsx, 'mt-4!')}>Course Name: </h3>
-      <p className={pClsx}>{detailedInfo.name}</p>
+      <p className={pClsx}>{course.name}</p>
 
       <h3 className={subHeaderClsx}>Course Description: </h3>
-      <p className={pClsx}>{detailedInfo.description || 'No description'}</p>
+      <p className={pClsx}>{course.description || 'No description'}</p>
 
-      {detailedInfo?.courseInfo['cross-listed courses'] && (
+      {course?.courseInfo['cross-listed courses'] && (
         <div>
           <h3 className={subHeaderClsx}>cross-listed courses: </h3>
           <ul>
-            {detailedInfo.courseInfo['cross-listed courses'].map(({ value, url }, index) => (
+            {course.courseInfo['cross-listed courses'].map(({ value, url }, index) => (
               <li key={index}>
                 <a href={url}>{value}</a>
               </li>
@@ -116,39 +104,42 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
         </div>
       )}
       {/* TODO: compelete */}
-      {/* <p>{totalRequirementStatus(detailedInfo,detailedInfo.termId,detailedInfo.termName)}</p> */}
-      {detailedInfo.courseInfo.prerequisites && (
+      <p className="text-red-700">
+        Hello: here is status:{' '}
+        {totalRequirementStatus(course.courseInfo, termId, allCourses) ? 'passed' : 'failed'}
+      </p>
+      {course.courseInfo.prerequisites && (
         <div>
           <h3 className={subHeaderClsx}>Prerequisites: </h3>
           <ul className="ml-2">
-            <ShowReqs requirement={detailedInfo.courseInfo.prerequisites} />
+            <ShowReqs requirement={course.courseInfo.prerequisites} />
           </ul>
         </div>
       )}
 
-      {detailedInfo.courseInfo.antirequisites && (
+      {course.courseInfo.antirequisites && (
         <div>
           <h3 className={subHeaderClsx}>Antirequisites: </h3>
           <ul className="ml-2">
-            <ShowReqs requirement={detailedInfo.courseInfo.antirequisites} />
+            <ShowReqs requirement={course.courseInfo.antirequisites} />
           </ul>
         </div>
       )}
 
-      {detailedInfo.courseInfo.corequisites && (
+      {course.courseInfo.corequisites && (
         <div>
           <h3 className={subHeaderClsx}>Corequisites: </h3>
           <ul className="ml-2">
-            <ShowReqs requirement={detailedInfo.courseInfo.corequisites} />
+            <ShowReqs requirement={course.courseInfo.corequisites} />
           </ul>
         </div>
       )}
 
       <h3 className={subHeaderClsx}>Current Offerings: </h3>
       <ul className={pClsx}>
-        {detailedInfo.sections.map((sec) => (
-          <li className={liClsx} key={sec.term_id}>
-            {getTermSeason(sec.term_id)}
+        {[...course.termInfo.keys()].map((termId) => (
+          <li className={liClsx} key={termId}>
+            {getTermSeason(termId)}
           </li>
         ))}
       </ul>
@@ -162,11 +153,9 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           )}
         >
           <span>
-            Liked{' '}
-            {detailedInfo.rating.liked ? `(${Math.round(detailedInfo.rating.liked * 100)}%)` : ''}
-            :{' '}
+            Liked {course.rating.liked ? `(${Math.round(course.rating.liked * 100)}%)` : ''}:{' '}
           </span>
-          {detailedInfo.rating.liked ? <Percentage value={detailedInfo.rating.liked} /> : 'no info'}
+          {course.rating.liked ? <Percentage value={course.rating.liked} /> : 'no info'}
         </div>
         <div
           className={clsx(
@@ -175,11 +164,9 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           )}
         >
           <span>
-            Easy{' '}
-            {detailedInfo.rating.easy ? `(${Math.round(detailedInfo.rating.easy * 100)}%)` : ''}
-            :{' '}
+            Easy {course.rating.easy ? `(${Math.round(course.rating.easy * 100)}%)` : ''}:{' '}
           </span>
-          {detailedInfo.rating.easy ? <Percentage value={detailedInfo.rating.easy} /> : 'no info'}
+          {course.rating.easy ? <Percentage value={course.rating.easy} /> : 'no info'}
         </div>
         <div
           className={clsx(
@@ -189,15 +176,12 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
         >
           <span>
             Usefull
-            {detailedInfo.rating.useful
-              ? ` (${Math.round(detailedInfo.rating.useful * 100)}%)`
-              : ''}
-            :
+            {course.rating.useful ? ` (${Math.round(course.rating.useful * 100)}%)` : ''}:
           </span>
-          {detailedInfo.rating.liked ? <Percentage value={detailedInfo.rating.liked} /> : 'no info'}
+          {course.rating.liked ? <Percentage value={course.rating.liked} /> : 'no info'}
         </div>
         <div className={clsx(liClsx, 'text-nowrap text-sm md:text-base font-normal text-zinc-700')}>
-          {detailedInfo.rating.filled_count || 0} Ratings
+          {course.rating.filled_count || 0} Ratings
         </div>
       </ul>
 
@@ -210,14 +194,14 @@ function NormalVersion({ detailedInfo }: { detailedInfo: detailedInfoType }) {
           <a
             className="underline"
             target="_blank"
-            href={`https://uwflow.com/course/${detailedInfo.name}`}
+            href={`https://uwflow.com/course/${course.name}`}
             rel="noreferrer"
           >
             UWFLOW
           </a>
         </li>
         <li className={liClsx}>
-          <a className="underline" target="_blank" href={detailedInfo.url} rel="noreferrer">
+          <a className="underline" target="_blank" href={course.url} rel="noreferrer">
             Undergraduate Calendar
           </a>
         </li>
@@ -234,58 +218,20 @@ function LoadingVersion() {
   );
 }
 
-export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProps) {
+export default function CourseInfoPage({
+  close,
+  allCourses,
+  courseId,
+  termId,
+}: CourseInfoPageProps) {
   //TODO: get the actual prereqs from the correct websites
   //      get as much links as you can
   //      delete functionality
-  const gql = useGQL();
-  const [detailedInfo, setDetailedInfo] = useState<detailedInfoType>();
-  const [status, setStatus] = useState<'Loading' | 'error' | 'idle'>('Loading');
-  const [message, setMessage] = useState<string>('Loading...');
+  const [status, setStatus] = useState<'error' | 'idle'>('idle');
+  const [message, setMessage] = useState<string>('');
 
-  useEffect(() => {
-    async function initialSetup() {
-      const GQL_QUERY = `
-        query Course($course_id: Int!) {
-          course(limit: 1, where: { id: { _eq: $course_id } }) {
-              code
-              id
-              description
-              name
-              rating {
-                  easy
-                  liked
-                  useful
-                  filled_count
-              }
-              sections(distinct_on: [term_id]) {
-                  enrollment_capacity
-                  enrollment_total
-                  section_name
-                  term_id
-                  class_number
-              }
-          }
-      }
-      `;
-      const response = await gql(GQL_QUERY, { course_id: courseInfo.courseId });
-      if (!response?.data?.course?.length) {
-        setStatus('error');
-        setMessage('error in recieving course information');
-        console.info(response);
-      } else {
-        const data: detailedInfoType = response.data.course[0];
-        data.sections = data.sections.sort((a, b) => b.term_id - a.term_id);
-        setDetailedInfo({ ...data, ...courseInfo });
-        setStatus('idle');
-        setMessage('');
-      }
-    }
-
-    initialSetup();
-  }, []);
-
-  if (status === 'idle' && !detailedInfo) {
+  const course = allCourses.getCourseInfoId(courseId);
+  if (status === 'idle' && !course) {
     setStatus('error');
     setMessage('error occured');
   }
@@ -293,20 +239,14 @@ export default function CourseInfoPage({ close, courseInfo }: CourseInfoPageProp
   return (
     <div className="bg-white py-4 px-4 rounded-xl shadow-2xl shadow-dark-green/10 max-w-180 w-[95%] max-h-[calc(100%-45*var(--spacing))] overflow-y-auto scroller overflow-x-clip">
       <div className="bg-white flex gap-1 px-1 rounded-md sticky top-0 right-0 justify-end max-w-max ml-auto">
-        <a
-          target="_blank"
-          href={`https://uwflow.com/course/${courseInfo.courseName}`}
-          rel="noreferrer"
-        >
+        <a target="_blank" href={`https://uwflow.com/course/${course?.code}`} rel="noreferrer">
           FLOW
         </a>
         <LuTrash2 className="w-4 font-semibold h-auto cursor-pointer text-red-900" />
         <LuX className="w-4 font-semibold h-auto cursor-pointer" onClick={close} />
       </div>
-      {status === 'idle' ? (
-        <NormalVersion detailedInfo={detailedInfo!} />
-      ) : status === 'Loading' ? (
-        <LoadingVersion />
+      {status === 'idle' && course ? (
+        <NormalVersion course={course} allCourses={allCourses} termId={termId} />
       ) : (
         ''
       )}

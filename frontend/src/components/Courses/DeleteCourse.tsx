@@ -1,13 +1,17 @@
 import { LuX } from 'react-icons/lu';
 
-import { CourseInformation } from '../interface';
+import { AllCourseInformation } from '../graph/CourseClass';
 import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermSeason } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 
 type DeleteCourseInterface = {
-  courseInfo: CourseInformation;
+  courses: {
+    courseId: number;
+    termId: number;
+  }[];
+  allCourses: AllCourseInformation;
   close: () => void;
   updatePage: () => void;
 };
@@ -15,7 +19,8 @@ type DeleteCourseInterface = {
 export default function DeleteCourse({
   close,
   updatePage,
-  courseInfo: { termId, termName, courseId, courseName },
+  courses,
+  allCourses,
 }: DeleteCourseInterface) {
   //TODO: disable when loading
   const backend = useApi();
@@ -27,8 +32,7 @@ export default function DeleteCourse({
         'Content-type': 'application/json',
       },
       body: JSON.stringify({
-        term_id: termId,
-        course_id: courseId,
+        courses: courses,
         current_term: getCurrentTermId(),
       }),
     });
@@ -46,11 +50,17 @@ export default function DeleteCourse({
       <RightSide className="!mb-1 !mr-0">
         <LuX className="w-4 font-semibold h-auto cursor-pointer" onClick={close} />
       </RightSide>
-      <h2 className="text-lg font-semibold ">Are you sure about deleting this course?</h2>
-      <p className="text-sm mt-2 md:mt-0">
-        It will delete all sections of <b>{courseName?.toUpperCase() || 'the course'}</b> from the{' '}
-        <b>{termName || getTermSeason(termId)}</b> semester
-      </p>
+      <h2 className="text-lg font-semibold ">Are you sure about deleting the following courses?</h2>
+      {courses.map(({ courseId, termId }, key) => (
+        <li className="text-sm mt-2 md:mt-0 list-inside list-disc" key={key}>
+          All sections of{' '}
+          <b>{allCourses.getCourseInfoId(courseId)?.code.toUpperCase() || 'the course'}</b> from the{' '}
+          <b>
+            {allCourses.getTermsInfo({ termId })?.termName || ''}-{getTermSeason(termId)}
+          </b>{' '}
+          semester
+        </li>
+      ))}
       <RightSide className="mt-4">
         <button className="px-2 border rounded-sm cursor-pointer" onClick={close}>
           Cancel

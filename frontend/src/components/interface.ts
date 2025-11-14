@@ -1,8 +1,11 @@
+//term
+
 export type termIdInterface = {
   value: number;
   display: string;
 };
 
+//Location
 export type Pair = {
   x: number;
   y: number;
@@ -11,8 +14,8 @@ export type Pair = {
 export type LineType = {
   startLoc: Pair;
   endLoc: Pair;
-  startCourse: CourseInformation;
-  endCourse: CourseInformation;
+  startCourse: { courseId: number; termId: number };
+  endCourse: { courseId: number; termId: number };
 };
 
 export type Location = {
@@ -22,11 +25,10 @@ export type Location = {
   height: number;
 };
 
-export type CourseInformation = {
-  termName?: string;
-  courseName?: string;
-  termId: number;
-  courseId: number;
+//CourseClass:
+export type CourseLocation = {
+  location?: Location;
+  visible: boolean;
 };
 
 type LinkType = {
@@ -52,11 +54,21 @@ export type Requirement = {
   appliesTo: Requirement[];
 };
 
-export type GQLCoursePreReq = {
+export type UWFCourseInfo = {
   id: number;
-  code: string;
-  name: string;
-  url: string;
+  code: string; // e.g. CS135
+  name: string; // e.g. Functional Programming
+  description?: string; // e.g. in this course we...
+  rating: {
+    easy?: number; //less than 1
+    liked?: number; //less than 1
+    useful?: number; //less than 1
+    filled_count?: number;
+  };
+};
+
+export type BKCourseInfo = {
+  url: string; // e.g uwaterloo.ca./academi...
   courseInfo: {
     prerequisites?: Requirement;
     antirequisites?: Requirement;
@@ -65,8 +77,21 @@ export type GQLCoursePreReq = {
   };
 };
 
-export type ClassLocations = Map<number, Map<number, Location>>; // CourseId, termId, Location
+export type CourseInformation = {
+  termInfo: Map<number, CourseLocation>; // termId: CourseLocation
+  bgColour: string;
+  textColour: string;
+} & BKCourseInfo &
+  UWFCourseInfo;
 
+export type TermInformation = {
+  termId: number; //e.g. 1255
+  termName: string; //e.g. 1A
+  termSeason: string; //e.g. Fall 2025
+  courseIds: number[]; //courseId[]
+};
+
+//Semester:
 export type DaysOfWeek = 'M' | 'T' | 'W' | 'Th' | 'F';
 
 export type GQLMeeting = {

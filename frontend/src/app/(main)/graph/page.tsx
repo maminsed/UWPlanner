@@ -1,5 +1,5 @@
 'use client';
-import { RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { IoSwapHorizontalOutline } from 'react-icons/io5';
 import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuRefreshCcw, LuShare } from 'react-icons/lu';
 
@@ -7,21 +7,16 @@ import AddACourse from '@/components/Courses/AddACourse';
 import BatchAddCourses from '@/components/Courses/BatchAddCourses';
 import CourseInfoPage from '@/components/Courses/CourseInfoPage';
 import DeleteCourse from '@/components/Courses/DeleteCourse';
+import { AllCourseInformation } from '@/components/graph/CourseClass';
 import { CourseContext } from '@/components/graph/CourseCtx';
 import Graph from '@/components/graph/Graph';
 import Lines from '@/components/graph/Lines';
-import {
-  ClassLocations,
-  CourseInformation,
-  GQLCoursePreReq,
-  LineType,
-  Location,
-  termIdInterface,
-} from '@/components/interface';
+import { LineType } from '@/components/interface';
 import ExpandPanel from '@/components/utils/ExpandPanel';
 import PanZoomCanvas from '@/components/utils/PanZoomCanvas';
 import { generateConnectionLines, preReq } from '@/components/utils/preReqUtils';
-import { getCurrentTermId, getTermDistance } from '@/components/utils/termUtils';
+import { useApi } from '@/lib/useApi';
+import useGQL from '@/lib/useGQL';
 
 function ControlPanel({
   setOverlay,
@@ -34,10 +29,20 @@ function ControlPanel({
 }) {
   return (
     <div className="text-light-green px-3 py-2 flex flex-col items-start text-sm gap-1">
-      <button className="cursor-pointer" onClick={() => setOverlay('add_single')}>
+      <button
+        className="cursor-pointer"
+        onClick={() =>
+          setOverlay({ overlayType: 'add_single', overlayCourseId: 0, overlayTermId: 0 })
+        }
+      >
         <LuPlus className="inline-block" /> Add a course
       </button>
-      <button className="cursor-pointer" onClick={() => setOverlay('add_batch')}>
+      <button
+        className="cursor-pointer"
+        onClick={() =>
+          setOverlay({ overlayType: 'add_batch', overlayCourseId: 0, overlayTermId: 0 })
+        }
+      >
         <LuImport className="inline-block mr-0.2" /> Import a Semester
       </button>
       <button className="cursor-pointer">
@@ -63,50 +68,46 @@ function ControlPanel({
 }
 
 type ClassPanelInterface = {
-  isHiddenMap: RefObject<Map<number, Map<number, boolean>>>;
-  updateHiddenMap: (courseIds: number[], value: boolean) => void;
-  courseDict: Map<number, string>;
-  classPanelUpdate: number; //for the useEffect
+  // isHiddenMap: RefObject<Map<number, Map<number, boolean>>>;
+  // updateHiddenMap: (courseIds: number[], value: boolean) => void;
+  // courseDict: Map<number, string>;
+  // classPanelUpdate: number; //for the useEffect
+  allCourses: AllCourseInformation;
+  updateClassPanelCourses: number;
 };
 
-function ClassPanel({
-  isHiddenMap,
-  updateHiddenMap,
-  courseDict,
-  classPanelUpdate,
-}: ClassPanelInterface) {
-  const internalIsHiddenMap = useMemo(() => {
-    const newVal = new Map<string, [number[], boolean]>();
+function ClassPanel({ allCourses, updateClassPanelCourses }: ClassPanelInterface) {
+  const internalVisbilityMap = useMemo(() => {
+    const newMap = new Map<string, [number[], boolean]>(); // Map<CS, [courseIds,isHidden]>
     const all: [number[], boolean] = [[], true];
-    Array.from(isHiddenMap.current.entries()).forEach(([courseId, termMap]) => {
-      const code = courseDict.get(courseId) || '';
+    allCourses.courseInfoMap.values().forEach(({ code, id: courseId, termInfo }) => {
       const firstNonLetter = code.search(/[^a-zA-Z]/);
       const striped = firstNonLetter === -1 ? code : code.slice(0, firstNonLetter);
 
-      if (!newVal.has(striped)) newVal.set(striped, [[], true]);
+      if (!newMap.has(striped)) newMap.set(striped, [[], true]);
 
-      const cgHidden = newVal.get(striped)!;
+      const cgHidden = newMap.get(striped)!;
       cgHidden[0].push(courseId);
 
-      Array.from(termMap.entries()).forEach(([_, value]) => {
-        cgHidden[1] = cgHidden[1] && value;
+      termInfo.values().forEach(({ visible }) => {
+        cgHidden[1] = cgHidden[1] && visible;
       });
       all[0].push(courseId);
       all[1] = all[1] && cgHidden[1];
     });
-    newVal.set('all', all);
-    return newVal;
-  }, [classPanelUpdate]);
+    newMap.set('all', all);
+    return newMap;
+  }, [updateClassPanelCourses]);
 
   return (
     <div className="py-1">
-      {Array.from(internalIsHiddenMap.entries()).map(([cg, [courseIds, value]]) => (
+      {Array.from(internalVisbilityMap.entries()).map(([cg, [courseIds, value]]) => (
         <label key={cg} className="flex gap-1 items-center pl-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={!value}
+            checked={value}
             className="rounded-full accent-green-500"
-            onChange={() => updateHiddenMap(courseIds, !value)}
+            onChange={() => allCourses.setVisibilityGrouped(courseIds, !value)}
           />
           {cg.toUpperCase()}
         </label>
@@ -115,17 +116,11 @@ function ClassPanel({
   );
 }
 
-function isLocEqual(loc1: Location | undefined, loc2: Location) {
-  if (!loc1) return false;
-  return (
-    loc1.height === loc2.height &&
-    loc1.left === loc2.left &&
-    loc1.top === loc2.top &&
-    loc1.width === loc1.width
-  );
-}
-
-type overlayInterface = 'none' | 'add_single' | 'add_batch' | 'delete_indiv' | 'course_info';
+type overlayInterface = {
+  overlayType: 'none' | 'add_single' | 'add_batch' | 'delete_indiv' | 'course_info';
+  overlayCourseId: number;
+  overlayTermId: number;
+};
 
 export default function GraphPage() {
   // TODO: add checks to see if users meet their reqs
@@ -134,167 +129,149 @@ export default function GraphPage() {
   //       add at the top left corner + - and reload (for prereqs) buttons
   //       the user can choose which course prereqs to see
   //       add a report issue button
-  const [overlay, setOverlay] = useState<overlayInterface>('none');
+  // settings:
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
+  //versions
+  const [coruseVisibilityVersion, setCoruseVisibilityVersion] = useState<number>(0);
+  const [courseLocationsVersion, setCourseLocationsVersion] = useState<number>(0);
+  //Maybe courseConnectionsVersion?
+  const [panRefVersion, setPanRefVersion] = useState<boolean>(true);
+  //hooks:
+  const gql = useGQL();
+  const backend = useApi();
+
+  const [overlay, setOverlay] = useState<overlayInterface>({
+    overlayType: 'none',
+    overlayCourseId: 0,
+    overlayTermId: 0,
+  });
   const [connections, setConnections] = useState<LineType[]>([]);
-  const [courseDict, setCourseDict] = useState<Map<number, string>>(new Map()); //courseId: courseCode
-  const colourMap = useRef<Map<string, { bg: string; text: string }>>(new Map()); // map for course colours
-  const gqlCourseSections = useRef<GQLCoursePreReq[] | null>(null);
+  const [status, setStatus] = useState<'Loading' | 'idle'>('Loading');
 
-  const [overlayedCourseInfo, setOverlayedCourseInfo] = useState<CourseInformation | undefined>(
-    undefined,
+  const allCourses = useRef(
+    new AllCourseInformation(
+      () => setCoruseVisibilityVersion((v) => v + 1),
+      () => setCourseLocationsVersion((v) => v + 1),
+      () => setPanRefVersion(false),
+      gql,
+      backend,
+    ),
   );
-  const courseHiddenStatus = useRef<Map<number, Map<number, boolean>>>(new Map()); // courseId: termId: boolean
-  const [classPanelVersion, setClassPanelVersion] = useState<number>(0);
 
-  const [_1, setVersion] = useState<number>(0); // version for locations and GQLCoursePreReq
-  const [update, setUpdate] = useState<number>(0); // update for the graph's courses
-  const [updatePanRef, setUpdatePanRef] = useState<boolean>(true); // update Pan
-  const [updateLocation, setUpdateLocation] = useState<number>(0);
-
-  const pathRef = useRef<termIdInterface[]>([]);
-  const locations = useRef<ClassLocations>(new Map()); // courseId: termId: Location
-
+  const closeFn = () => setOverlay({ overlayType: 'none', overlayCourseId: 0, overlayTermId: 0 });
   function updateCourse() {
-    setOverlay('none');
-    setUpdate((v) => v + 1);
+    closeFn();
+    //TODO: do something about the efficiency of this
+    reloadCourses();
   }
 
   useEffect(() => {
-    // If there are no course sections or no locations, exit early
-    if (!gqlCourseSections.current || !locations.current.size) return;
-
-    // Generate connection lines for prerequisites and update the connections state
-    setConnections(
-      generateConnectionLines(preReq(gqlCourseSections.current, courseDict), locations.current),
-    );
-
-    // Clear the current hidden status map for courses
-    const newCourseHiddenStatus: Map<number, Map<number, boolean>> = new Map();
-    gqlCourseSections.current.forEach(({ id: courseId }) => {
-      newCourseHiddenStatus.set(courseId, new Map());
-    });
-    newCourseHiddenStatus.forEach((currentValues, courseId) => {
-      locations.current.get(courseId)!.forEach((_, termId) => {
-        if (!courseHiddenStatus.current.get(courseId)?.has(termId)) {
-          currentValues.set(termId, false);
-        } else {
-          currentValues.set(termId, courseHiddenStatus.current.get(courseId)!.get(termId)!);
-        }
-      });
-      newCourseHiddenStatus.set(courseId, currentValues);
-    });
-    courseHiddenStatus.current = newCourseHiddenStatus;
-    setClassPanelVersion((v) => v + 1);
-    setUpdateLocation((v) => v + 1);
-  }, [gqlCourseSections.current]);
+    async function initialize() {
+      await allCourses.current.init();
+      // Generate connection lines for prerequisites and update the connections state
+      setStatus('idle');
+      //TODO: remove
+      await new Promise((resolve) =>
+        setTimeout(() => {
+          resolve(0);
+        }, 200),
+      );
+      setConnections(generateConnectionLines(preReq(allCourses.current), allCourses.current));
+    }
+    initialize();
+  }, []);
 
   function getOverLay() {
-    const closeFn = () => setOverlay('none');
-
-    switch (overlay) {
+    const termOptions = allCourses.current
+      .getPath()
+      .map((termInfo) => ({
+        value: termInfo.termId,
+        display: `${termInfo.termName} - ${termInfo.termSeason}`,
+      }));
+    switch (overlay.overlayType) {
       case 'add_single':
-        return (
-          <AddACourse close={closeFn} updatePage={updateCourse} termOptions={pathRef.current} />
-        );
+        return <AddACourse close={closeFn} updatePage={updateCourse} termOptions={termOptions} />;
       case 'add_batch':
         return (
-          <BatchAddCourses
-            close={closeFn}
-            updatePage={updateCourse}
-            termOptions={pathRef.current.filter(
-              (term) => getTermDistance(term.value, getCurrentTermId()) < 2,
-            )}
-          />
+          <BatchAddCourses close={closeFn} updatePage={updateCourse} termOptions={termOptions} />
         );
       case 'delete_indiv':
         return (
-          overlayedCourseInfo && (
-            <DeleteCourse
-              courseInfo={overlayedCourseInfo}
-              close={closeFn}
-              updatePage={updateCourse}
-            />
-          )
+          <DeleteCourse
+            courses={[
+              {
+                courseId: overlay.overlayCourseId,
+                termId: overlay.overlayTermId,
+              },
+            ]}
+            allCourses={allCourses.current}
+            close={closeFn}
+            updatePage={updateCourse}
+          />
         );
       case 'course_info':
         return (
-          overlayedCourseInfo &&
-          gqlCourseSections.current && (
-            <CourseInfoPage
-              close={closeFn}
-              courseInfo={{
-                ...overlayedCourseInfo,
-                ...gqlCourseSections.current.find((sec) => sec.id == overlayedCourseInfo.courseId)!,
-              }}
-            />
-          )
+          <CourseInfoPage
+            close={closeFn}
+            allCourses={allCourses.current}
+            courseId={overlay.overlayCourseId}
+            termId={overlay.overlayTermId}
+          />
         );
       default:
         return undefined;
     }
   }
 
+  async function reloadCourses() {
+    setStatus('Loading');
+    await allCourses.current.updateAllCourses();
+    setStatus('idle');
+    //TODO: remove
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        resolve(0);
+      }, 200),
+    );
+    setConnections(generateConnectionLines(preReq(allCourses.current), allCourses.current));
+  }
+
   return (
     <section>
-      {overlay != 'none' && (
+      {overlay.overlayType != 'none' && (
         <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-1 flex justify-center items-center">
           {getOverLay()}
         </div>
       )}
-      <PanZoomCanvas updatePan={updatePanRef}>
+      <PanZoomCanvas updatePan={panRefVersion}>
         <CourseContext.Provider
           value={{
-            courseDict,
-            colourMap,
-            isHidden: (termId, courseId) =>
-              courseHiddenStatus.current.get(courseId)?.get(termId) || false,
-
-            updateLocation: updateLocation,
-            deleteCourse: (courseInfo) => {
-              setOverlayedCourseInfo(courseInfo);
-              setOverlay('delete_indiv');
+            updateLocation: courseLocationsVersion,
+            deleteCourse: (courseId, termId) => {
+              setOverlay({
+                overlayType: 'delete_indiv',
+                overlayCourseId: courseId,
+                overlayTermId: termId,
+              });
             },
-            viewCourse: (courseInfo) => {
-              setOverlayedCourseInfo(courseInfo);
-              setOverlay('course_info');
-            },
-            setIsHidden: (termId, courseId, value) => {
-              if (!courseHiddenStatus.current.has(courseId)) {
-                courseHiddenStatus.current.set(courseId, new Map());
-              }
-              const course = courseHiddenStatus.current.get(courseId)!;
-              if (!course.has(courseId)) course.set(termId, value);
-              setClassPanelVersion((v) => v + 1);
-            },
-            setCourseDict,
-            setLocation: (loc, termId, courseId) => {
-              const newLocs = locations.current;
-              if (!newLocs.has(courseId)) {
-                newLocs.set(courseId, new Map());
-              }
-              const course = newLocs.get(courseId)!;
-              if (!isLocEqual(course.get(termId), loc)) {
-                course.set(termId, loc);
-                setVersion((v) => v + 1);
-              }
+            viewCourse: (courseId, termId) => {
+              setOverlay({
+                overlayType: 'course_info',
+                overlayCourseId: courseId,
+                overlayTermId: termId,
+              });
             },
           }}
         >
-          <Graph
-            pathRef={pathRef}
-            getUpdated={update}
-            updatePan={() => setUpdatePanRef(false)}
-            setCourseInformations={(courseInfo) => {
-              gqlCourseSections.current = courseInfo;
-              setVersion((v) => v + 1);
-            }}
-            setCourseDict={setCourseDict}
-          />
-          {showPreReq ? (
-            <Lines connections={connections} hiddenStatus={courseHiddenStatus.current} />
-          ) : (
-            ''
+          {status !== 'Loading' && (
+            <>
+              <Graph allCourses={allCourses.current} />
+              {showPreReq ? (
+                <Lines connections={connections} allCourses={allCourses.current} />
+              ) : (
+                ''
+              )}
+            </>
           )}
         </CourseContext.Provider>
       </PanZoomCanvas>
@@ -306,27 +283,15 @@ export default function GraphPage() {
               isHidden: !showPreReq,
               changeSatus: () => setShowPreReq((v) => !v),
             }}
-            reloadCourses={() => {
-              setUpdate((v) => v + 1);
-            }}
+            reloadCourses={reloadCourses}
           />
         </ExpandPanel>
       </div>
       <div className="fixed right-6 bottom-5">
         <ExpandPanel>
           <ClassPanel
-            isHiddenMap={courseHiddenStatus}
-            updateHiddenMap={(courseIds, value) => {
-              courseIds.forEach((courseId) => {
-                const course = courseHiddenStatus.current.get(courseId)!;
-                course.forEach((_, termId) => {
-                  course.set(termId, value);
-                });
-              });
-              setClassPanelVersion((v) => v + 1);
-            }}
-            courseDict={courseDict}
-            classPanelUpdate={classPanelVersion}
+            allCourses={allCourses.current}
+            updateClassPanelCourses={coruseVisibilityVersion}
           />
         </ExpandPanel>
       </div>

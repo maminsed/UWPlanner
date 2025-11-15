@@ -1,11 +1,19 @@
 'use client';
 import clsx from 'clsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
-export default function ExpandPanel({ children }: React.HTMLAttributes<HTMLDivElement>) {
+export default function ExpandPanel({
+  children,
+  addCloseFunction,
+}: React.HTMLAttributes<HTMLDivElement> & { addCloseFunction?: (arg0: () => void) => void }) {
   const [on, setOn] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (addCloseFunction !== undefined) {
+      addCloseFunction(() => setOn(false));
+    }
+  }, []);
   return (
     <div className="bg-[#063238] text-light-green rounded-md py-1">
       <button

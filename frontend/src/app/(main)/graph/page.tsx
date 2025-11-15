@@ -125,6 +125,7 @@ export default function GraphPage() {
   //       add a report issue button
   //       add the option to increase the distance between courses
   //       add the option to reorder classes
+  //       add the checks for program
   // settings:
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
   //versions
@@ -136,13 +137,18 @@ export default function GraphPage() {
   const gql = useGQL();
   const backend = useApi();
 
-  const [overlay, setOverlay] = useState<overlayInterface>({
+  const [overlay, setOverlayRaw] = useState<overlayInterface>({
     overlayType: 'none',
     overlayCourseId: 0,
     overlayTermId: 0,
   });
+  const setOverlay = (val: overlayInterface) => {
+    closeAllPanles();
+    setOverlayRaw(val);
+  };
   const [connections, setConnections] = useState<LineType[]>([]);
   const [status, setStatus] = useState<'Loading' | 'idle'>('Loading');
+  const expandPanelsCloseFns = useRef<(() => void)[]>([]);
 
   const allCourses = useRef(
     new AllCourseInformation(
@@ -154,7 +160,12 @@ export default function GraphPage() {
     ),
   );
 
-  const closeFn = () => setOverlay({ overlayType: 'none', overlayCourseId: 0, overlayTermId: 0 });
+  function closeAllPanles() {
+    expandPanelsCloseFns.current.forEach((closeFn) => closeFn());
+  }
+  const closeFn = () => {
+    setOverlay({ overlayType: 'none', overlayCourseId: 0, overlayTermId: 0 });
+  };
   function updateCourse() {
     closeFn();
     //TODO: do something about the efficiency of this
@@ -270,7 +281,7 @@ export default function GraphPage() {
         </CourseContext.Provider>
       </PanZoomCanvas>
       <div className="fixed left-6 bottom-5">
-        <ExpandPanel>
+        <ExpandPanel addCloseFunction={(fn) => expandPanelsCloseFns.current.push(fn)}>
           <ControlPanel
             setOverlay={setOverlay}
             preReq={{
@@ -282,7 +293,7 @@ export default function GraphPage() {
         </ExpandPanel>
       </div>
       <div className="fixed right-6 bottom-5">
-        <ExpandPanel>
+        <ExpandPanel addCloseFunction={(fn) => expandPanelsCloseFns.current.push(fn)}>
           <ClassPanel
             allCourses={allCourses.current}
             updateClassPanelCourses={coruseVisibilityVersion}

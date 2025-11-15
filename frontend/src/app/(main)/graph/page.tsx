@@ -116,6 +116,10 @@ type overlayInterface = {
   overlayType: 'none' | 'add_single' | 'add_batch' | 'delete_indiv' | 'course_info';
   overlayCourseId: number;
   overlayTermId: number;
+  groupOfCourses?: {
+    termId: number;
+    courseId: number;
+  }[];
 };
 
 export default function GraphPage() {
@@ -195,7 +199,14 @@ export default function GraphPage() {
     }));
     switch (overlay.overlayType) {
       case 'add_single':
-        return <AddACourse close={closeFn} updatePage={updateCourse} termOptions={termOptions} />;
+        return (
+          <AddACourse
+            close={closeFn}
+            updatePage={updateCourse}
+            termId={overlay.overlayTermId > 10 ? overlay.overlayTermId : undefined}
+            termOptions={termOptions}
+          />
+        );
       case 'add_batch':
         return (
           <BatchAddCourses close={closeFn} updatePage={updateCourse} termOptions={termOptions} />
@@ -203,12 +214,16 @@ export default function GraphPage() {
       case 'delete_indiv':
         return (
           <DeleteCourse
-            courses={[
-              {
-                courseId: overlay.overlayCourseId,
-                termId: overlay.overlayTermId,
-              },
-            ]}
+            courses={
+              overlay.groupOfCourses
+                ? overlay.groupOfCourses
+                : [
+                    {
+                      courseId: overlay.overlayCourseId,
+                      termId: overlay.overlayTermId,
+                    },
+                  ]
+            }
             allCourses={allCourses.current}
             close={closeFn}
             updatePage={updateCourse}
@@ -252,10 +267,18 @@ export default function GraphPage() {
         <CourseContext.Provider
           value={{
             updateLocation: courseLocationsVersion,
-            deleteCourse: (courseId, termId) => {
+            deleteCourse: ({ courseId, termId, groupOfCourses }) => {
               setOverlay({
                 overlayType: 'delete_indiv',
-                overlayCourseId: courseId,
+                overlayCourseId: courseId || 0,
+                overlayTermId: termId || 0,
+                groupOfCourses,
+              });
+            },
+            addToTerm: (termId) => {
+              setOverlay({
+                overlayType: 'add_single',
+                overlayCourseId: 0,
                 overlayTermId: termId,
               });
             },

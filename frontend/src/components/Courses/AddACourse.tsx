@@ -66,7 +66,9 @@ export default function AddACourse({
   termId?: number;
   termOptions?: termIdInterface[];
 }) {
-  //TODO: disable when loading - allow the user to add multiple if the term is too faraway
+  //TODO: disable when loading -
+  //      allow the user to add multiple if the term is too faraway
+  //      show the options when the user first clicks on it
   const [searchPhrase, setSearchPhrase] = useState<OptionsInterface>({
     code: '',
     course_id: -1,

@@ -6,12 +6,11 @@ import { getCurrentTermId } from '../utils/termUtils';
 
 import Course from './Course';
 import { AllCourseInformation } from './CourseClass';
+import { useCourseCtx } from './CourseCtx';
 
 type SemesterInterface = {
-  // semester: string;
   termId: number;
   allCourses: AllCourseInformation;
-  // class_lst: number[];
   canSwapRight: boolean;
   canSwapLeft: boolean;
 };
@@ -24,6 +23,7 @@ export default function Semester({
 }: SemesterInterface) {
   const [settingOpen, setSettingOpen] = useState<boolean>(false);
   const term = allCourses.getTermsInfo({ termId: termId })!;
+  const { deleteCourse, addToTerm } = useCourseCtx();
 
   // TODO: add a delete and + button at the buttom of each semester
   return (
@@ -52,7 +52,19 @@ export default function Semester({
         >
           {canSwapRight ? <button className="mt-1 cursor-pointer">Swap Right</button> : ''}
           {canSwapLeft ? <button className="cursor-pointer">Swap Left</button> : ''}
-          <button className="mb-1 cursor-pointer">Delete All</button>
+          <button
+            onClick={() =>
+              deleteCourse({
+                groupOfCourses: term.courseIds.map((courseId) => ({ courseId, termId })),
+              })
+            }
+            className="mb-1 cursor-pointer"
+          >
+            Delete All
+          </button>
+          <button onClick={() => addToTerm(termId)} className="mb-1 cursor-pointer">
+            Add
+          </button>
         </div>
       </div>
     </div>

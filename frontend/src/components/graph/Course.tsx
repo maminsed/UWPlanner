@@ -48,9 +48,9 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
   const courseInfo = allCourses.getCourseInfoId(courseId)!;
   const termInfo = courseInfo.termInfo.get(termId)!;
   let hoverMessage = '';
-  if (termInfo.allReqsMet === undefined || termInfo.termCompatible === undefined)
+  if (termInfo.allReqsMet === undefined || termInfo.termCompatible === undefined) {
     hoverMessage = 'Loading';
-  else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+  } else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
   else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
   else hoverMessage = 'Reqs met';
 
@@ -71,7 +71,7 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
             className="h-auto w-[0.9rem] hover:text-teal-950 cursor-pointer duration-150"
           />
           <LuTrash2
-            onClick={() => deleteCourse(courseId, termId)}
+            onClick={() => deleteCourse({ courseId, termId })}
             className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
           />
         </div>

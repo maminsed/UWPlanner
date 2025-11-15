@@ -22,7 +22,7 @@ export default function HoverEffect({
       <div className={clsx('truncate w-fit ', pClass)}>{children}</div>
       <div
         className={
-          'absolute max-h-0 py-0 overflow-x-auto group-hover:max-h-15 transition-all duration-600 bg-slate-900/70 overflow-y-hidden text-green-100 text-xs px-2 group-hover:py-1 rounded-md top-5 -right-2 z-20 '
+          'absolute max-h-0 py-0 overflow-x-auto text-center group-hover:max-h-15 transition-all duration-600 bg-slate-900/70 overflow-y-hidden text-green-100 text-xs px-2 group-hover:py-1 rounded-md top-5 -right-2 z-20 '
         }
         style={hoverStyle}
       >

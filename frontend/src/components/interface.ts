@@ -26,9 +26,10 @@ export type Location = {
 };
 
 //CourseClass:
-export type CourseLocation = {
+export type CourseTermInfo = {
   location?: Location;
   visible: boolean;
+  allReqsMet?: boolean;
 };
 
 type LinkType = {
@@ -52,6 +53,7 @@ export type Requirement = {
   conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none';
   relatedLinks: LinkType[];
   appliesTo: Requirement[];
+  met?: boolean;
 };
 
 export type UWFCourseInfo = {
@@ -78,7 +80,7 @@ export type BKCourseInfo = {
 };
 
 export type CourseInformation = {
-  termInfo: Map<number, CourseLocation>; // termId: CourseLocation
+  termInfo: Map<number, CourseTermInfo>; // termId: CourseTermInfo
   bgColour: string;
   textColour: string;
 } & BKCourseInfo &

@@ -37,12 +37,14 @@ const levelConditionList = [
 export function totalRequirementStatus(
   courseInfo: BKCourseInfo['courseInfo'],
   termId: number, // e.g. 1255
+  courseId: number,
   allCourses: AllCourseInformation,
-): boolean {
+) {
+  const termName = allCourses.getTermsInfo({ termId })!.termName;
   function singleRequirementStatus(
     courseInfo: Requirement,
     status: Requirement['conditionStatus'],
-  ) {
+  ): boolean {
     if (courseInfo.conditionedOn == 'final' || courseInfo.conditionedOn == 'unclassified') {
       let decision = true;
       for (const link of courseInfo.relatedLinks) {
@@ -87,40 +89,55 @@ export function totalRequirementStatus(
           decision = decision && isEnroled;
         }
       }
+      courseInfo.met = decision;
       return decision;
     }
-    const conditionsMet: number = courseInfo.appliesTo.filter((req) =>
+    const conditionsMet = courseInfo.appliesTo.filter((req) =>
       singleRequirementStatus(req, courseInfo.conditionStatus),
     ).length;
 
+    let decision = false;
     switch (courseInfo.conditionedOn) {
       case 'all':
-        return conditionsMet === courseInfo.appliesTo.length;
+        decision = conditionsMet === courseInfo.appliesTo.length;
+        break;
       case 'any':
-        return conditionsMet >= 1;
+        decision = conditionsMet >= 1;
+        break;
       case 'two':
-        return conditionsMet >= 2;
+        decision = conditionsMet >= 2;
+        break;
       case 'three':
-        return conditionsMet >= 3;
+        decision = conditionsMet >= 3;
+        break;
       case 'four':
-        return conditionsMet >= 4;
+        decision = conditionsMet >= 4;
+        break;
       case 'not_all':
-        return conditionsMet < courseInfo.appliesTo.length;
+        decision = conditionsMet < courseInfo.appliesTo.length;
+        break;
       case 'not_any':
-        return conditionsMet === 0;
+        decision = conditionsMet === 0;
+        break;
     }
+    courseInfo.met = decision;
+    return decision;
   }
-  const termName = allCourses.getTermsInfo({ termId })!.termName;
+
   let finalResult = true;
   if (courseInfo.prerequisites) {
     finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none');
   }
   if (courseInfo.antirequisites) {
-    finalResult = finalResult && singleRequirementStatus(courseInfo.antirequisites, 'none');
+    const decision = singleRequirementStatus(courseInfo.antirequisites, 'none');
+    finalResult = finalResult && decision;
+    // console.log(`debug: at antiReq for: ${allCourses.getCourseInfoId(courseId)?.code} with decision: ${decision}`)
   }
   if (courseInfo.corequisites) {
     finalResult = finalResult && singleRequirementStatus(courseInfo.corequisites, 'none');
   }
+  const term = allCourses.getCourseInfoId(courseId)?.termInfo.get(termId);
+  if (term) term.allReqsMet = finalResult;
   return finalResult;
 }
 

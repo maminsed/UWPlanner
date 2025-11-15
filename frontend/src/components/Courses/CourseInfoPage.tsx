@@ -5,8 +5,9 @@ import { LuTrash2, LuX } from 'react-icons/lu';
 
 import { AllCourseInformation } from '../graph/CourseClass';
 import { CourseInformation, Requirement } from '../interface';
-import { totalRequirementStatus } from '../utils/preReqUtils';
 import { getTermSeason } from '../utils/termUtils';
+
+import { GetReqIcon } from './utils';
 
 type CourseInfoPageProps = {
   close: () => void;
@@ -51,13 +52,14 @@ function ShowReqs({ requirement }: { requirement: Requirement }) {
   }
 
   return (
-    <li className="list-disc list-inside">
+    <li>
       <span
         className={clsx(requirement.conditionedOn == 'final' ? 'font-normal' : 'font-semibold')}
       >
+        <GetReqIcon met={requirement.met} />
         {...textBroken}
       </span>
-      <ul className="ml-5">
+      <ul className="ml-5 list-inside">
         {requirement.appliesTo.map((req, id) => (
           <div key={id}>
             <ShowReqs requirement={req} />
@@ -68,19 +70,12 @@ function ShowReqs({ requirement }: { requirement: Requirement }) {
   );
 }
 
-function NormalVersion({
-  allCourses,
-  course,
-  termId,
-}: {
-  allCourses: AllCourseInformation;
-  course: CourseInformation;
-  termId: number;
-}) {
+function NormalVersion({ course, termId }: { course: CourseInformation; termId: number }) {
   const subHeaderClsx = 'text-lg md:text-xl mt-6 text-gray-950';
   const pClsx = 'text-md text-zinc-900 font-light';
   const liClsx = 'list-disc list-inside';
-
+  const term = course.termInfo.get(termId);
+  const reqMet = term?.allReqsMet;
   return (
     <div>
       <h2 className="text-2xl text-center">{course.code.toUpperCase()}</h2>
@@ -103,14 +98,16 @@ function NormalVersion({
           </ul>
         </div>
       )}
-      {/* TODO: compelete */}
-      <p className="text-red-700">
-        Hello: here is status:{' '}
-        {totalRequirementStatus(course.courseInfo, termId, allCourses) ? 'passed' : 'failed'}
+      <p className={clsx(reqMet && 'text-green-500', reqMet === false && 'text-red-500')}>
+        {reqMet === undefined
+          ? 'Loading Requirement Status'
+          : `You have ${reqMet ? '' : 'not '}met all your requirements`}
       </p>
       {course.courseInfo.prerequisites && (
         <div>
-          <h3 className={subHeaderClsx}>Prerequisites: </h3>
+          <h3 className={subHeaderClsx}>
+            Prerequisites: <GetReqIcon met={course.courseInfo.prerequisites.met} size={'md'} />
+          </h3>
           <ul className="ml-2">
             <ShowReqs requirement={course.courseInfo.prerequisites} />
           </ul>
@@ -119,8 +116,11 @@ function NormalVersion({
 
       {course.courseInfo.antirequisites && (
         <div>
-          <h3 className={subHeaderClsx}>Antirequisites: </h3>
-          <ul className="ml-2">
+          <h3 className={subHeaderClsx}>
+            Antirequisites:
+            <GetReqIcon met={course.courseInfo.antirequisites.met} size={'md'} />
+          </h3>
+          <ul className="ml-2 list-inside">
             <ShowReqs requirement={course.courseInfo.antirequisites} />
           </ul>
         </div>
@@ -128,7 +128,9 @@ function NormalVersion({
 
       {course.courseInfo.corequisites && (
         <div>
-          <h3 className={subHeaderClsx}>Corequisites: </h3>
+          <h3 className={subHeaderClsx}>
+            Corequisites: <GetReqIcon met={course.courseInfo.corequisites.met} size={'md'} />
+          </h3>
           <ul className="ml-2">
             <ShowReqs requirement={course.courseInfo.corequisites} />
           </ul>
@@ -245,11 +247,7 @@ export default function CourseInfoPage({
         <LuTrash2 className="w-4 font-semibold h-auto cursor-pointer text-red-900" />
         <LuX className="w-4 font-semibold h-auto cursor-pointer" onClick={close} />
       </div>
-      {status === 'idle' && course ? (
-        <NormalVersion course={course} allCourses={allCourses} termId={termId} />
-      ) : (
-        ''
-      )}
+      {status === 'idle' && course ? <NormalVersion course={course} termId={termId} /> : ''}
       {message.length ? (
         <p className={clsx(status === 'error' && 'text-red-600', 'text-center mt-4')}>{message}</p>
       ) : (

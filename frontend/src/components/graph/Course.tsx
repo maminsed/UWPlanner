@@ -3,6 +3,9 @@ import { clsx } from 'clsx';
 import { useLayoutEffect, useRef } from 'react';
 import { LuEye, LuEyeOff, LuMoveDiagonal, LuTrash2 } from 'react-icons/lu';
 
+import { GetReqIcon } from '../Courses/utils';
+import HoverEffect from '../HoverEffect';
+
 import { AllCourseInformation } from './CourseClass';
 import { useCourseCtx } from './CourseCtx';
 
@@ -79,6 +82,20 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
             className="h-auto w-[0.9rem] absolute top-1 right-2 hover:text-teal-950 cursor-pointer duration-150"
           />
         )}
+        <div className="absolute bottom-0 right-1 cursor-default">
+          <HoverEffect
+            hoverStyle={{ minWidth: '4.5rem' }}
+            hover={
+              termInfo.allReqsMet === undefined
+                ? 'Loading'
+                : termInfo.allReqsMet
+                  ? 'Reqs met'
+                  : 'Reqs not met'
+            }
+          >
+            <GetReqIcon met={termInfo.allReqsMet} />
+          </HoverEffect>
+        </div>
         <div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />
       </div>
     </div>

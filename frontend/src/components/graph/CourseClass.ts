@@ -1,12 +1,13 @@
 import {
   BKCourseInfo,
   CourseInformation,
-  CourseLocation,
+  CourseTermInfo,
   Location,
   TermInformation,
   UWFCourseInfo,
 } from '../interface';
 import { generateRandomColours } from '../utils/colour';
+import { totalRequirementStatus } from '../utils/preReqUtils';
 import { getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
@@ -98,6 +99,7 @@ export class AllCourseInformation {
         courseInfo.termInfo.set(termId, { visible: true });
       });
     });
+    this.#calculateReqStatus();
 
     this.#updateCourseVisibility();
     this.#updateCourseLocations();
@@ -190,6 +192,16 @@ export class AllCourseInformation {
       throw err;
     }
   }
+
+  async #calculateReqStatus() {
+    for (const courseId of this.courseInfoMap.keys()) {
+      const course = this.courseInfoMap.get(courseId)!;
+      for (const termId of course.termInfo.keys()) {
+        totalRequirementStatus(course.courseInfo, termId, courseId, this);
+      }
+    }
+  }
+
   // getters and setters
   getCourseInfoId(courseId: number) {
     return this.courseInfoMap.get(courseId);
@@ -220,7 +232,7 @@ export class AllCourseInformation {
   }
 
   getAllCourseLocations(courseId: number) {
-    return this.courseInfoMap.get(courseId)?.termInfo || new Map<number, CourseLocation>();
+    return this.courseInfoMap.get(courseId)?.termInfo || new Map<number, CourseTermInfo>();
   }
 
   setVisibilityGrouped(courseIds: number[], value: boolean) {
@@ -232,6 +244,7 @@ export class AllCourseInformation {
   }
 
   setVisibility(courseId: number, termId: number, value?: boolean) {
+    // console.log('debug: updated')
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course) {
       course.visible = value === undefined ? !course.visible : value;
@@ -252,6 +265,7 @@ export class AllCourseInformation {
   }
 
   setLocation(loc: Location, courseId: number, termId: number) {
+    // console.log('debug: updated')
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course && !this.#locationsEqual(loc, course.location)) {
       course.location = loc;

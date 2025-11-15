@@ -196,8 +196,9 @@ export class AllCourseInformation {
   async #calculateReqStatus() {
     for (const courseId of this.courseInfoMap.keys()) {
       const course = this.courseInfoMap.get(courseId)!;
-      for (const termId of course.termInfo.keys()) {
+      for (const [termId, term] of course.termInfo.entries()) {
         totalRequirementStatus(course.courseInfo, termId, courseId, this);
+        term.termCompatible = course.sections.some(({ term_id }) => term_id % 10 === termId % 10);
       }
     }
   }
@@ -244,7 +245,6 @@ export class AllCourseInformation {
   }
 
   setVisibility(courseId: number, termId: number, value?: boolean) {
-    // console.log('debug: updated')
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course) {
       course.visible = value === undefined ? !course.visible : value;
@@ -265,7 +265,6 @@ export class AllCourseInformation {
   }
 
   setLocation(loc: Location, courseId: number, termId: number) {
-    // console.log('debug: updated')
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course && !this.#locationsEqual(loc, course.location)) {
       course.location = loc;
@@ -274,6 +273,7 @@ export class AllCourseInformation {
     }
   }
 
+  //general functions
   async updateAllCourses() {
     //TODO: improve this with better version
     this.courseIds = new Set();

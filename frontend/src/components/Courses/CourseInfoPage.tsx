@@ -56,7 +56,7 @@ function ShowReqs({ requirement }: { requirement: Requirement }) {
       <span
         className={clsx(requirement.conditionedOn == 'final' ? 'font-normal' : 'font-semibold')}
       >
-        <GetReqIcon met={requirement.met} />
+        <GetReqIcon reqsMet={requirement.met} />
         {...textBroken}
       </span>
       <ul className="ml-5 list-inside">
@@ -76,6 +76,7 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
   const liClsx = 'list-disc list-inside';
   const term = course.termInfo.get(termId);
   const reqMet = term?.allReqsMet;
+
   return (
     <div>
       <h2 className="text-2xl text-center">{course.code.toUpperCase()}</h2>
@@ -86,27 +87,23 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
       <h3 className={subHeaderClsx}>Course Description: </h3>
       <p className={pClsx}>{course.description || 'No description'}</p>
 
-      {course?.courseInfo['cross-listed courses'] && (
-        <div>
-          <h3 className={subHeaderClsx}>cross-listed courses: </h3>
-          <ul>
-            {course.courseInfo['cross-listed courses'].map(({ value, url }, index) => (
-              <li key={index}>
-                <a href={url}>{value}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <p className={clsx(reqMet && 'text-green-500', reqMet === false && 'text-red-500')}>
-        {reqMet === undefined
-          ? 'Loading Requirement Status'
-          : `You have ${reqMet ? '' : 'not '}met all your requirements`}
-      </p>
+      <h3 className={subHeaderClsx}>Status: </h3>
+      <ul className="list-inside list-disc">
+        <li className={clsx(reqMet && 'text-green-500', reqMet === false && 'text-red-500')}>
+          {reqMet === undefined
+            ? 'Loading Requirement Status'
+            : `You have ${reqMet ? '' : 'not '}met all your requirements`}
+        </li>
+        <li className={clsx(term?.termCompatible ? 'text-green-500' : 'text-yellow-500')}>
+          This course is usually {term?.termCompatible ? '' : '(not )'}offered in{' '}
+          {getTermSeason(termId).split(' ')[0]}
+        </li>
+      </ul>
+
       {course.courseInfo.prerequisites && (
         <div>
           <h3 className={subHeaderClsx}>
-            Prerequisites: <GetReqIcon met={course.courseInfo.prerequisites.met} size={'md'} />
+            Prerequisites: <GetReqIcon reqsMet={course.courseInfo.prerequisites.met} size={'md'} />
           </h3>
           <ul className="ml-2">
             <ShowReqs requirement={course.courseInfo.prerequisites} />
@@ -118,7 +115,7 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
         <div>
           <h3 className={subHeaderClsx}>
             Antirequisites:
-            <GetReqIcon met={course.courseInfo.antirequisites.met} size={'md'} />
+            <GetReqIcon reqsMet={course.courseInfo.antirequisites.met} size={'md'} />
           </h3>
           <ul className="ml-2 list-inside">
             <ShowReqs requirement={course.courseInfo.antirequisites} />
@@ -129,7 +126,7 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
       {course.courseInfo.corequisites && (
         <div>
           <h3 className={subHeaderClsx}>
-            Corequisites: <GetReqIcon met={course.courseInfo.corequisites.met} size={'md'} />
+            Corequisites: <GetReqIcon reqsMet={course.courseInfo.corequisites.met} size={'md'} />
           </h3>
           <ul className="ml-2">
             <ShowReqs requirement={course.courseInfo.corequisites} />
@@ -137,11 +134,26 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
         </div>
       )}
 
+      {course.courseInfo['cross-listed courses'] && (
+        <div>
+          <h3 className={subHeaderClsx}>cross-listed courses: </h3>
+          <ul className="list-inside list-disc">
+            {course.courseInfo['cross-listed courses'].map(({ value, url }, index) => (
+              <li key={index}>
+                <a href={url} target="_blank" className="underline" rel="noreferrer">
+                  {value}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <h3 className={subHeaderClsx}>Current Offerings: </h3>
       <ul className={pClsx}>
-        {[...course.termInfo.keys()].map((termId) => (
-          <li className={liClsx} key={termId}>
-            {getTermSeason(termId)}
+        {[...course.sections].map(({ term_id }) => (
+          <li className={clsx(liClsx, term_id === termId && 'font-medium')} key={term_id}>
+            {getTermSeason(term_id)}
           </li>
         ))}
       </ul>

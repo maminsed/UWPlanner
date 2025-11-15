@@ -30,6 +30,7 @@ export type CourseTermInfo = {
   location?: Location;
   visible: boolean;
   allReqsMet?: boolean;
+  termCompatible?: boolean;
 };
 
 type LinkType = {
@@ -67,6 +68,7 @@ export type UWFCourseInfo = {
     useful?: number; //less than 1
     filled_count?: number;
   };
+  sections: { term_id: number }[];
 };
 
 export type BKCourseInfo = {

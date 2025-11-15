@@ -1,16 +1,33 @@
 import clsx from 'clsx';
 import { LuCircleCheck, LuCircleDashed, LuCircleX } from 'react-icons/lu';
+import { PiWarning } from 'react-icons/pi';
 
 export function GetReqIcon({
-  met,
+  reqsMet,
+  termCompatible,
   size = 'sm',
   className,
 }: {
-  met: boolean | undefined;
+  reqsMet?: boolean;
+  termCompatible?: boolean;
   size?: 'lg' | 'md' | 'sm';
   className?: string;
 }) {
-  switch (met) {
+  if (termCompatible === false && reqsMet) {
+    return (
+      <PiWarning
+        className={clsx(
+          'text-yellow-600 inline-block mr-1',
+          size == 'lg' && 'w-5',
+          size == 'md' && 'w-4',
+          size == 'sm' && 'w-3',
+          className,
+        )}
+      />
+    );
+  }
+
+  switch (reqsMet) {
     case undefined:
       return (
         <LuCircleDashed
@@ -23,11 +40,11 @@ export function GetReqIcon({
           )}
         />
       );
-    case true:
+    case false:
       return (
-        <LuCircleCheck
+        <LuCircleX
           className={clsx(
-            'text-green-600 inline-block mr-1',
+            'text-red-600 inline-block mr-1',
             size == 'lg' && 'w-5',
             size == 'md' && 'w-4',
             size == 'sm' && 'w-3',
@@ -35,11 +52,11 @@ export function GetReqIcon({
           )}
         />
       );
-    case false:
+    case true:
       return (
-        <LuCircleX
+        <LuCircleCheck
           className={clsx(
-            'text-red-600 inline-block mr-1',
+            'text-green-600 inline-block mr-1',
             size == 'lg' && 'w-5',
             size == 'md' && 'w-4',
             size == 'sm' && 'w-3',

@@ -68,10 +68,6 @@ function ControlPanel({
 }
 
 type ClassPanelInterface = {
-  // isHiddenMap: RefObject<Map<number, Map<number, boolean>>>;
-  // updateHiddenMap: (courseIds: number[], value: boolean) => void;
-  // courseDict: Map<number, string>;
-  // classPanelUpdate: number; //for the useEffect
   allCourses: AllCourseInformation;
   updateClassPanelCourses: number;
 };
@@ -123,12 +119,12 @@ type overlayInterface = {
 };
 
 export default function GraphPage() {
-  // TODO: add checks to see if users meet their reqs
-  //       add crosslisted section
-  //       add the swaping functionality
+  // TODO: add the swaping functionality
   //       add at the top left corner + - and reload (for prereqs) buttons
   //       the user can choose which course prereqs to see
   //       add a report issue button
+  //       add the option to increase the distance between courses
+  //       add the option to reorder classes
   // settings:
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
   //versions
@@ -182,12 +178,10 @@ export default function GraphPage() {
   }, []);
 
   function getOverLay() {
-    const termOptions = allCourses.current
-      .getPath()
-      .map((termInfo) => ({
-        value: termInfo.termId,
-        display: `${termInfo.termName} - ${termInfo.termSeason}`,
-      }));
+    const termOptions = allCourses.current.getPath().map((termInfo) => ({
+      value: termInfo.termId,
+      display: `${termInfo.termName} - ${termInfo.termSeason}`,
+    }));
     switch (overlay.overlayType) {
       case 'add_single':
         return <AddACourse close={closeFn} updatePage={updateCourse} termOptions={termOptions} />;

@@ -47,6 +47,13 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
 
   const courseInfo = allCourses.getCourseInfoId(courseId)!;
   const termInfo = courseInfo.termInfo.get(termId)!;
+  let hoverMessage = '';
+  if (termInfo.allReqsMet === undefined || termInfo.termCompatible === undefined)
+    hoverMessage = 'Loading';
+  else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+  else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
+  else hoverMessage = 'Reqs met';
+
   return (
     <div
       ref={ref}
@@ -83,17 +90,8 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
           />
         )}
         <div className="absolute bottom-0 right-1 cursor-default">
-          <HoverEffect
-            hoverStyle={{ minWidth: '4.5rem' }}
-            hover={
-              termInfo.allReqsMet === undefined
-                ? 'Loading'
-                : termInfo.allReqsMet
-                  ? 'Reqs met'
-                  : 'Reqs not met'
-            }
-          >
-            <GetReqIcon met={termInfo.allReqsMet} />
+          <HoverEffect hoverStyle={{ minWidth: '4.5rem' }} hover={hoverMessage}>
+            <GetReqIcon termCompatible={termInfo.termCompatible} reqsMet={termInfo.allReqsMet} />
           </HoverEffect>
         </div>
         <div className="mr-2 border-1 rounded-full h-1.5 aspect-square" />

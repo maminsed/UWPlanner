@@ -273,5 +273,5 @@ class Semester(db.Model):
     term_id: Mapped[int] = mapped_column(db.Integer)
     user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey("users.id"))
     user: Mapped["Users"] = relationship("Users", back_populates="semesters")
-    sections: Mapped[str] = mapped_column(db.String())
-    courses: Mapped[str] = mapped_column(db.String())
+    sections: Mapped[str] = mapped_column(db.String(), default="[]")
+    courses: Mapped[str] = mapped_column(db.String(), default="[]")

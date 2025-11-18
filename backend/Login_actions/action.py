@@ -11,12 +11,13 @@ from backend.Schema import (
     Link,
     Major,
     Minor,
+    Semester,
     Sequence,
     Specialization,
     Users,
     db,
 )
-from backend.utils.path import translate_path, translate_to_id
+from backend.utils.path import term_distance, translate_path, translate_to_id
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
@@ -335,6 +336,76 @@ def get_user_seq() -> tuple[str, int]:
             "path": path,
         }
     ), 200
+
+
+@update_info.route("/update_terms", methods=["POST"])
+def update_terms():
+    """Endpoint to swap courses between two terms/semesters."""
+    # Get the term IDs from the request
+    data = request.get_json()
+    termId1: int = data.get("termId1")
+    termId2: int = data.get("termId2")
+
+    # Fetch the user from the database
+    user = Users.query.filter_by(username=g.username).first()
+
+    # Validate that all required data is present
+    if not termId1 or not termId2 or not user or not user.path:
+        return jsonify({"message": "some of the arguments were not supplied"}), 403
+
+    # Find existing semester records for both terms
+    term1 = None
+    term2 = None
+    for term in user.semesters:
+        if term.term_id == termId1:
+            term1 = term
+        elif term.term_id == termId2:
+            term2 = term
+
+    # Parse the user's path and calculate term indices
+    path = json.loads(user.path)
+    started_term = user.started_term
+    index1 = term_distance(started_term, termId1)
+    index2 = term_distance(started_term, termId2)
+
+    # Create semester records if they don't exist
+    if not term1:
+        term1 = Semester(term_id=termId1, user=user)
+        db.session.add(term1)
+        db.session.commit()
+    if not term2:
+        term2 = Semester(term_id=termId2, user=user)
+        db.session.add(term2)
+        db.session.commit()
+
+    try:
+        # Clear sections for both terms
+        term1.sections = json.dumps([])
+        term2.sections = json.dumps([])
+
+        # Swap courses between the two terms
+        term1Courses = term1.courses
+        term1.courses = term2.courses
+        term2.courses = term1Courses
+
+        # Swap term names in the path
+        term1Name = path[index1]
+        path[index1] = path[index2]
+        path[index2] = term1Name
+        user.path = json.dumps(path)
+
+        # Commit all changes to the database
+        db.session.add(term1)
+        db.session.flush()
+        db.session.add(term2)
+        db.session.flush()
+        db.session.add(user)
+        db.session.commit()
+
+        return "", 204
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "error in bk"}), 500
 
 
 """

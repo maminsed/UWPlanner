@@ -1,8 +1,9 @@
 'use client';
 import clsx from 'clsx';
 import { useState } from 'react';
-import { LuSettings } from 'react-icons/lu';
+import { LuArrowLeft, LuSettings, LuArrowRight, LuCirclePlus, LuDelete } from 'react-icons/lu';
 
+import HoverEffect from '../HoverEffect';
 import { getCurrentTermId, termOperation } from '../utils/termUtils';
 
 import Course from './Course';
@@ -28,7 +29,10 @@ export default function Semester({
 
   // TODO: add a delete and + button at the buttom of each semester
   return (
-    <div className="flex flex-col text-xl gap-6 items-center">
+    <div
+      className="flex flex-col text-xl gap-6 items-center group"
+      onMouseLeave={() => setSettingOpen(false)}
+    >
       <div
         className={clsx(
           'px-6 py-2 rounded-3xl bg-white shadow-xs mb-3 w-full font-semibold text-center text-lg whitespace-nowrap',
@@ -40,35 +44,41 @@ export default function Semester({
       {term.courseIds.map((courseId, i) => (
         <Course key={i} courseId={courseId} termId={termId} allCourses={allCourses} />
       ))}
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-2 opacity-5 group-hover:opacity-100 transition-opacity duration-500">
         <LuSettings
           className="w-7 h-auto aspect-square backdrop-blur-md hover:animate-spin hover:[animation-iteration-count:1] bg-sky-300/30 cursor-pointer rounded-full p-[0.6rem] box-content"
           onClick={() => setSettingOpen(!settingOpen)}
         />
         <div
           className={clsx(
-            'bg-sky-300/30 rounded-md flex flex-col px-2 transition-all duration-700 overflow-clip',
-            settingOpen ? 'max-h-30' : 'max-h-0',
+            'bg-sky-300/30 rounded-md flex gap-1 px-2 transition-all items-stretch align-middle',
+            settingOpen ? 'max-h-30' : 'max-h-0 overflow-clip',
           )}
         >
           {canSwapRight ? (
             <button
-              className="mt-1 cursor-pointer"
+              className="cursor-pointer h-fit"
               onClick={async () => await allCourses.swapSemesters(termId, termOperation(termId, 1))}
             >
-              Swap Right
+              <HoverEffect hover="Swap Right">
+                <LuArrowRight className="inline-block w-5 hover:text-teal-500 duration-300 h-auto" />
+              </HoverEffect>
+              {/* Swap Right */}
             </button>
           ) : (
             ''
           )}
           {canSwapLeft ? (
             <button
-              className="cursor-pointer"
+              className="cursor-pointer h-fit"
               onClick={async () =>
                 await allCourses.swapSemesters(termId, termOperation(termId, -1))
               }
             >
-              Swap Left
+              <HoverEffect hover="Swap Left">
+                <LuArrowLeft className="inline-block w-5 hover:text-teal-500 duration-300 h-auto" />
+              </HoverEffect>
+              {/* Swap Left */}
             </button>
           ) : (
             ''
@@ -79,12 +89,18 @@ export default function Semester({
                 groupOfCourses: term.courseIds.map((courseId) => ({ courseId, termId })),
               })
             }
-            className="mb-1 cursor-pointer"
+            className="cursor-pointer h-fit"
           >
-            Delete All
+            <HoverEffect hover="Delete Courses">
+              <LuDelete className="inline-block w-5 hover:text-teal-500 duration-300 h-auto" />
+            </HoverEffect>
+            {/* Delete All */}
           </button>
-          <button onClick={() => addToTerm(termId)} className="mb-1 cursor-pointer">
-            Add
+          <button onClick={() => addToTerm(termId)} className="cursor-pointer h-fit">
+            <HoverEffect hover="Add a course">
+              <LuCirclePlus className="inline-block w-5 hover:text-teal-500 duration-300 h-auto ml-[0.01rem]" />
+            </HoverEffect>
+            {/* Add */}
           </button>
         </div>
       </div>

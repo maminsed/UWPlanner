@@ -11,10 +11,8 @@ import { AllCourseInformation } from '@/components/graph/CourseClass';
 import { CourseContext } from '@/components/graph/CourseCtx';
 import Graph from '@/components/graph/Graph';
 import Lines from '@/components/graph/Lines';
-import { LineType } from '@/components/interface';
 import ExpandPanel from '@/components/utils/ExpandPanel';
 import PanZoomCanvas from '@/components/utils/PanZoomCanvas';
-import { generateConnectionLines, preReq } from '@/components/utils/preReqUtils';
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
 
@@ -150,7 +148,6 @@ export default function GraphPage() {
     closeAllPanles();
     setOverlayRaw(val);
   };
-  const [connections, setConnections] = useState<LineType[]>([]);
   const [status, setStatus] = useState<'Loading' | 'idle'>('Loading');
   const expandPanelsCloseFns = useRef<(() => void)[]>([]);
 
@@ -187,7 +184,7 @@ export default function GraphPage() {
           resolve(0);
         }, 200),
       );
-      setConnections(generateConnectionLines(preReq(allCourses.current), allCourses.current));
+      await allCourses.current.generateConnectionLines();
     }
     initialize();
   }, []);
@@ -253,7 +250,7 @@ export default function GraphPage() {
         resolve(0);
       }, 200),
     );
-    setConnections(generateConnectionLines(preReq(allCourses.current), allCourses.current));
+    await allCourses.current.generateConnectionLines();
   }
 
   return (
@@ -295,7 +292,10 @@ export default function GraphPage() {
             <>
               <Graph allCourses={allCourses.current} />
               {showPreReq ? (
-                <Lines connections={connections} allCourses={allCourses.current} />
+                <Lines
+                  connections={allCourses.current.getConnectionLines()}
+                  allCourses={allCourses.current}
+                />
               ) : (
                 ''
               )}

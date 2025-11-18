@@ -5,9 +5,10 @@ import {
   Location,
   TermInformation,
   UWFCourseInfo,
+  LineType,
 } from '../interface';
 import { generateRandomColours } from '../utils/colour';
-import { totalRequirementStatus } from '../utils/preReqUtils';
+import { generateConnectionLines, totalRequirementStatus } from '../utils/preReqUtils';
 import { getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
@@ -15,16 +16,19 @@ import useGQL from '@/lib/useGQL';
 
 export class AllCourseInformation {
   // user Info
-  #startingTermId: number;
+  #startingTermId: number = 0;
   // maps and sets
-  courseIds: Set<number>;
-  courseInfoMap: Map<number, CourseInformation>;
-  path: TermInformation[];
-  #colourMap: Map<string, { bg: string; text: string }>; // CS: {bg: yellow, text: blue}
+  courseIds: Set<number> = new Set();
+  courseInfoMap: Map<number, CourseInformation> = new Map();
+  path: TermInformation[] = [];
+  #colourMap: Map<string, { bg: string; text: string }> = new Map(); // CS: {bg: yellow, text: blue}
+  #connectingIds: [number, number][] = [];
+  #connectionLines: LineType[] = [];
   //Update functions
   #updateCourseVisibility: () => void;
   #updateCourseLocations: () => void;
   #updatePanRef: () => void;
+  #updateGraph: () => void = () => {};
   // hooks
   #gql: ReturnType<typeof useGQL>;
   #backend: ReturnType<typeof useApi>;
@@ -37,11 +41,6 @@ export class AllCourseInformation {
     gql: ReturnType<typeof useGQL>,
     backend: ReturnType<typeof useApi>,
   ) {
-    this.courseIds = new Set();
-    this.courseInfoMap = new Map();
-    this.#startingTermId = 0;
-    this.path = [];
-    this.#colourMap = new Map();
     this.#updateCourseVisibility = updateCourseVisibility;
     this.#updateCourseLocations = updateCourseLocations;
     this.#updatePanRef = updatePanRef;
@@ -194,13 +193,24 @@ export class AllCourseInformation {
   }
 
   async #calculateReqStatus() {
+    this.#connectingIds = [];
     for (const courseId of this.courseInfoMap.keys()) {
       const course = this.courseInfoMap.get(courseId)!;
+      let dependentCourses = undefined;
       for (const [termId, term] of course.termInfo.entries()) {
-        totalRequirementStatus(course.courseInfo, termId, courseId, this);
+        const res = totalRequirementStatus(course.courseInfo, termId, courseId, this);
+        if (dependentCourses === undefined) dependentCourses = res;
         term.termCompatible = course.sections.some(({ term_id }) => term_id % 10 === termId % 10);
       }
+      dependentCourses?.forEach((preReqId) => {
+        this.#connectingIds.push([preReqId, courseId]);
+      });
     }
+  }
+
+  async generateConnectionLines() {
+    this.#connectionLines = generateConnectionLines(this.#connectingIds, this);
+    this.#updateCourseVisibility();
   }
 
   // getters and setters
@@ -226,6 +236,10 @@ export class AllCourseInformation {
 
   getPath() {
     return this.path;
+  }
+
+  getConnectionLines() {
+    return this.#connectionLines;
   }
 
   getVisibility(courseId: number, termId: number) {
@@ -269,17 +283,77 @@ export class AllCourseInformation {
     if (course && !this.#locationsEqual(loc, course.location)) {
       course.location = loc;
     } else if (!course) {
-      console.error(`course does not exist: ${courseId}`);
+      console.error(`course does not exist: courseId: ${courseId} termId: ${termId}`);
     }
+  }
+
+  setUpdateGraph(updateFn: () => void) {
+    this.#updateGraph = updateFn;
   }
 
   //general functions
   async updateAllCourses() {
-    //TODO: improve this with better version
+    //TODO: improve this with more efficient version
     this.courseIds = new Set();
     this.courseInfoMap = new Map();
     await this.init();
     this.#updateCourseLocations();
+  }
+
+  async swapSemesters(termId1: number, termId2: number): Promise<boolean> {
+    console.log('starts');
+    const res = await this.#backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/update_terms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ termId1, termId2 }),
+    });
+
+    if (!res.ok) {
+      console.error('error occured in switching');
+      return false;
+    }
+    const term1 = this.path.find((term) => term.termId == termId1);
+    const term2 = this.path.find((term) => term.termId == termId2);
+    if (!term1 || !term2) {
+      await this.updateAllCourses();
+      return true;
+    }
+
+    const term1Ids = term1.courseIds;
+    term1.courseIds = term2.courseIds;
+    term2.courseIds = term1Ids;
+
+    this.#setToTerm(term2.courseIds, termId1, termId2);
+    this.#setToTerm(term1.courseIds, termId2, termId1);
+
+    if (!(term1.termName.startsWith('WT') && term2.termName.startsWith('WT'))) {
+      const term1Name = term1.termName;
+      term1.termName = term2.termName;
+      term2.termName = term1Name;
+    }
+    this.#calculateReqStatus();
+    this.#updateGraph();
+
+    this.#updateCourseLocations();
+    this.#updateCourseVisibility();
+
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        resolve(0);
+      }, 200),
+    );
+    this.generateConnectionLines();
+    this.#updateCourseVisibility();
+    return true;
+  }
+
+  #setToTerm(courses: number[], prevTermId: number, newTermId: number) {
+    for (const courseId of courses) {
+      const course = this.getCourseInfoId(courseId);
+      if (!course) continue;
+      course.termInfo.set(newTermId, { visible: true });
+      course.termInfo.delete(prevTermId);
+    }
   }
 
   /* 

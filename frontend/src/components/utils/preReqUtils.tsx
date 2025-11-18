@@ -39,11 +39,13 @@ export function totalRequirementStatus(
   termId: number, // e.g. 1255
   courseId: number,
   allCourses: AllCourseInformation,
-) {
+): number[] {
   const termName = allCourses.getTermsInfo({ termId })!.termName;
+  const dependentCourses: number[] = [];
   function singleRequirementStatus(
     courseInfo: Requirement,
     status: Requirement['conditionStatus'],
+    isPrereq: boolean = false,
   ): boolean {
     if (courseInfo.conditionedOn == 'final' || courseInfo.conditionedOn == 'unclassified') {
       let decision = true;
@@ -52,6 +54,7 @@ export function totalRequirementStatus(
         if (link.linkType == 'courses' || link.linkType == 'course') {
           const course = allCourses.getCourseInfoCode(link.value.toLowerCase());
           if (course) {
+            if (isPrereq) dependentCourses.push(course.id);
             switch (status) {
               case 'none':
               case 'complete':
@@ -93,7 +96,7 @@ export function totalRequirementStatus(
       return decision;
     }
     const conditionsMet = courseInfo.appliesTo.filter((req) =>
-      singleRequirementStatus(req, courseInfo.conditionStatus),
+      singleRequirementStatus(req, courseInfo.conditionStatus, isPrereq),
     ).length;
 
     let decision = false;
@@ -126,7 +129,7 @@ export function totalRequirementStatus(
 
   let finalResult = true;
   if (courseInfo.prerequisites) {
-    finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none');
+    finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none', true);
   }
   if (courseInfo.antirequisites) {
     const decision = singleRequirementStatus(courseInfo.antirequisites, 'none');
@@ -138,7 +141,7 @@ export function totalRequirementStatus(
   }
   const term = allCourses.getCourseInfoId(courseId)?.termInfo.get(termId);
   if (term) term.allReqsMet = finalResult;
-  return finalResult;
+  return dependentCourses;
 }
 
 // This function generates connection lines between courses and their prerequisites.

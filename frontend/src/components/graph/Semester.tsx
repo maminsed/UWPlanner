@@ -1,8 +1,9 @@
+'use client';
 import clsx from 'clsx';
 import { useState } from 'react';
 import { LuSettings } from 'react-icons/lu';
 
-import { getCurrentTermId } from '../utils/termUtils';
+import { getCurrentTermId, termOperation } from '../utils/termUtils';
 
 import Course from './Course';
 import { AllCourseInformation } from './CourseClass';
@@ -41,7 +42,7 @@ export default function Semester({
       ))}
       <div className="flex flex-col items-center gap-2">
         <LuSettings
-          className="w-7 h-auto aspect-square backdrop-blur-md hover:animate-spin bg-sky-300/30 cursor-pointer rounded-full p-[0.6rem] box-content"
+          className="w-7 h-auto aspect-square backdrop-blur-md hover:animate-spin hover:[animation-iteration-count:1] bg-sky-300/30 cursor-pointer rounded-full p-[0.6rem] box-content"
           onClick={() => setSettingOpen(!settingOpen)}
         />
         <div
@@ -50,8 +51,28 @@ export default function Semester({
             settingOpen ? 'max-h-30' : 'max-h-0',
           )}
         >
-          {canSwapRight ? <button className="mt-1 cursor-pointer">Swap Right</button> : ''}
-          {canSwapLeft ? <button className="cursor-pointer">Swap Left</button> : ''}
+          {canSwapRight ? (
+            <button
+              className="mt-1 cursor-pointer"
+              onClick={async () => await allCourses.swapSemesters(termId, termOperation(termId, 1))}
+            >
+              Swap Right
+            </button>
+          ) : (
+            ''
+          )}
+          {canSwapLeft ? (
+            <button
+              className="cursor-pointer"
+              onClick={async () =>
+                await allCourses.swapSemesters(termId, termOperation(termId, -1))
+              }
+            >
+              Swap Left
+            </button>
+          ) : (
+            ''
+          )}
           <button
             onClick={() =>
               deleteCourse({

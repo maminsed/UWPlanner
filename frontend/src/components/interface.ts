@@ -29,6 +29,7 @@ export type Location = {
 export type CourseTermInfo = {
   location?: Location;
   visible: boolean;
+  reqsOn: boolean;
   allReqsMet?: boolean;
   termCompatible?: boolean;
 };

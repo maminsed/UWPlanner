@@ -54,14 +54,22 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
   else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
   else hoverMessage = 'Reqs met';
 
+  function onClick(e: React.MouseEvent) {
+    if (e.metaKey || e.ctrlKey) allCourses.setReqsOn(courseId, termId);
+  }
+
   return (
     <div
       ref={ref}
-      className={clsx('rounded-r-xl text-dark-green', !termInfo?.visible ? 'opacity-40' : '')}
+      className={clsx(
+        'rounded-r-xl text-dark-green cursor-default',
+        !termInfo?.visible ? 'opacity-40' : '',
+      )}
       style={{
         backgroundColor: courseInfo.bgColour,
         color: courseInfo.textColour,
       }}
+      onClick={onClick}
     >
       <div className="w-full h-full flex items-center relative">
         <div className="h-full w-2" style={{ background: courseInfo.textColour }} />

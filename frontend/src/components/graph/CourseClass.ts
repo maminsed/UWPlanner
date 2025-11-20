@@ -32,6 +32,8 @@ export class AllCourseInformation {
   // hooks
   #gql: ReturnType<typeof useGQL>;
   #backend: ReturnType<typeof useApi>;
+  //general state variables
+  #ReqsOnCount = 0;
 
   // initializers:
   constructor(
@@ -95,7 +97,7 @@ export class AllCourseInformation {
       courseIds.map((courseId) => {
         const courseInfo = this.courseInfoMap.get(courseId)!;
         // Set term presence; visible defaults to true here
-        courseInfo.termInfo.set(termId, { visible: true });
+        courseInfo.termInfo.set(termId, { visible: true, reqsOn: false });
       });
     });
     this.#calculateReqStatus();
@@ -242,18 +244,57 @@ export class AllCourseInformation {
     return this.#connectionLines;
   }
 
-  getVisibility(courseId: number, termId: number) {
-    return this.courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible;
-  }
-
   getAllCourseLocations(courseId: number) {
     return this.courseInfoMap.get(courseId)?.termInfo || new Map<number, CourseTermInfo>();
+  }
+
+  getReqsOn(courseId: number, termId: number) {
+    return (
+      (this.#ReqsOnCount && this.courseInfoMap.get(courseId)?.termInfo.get(termId)?.reqsOn) || false
+    );
+  }
+
+  setReqsOn(courseId: number, termId: number, value?: boolean) {
+    const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
+    if (!course) return;
+    value = (value === undefined ? !course.reqsOn : value) as boolean;
+    if (value != course.reqsOn) {
+      if (this.#ReqsOnCount == 0 && value) {
+        this.setVisibilityGrouped(Array.from(this.courseIds), false);
+      }
+      this.#ReqsOnCount += value ? 1 : -1;
+    }
+    course.reqsOn = value;
+    course.visible = value;
+
+    this.#updateCourseVisibility();
+  }
+
+  getVisibility(courseId: number, termId: number) {
+    return this.courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible || false;
+  }
+
+  #setReqOnWhileSettingVisibility(termInfo: CourseTermInfo, visible: boolean) {
+    termInfo.reqsOn = false;
+    if (this.#ReqsOnCount) {
+      this.#ReqsOnCount = 0;
+      for (const course of this.courseInfoMap.values()) {
+        for (const term of course.termInfo.values()) {
+          if (term.reqsOn) term.reqsOn = false;
+        }
+      }
+    }
   }
 
   setVisibilityGrouped(courseIds: number[], value: boolean) {
     for (const courseId of courseIds) {
       const course = this.courseInfoMap.get(courseId);
-      if (course) course.termInfo.forEach((termInfo) => (termInfo.visible = value));
+      if (course) {
+        course.termInfo.forEach((termInfo) => {
+          termInfo.visible = value;
+          this.#setReqOnWhileSettingVisibility(termInfo, value);
+        });
+      }
     }
     this.#updateCourseVisibility();
   }
@@ -262,6 +303,7 @@ export class AllCourseInformation {
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course) {
       course.visible = value === undefined ? !course.visible : value;
+      this.#setReqOnWhileSettingVisibility(course, course.visible);
     } else {
       throw new Error('course does not exist');
     }
@@ -301,7 +343,6 @@ export class AllCourseInformation {
   }
 
   async swapSemesters(termId1: number, termId2: number): Promise<boolean> {
-    console.log('starts');
     const res = await this.#backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/update_terms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -351,7 +392,7 @@ export class AllCourseInformation {
     for (const courseId of courses) {
       const course = this.getCourseInfoId(courseId);
       if (!course) continue;
-      course.termInfo.set(newTermId, { visible: true });
+      course.termInfo.set(newTermId, { visible: true, reqsOn: false });
       course.termInfo.delete(prevTermId);
     }
   }

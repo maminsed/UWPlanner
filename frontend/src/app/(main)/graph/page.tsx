@@ -121,8 +121,7 @@ type overlayInterface = {
 };
 
 export default function GraphPage() {
-  // TODO: add at the top left corner + - and reload (for prereqs) buttons
-  //       the user can choose which course prereqs to see
+  // TODO: the user can choose which course prereqs to see
   //       add a report issue button
   //       add the option to increase the distance between courses
   //       add the option to reorder classes

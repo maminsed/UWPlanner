@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState, useEffect } from 'react';
+import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(v, hi));
@@ -19,7 +20,7 @@ export default function PanZoomCanvas({
 
   // content style values
   interface viewInterface {
-    tx: number;
+    tx: number; //translatex
     ty: number;
     scale: number;
   }
@@ -30,7 +31,7 @@ export default function PanZoomCanvas({
   }, [view]);
 
   // constants
-  const MIN_SCALE = 0.5;
+  const MIN_SCALE = 0.25;
   const MAX_SCALE = 4;
   const ZOOM_STEP = 1.15;
 
@@ -78,7 +79,7 @@ export default function PanZoomCanvas({
     const cRect = container.getBoundingClientRect();
     const worldW = content.offsetWidth;
     const worldH = content.offsetHeight;
-    const pad = 48;
+    const pad = 10;
 
     const scaleX = (cRect.width - pad * 2) / worldW;
     const scaleY = (cRect.height - pad * 2) / worldH;
@@ -203,6 +204,18 @@ export default function PanZoomCanvas({
     }
   }
 
+  function onZoomIn(zoomIn: boolean = false) {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    const cRect = content.getBoundingClientRect();
+    const cx = cRect.width / 2 + cRect.left;
+    const cy = cRect.height / 2 + cRect.top;
+    const factor = zoomIn ? ZOOM_STEP : 1 / ZOOM_STEP;
+    zoomAt(cx, cy, view.scale * factor);
+  }
+
   return (
     <div className="fixed top-0 left-0 w-screen h-screen">
       <div
@@ -220,11 +233,26 @@ export default function PanZoomCanvas({
           <div
             className="w-full h-full opacity-60"
             style={{
-              backgroundImage: `radial-gradient(var(--color-dark-green) ${Math.max(1, view.scale)}px, transparent ${Math.max(1, view.scale)}px)`,
+              backgroundImage: `radial-gradient(var(--color-dark-green) ${clamp(view.scale, 0.6, 4)}px, transparent ${clamp(view.scale, 0.6, 4)}px)`,
               backgroundSize: `${40 * view.scale}px ${40 * view.scale}px`,
               backgroundPosition: `${view.tx % (40 * view.scale)}px ${view.ty % (40 * view.scale)}px`, // parallax grid
             }}
           />
+        </div>
+        {/* Controls */}
+        <div className="fixed top-22 left-5 flex items-stretch gap-1 text-blue-700 z-10">
+          <button onClick={() => onZoomIn(true)}>
+            <LuCirclePlus className=" w-auto h-4 backdrop-blur-lg p-1 rounded-sm box-content cursor-pointer border hover:bg-[#e2f5ec]" />
+          </button>
+          <button onClick={() => onZoomIn(false)}>
+            <LuCircleMinus className=" w-auto h-4 backdrop-blur-lg p-1 rounded-sm box-content cursor-pointer border hover:bg-[#e2f5ec]" />
+          </button>
+          <button
+            onClick={fitToView}
+            className=" px-1 backdrop-blur-lg rounded-sm box-content cursor-pointer border hover:bg-[#e2f5ec]"
+          >
+            Center
+          </button>
         </div>
 
         <div

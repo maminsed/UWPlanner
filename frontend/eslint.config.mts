@@ -50,7 +50,7 @@ export default defineConfig([
       // "eqeqeq": ["error", "smart"], //disabeled for now
       curly: ['error', 'multi-line'],
 
-      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }], //TODO: remove info
+      'no-console': ['error', { allow: ['warn', 'error', 'info'] }], //TODO: remove info
 
       // Keep imports tidy and predictable
       'import/order': [

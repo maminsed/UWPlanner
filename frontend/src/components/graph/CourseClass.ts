@@ -274,7 +274,7 @@ export class AllCourseInformation {
     return this.courseInfoMap.get(courseId)?.termInfo.get(termId)?.visible || false;
   }
 
-  #setReqOnWhileSettingVisibility(termInfo: CourseTermInfo, visible: boolean) {
+  #setReqOnWhileSettingVisibility(termInfo: CourseTermInfo) {
     termInfo.reqsOn = false;
     if (this.#ReqsOnCount) {
       this.#ReqsOnCount = 0;
@@ -292,7 +292,7 @@ export class AllCourseInformation {
       if (course) {
         course.termInfo.forEach((termInfo) => {
           termInfo.visible = value;
-          this.#setReqOnWhileSettingVisibility(termInfo, value);
+          this.#setReqOnWhileSettingVisibility(termInfo);
         });
       }
     }
@@ -303,7 +303,7 @@ export class AllCourseInformation {
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course) {
       course.visible = value === undefined ? !course.visible : value;
-      this.#setReqOnWhileSettingVisibility(course, course.visible);
+      this.#setReqOnWhileSettingVisibility(course);
     } else {
       throw new Error('course does not exist');
     }

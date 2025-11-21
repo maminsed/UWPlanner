@@ -30,8 +30,9 @@ export default function Semester({
   // TODO: add a delete and + button at the buttom of each semester
   return (
     <div
-      className="flex flex-col text-xl gap-6 items-center group"
+      className="flex flex-col text-xl items-center group"
       onMouseLeave={() => setSettingOpen(false)}
+      style={{ gap: `${20 * 1.4 * allCourses.scale}px` }}
     >
       <div
         className={clsx(

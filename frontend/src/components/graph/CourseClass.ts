@@ -34,6 +34,7 @@ export class AllCourseInformation {
   #backend: ReturnType<typeof useApi>;
   //general state variables
   #ReqsOnCount = 0;
+  scale = 1;
 
   // initializers:
   constructor(
@@ -310,6 +311,12 @@ export class AllCourseInformation {
     this.#updateCourseVisibility();
   }
 
+  setScale(scale: number) {
+    if (this.scale === scale) return;
+    this.scale = scale;
+    this.#updateCourseLocations();
+  }
+
   #locationsEqual(loc1: Location, loc2?: Location) {
     if (!loc2) return false;
     return (
@@ -324,6 +331,24 @@ export class AllCourseInformation {
     const course = this.courseInfoMap.get(courseId)?.termInfo.get(termId);
     if (course && !this.#locationsEqual(loc, course.location)) {
       course.location = loc;
+      let updated = false;
+      this.#connectionLines.forEach((connection) => {
+        const { startCourse, endCourse } = connection;
+        if (startCourse.courseId == courseId && startCourse.termId == termId) {
+          updated = true;
+          connection.startLoc = {
+            x: loc.left + loc.width,
+            y: loc.top + loc.height / 2,
+          };
+        } else if (endCourse.courseId == courseId && endCourse.termId == termId) {
+          updated = true;
+          connection.endLoc = {
+            x: loc.left,
+            y: loc.top + loc.height / 2,
+          };
+        }
+      });
+      this.#updateCourseVisibility();
     } else if (!course) {
       console.error(`course does not exist: courseId: ${courseId} termId: ${termId}`);
     }

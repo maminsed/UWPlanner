@@ -14,7 +14,7 @@ export default function Graph({ allCourses }: { allCourses: AllCourseInformation
   }
 
   return (
-    <div className="flex gap-6 p-8">
+    <div className="flex p-8" style={{ gap: `${20 * allCourses.scale}px` }}>
       {allCourses.path.map(({ termId }, i) => {
         return (
           <Semester

@@ -1,7 +1,15 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { IoSwapHorizontalOutline } from 'react-icons/io5';
-import { LuCheckCheck, LuImport, LuMinus, LuPlus, LuRefreshCcw, LuShare } from 'react-icons/lu';
+import {
+  LuCheckCheck,
+  LuImport,
+  LuMinus,
+  LuPlus,
+  LuRefreshCcw,
+  LuShare,
+  LuChevronsDownUp,
+} from 'react-icons/lu';
 
 import AddACourse from '@/components/Courses/AddACourse';
 import BatchAddCourses from '@/components/Courses/BatchAddCourses';
@@ -20,11 +28,15 @@ function ControlPanel({
   setOverlay,
   preReq,
   reloadCourses,
+  allCourses,
 }: {
   setOverlay: (arg0: overlayInterface) => void;
   preReq: { isHidden: boolean; changeSatus: () => void };
   reloadCourses: () => void;
+  allCourses: AllCourseInformation;
 }) {
+  const [scaleValue, setScaleValue] = useState<number>(allCourses.scale);
+
   return (
     <div className="text-light-green px-3 py-2 flex flex-col items-start text-sm gap-1">
       <button
@@ -53,6 +65,22 @@ function ControlPanel({
       <button className="cursor-pointer" onClick={preReq.changeSatus}>
         <LuMinus className="inline-block" /> {preReq.isHidden ? 'Show' : 'Hide'} Prereqs
       </button>
+      <label className="flex items-center">
+        <LuChevronsDownUp className="inline-block mr-1" />
+        <input
+          type="range"
+          className="accent-green-500"
+          min={0.5}
+          max={3}
+          step={0.1}
+          value={scaleValue}
+          onChange={(e) => {
+            setScaleValue(Number(e.target.value));
+          }}
+          onMouseUp={() => allCourses.setScale(scaleValue)}
+          onTouchEnd={() => allCourses.setScale(scaleValue)}
+        />
+      </label>
       <button className="cursor-pointer" onClick={reloadCourses}>
         <LuRefreshCcw className="inline-block mr-1" />
         Reload Courses
@@ -121,8 +149,7 @@ type overlayInterface = {
 };
 
 export default function GraphPage() {
-  // TODO: the user can choose which course prereqs to see
-  //       add a report issue button
+  // TODO: add a report issue button
   //       add the option to increase the distance between courses
   //       add the option to reorder classes
   //       add the checks for program
@@ -180,7 +207,7 @@ export default function GraphPage() {
       await new Promise((resolve) =>
         setTimeout(() => {
           resolve(0);
-        }, 200),
+        }, 2),
       );
       await allCourses.current.generateConnectionLines();
     }
@@ -246,7 +273,7 @@ export default function GraphPage() {
     await new Promise((resolve) =>
       setTimeout(() => {
         resolve(0);
-      }, 200),
+      }, 100),
     );
     await allCourses.current.generateConnectionLines();
   }
@@ -310,6 +337,7 @@ export default function GraphPage() {
               changeSatus: () => setShowPreReq((v) => !v),
             }}
             reloadCourses={reloadCourses}
+            allCourses={allCourses.current}
           />
         </ExpandPanel>
       </div>

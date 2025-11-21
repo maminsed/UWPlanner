@@ -13,7 +13,6 @@ type CourseType = {
 };
 
 export default function Lines({ connections, allCourses }: LinesProps) {
-  console.log('hi');
   function isHidden(start: CourseType, end: CourseType) {
     const endReqsOn = allCourses.getReqsOn(end.courseId, end.termId);
     const startReqsOn = allCourses.getReqsOn(start.courseId, start.termId);

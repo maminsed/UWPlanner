@@ -16,12 +16,12 @@ import useGQL from '@/lib/useGQL';
 
 export class AllCourseInformation {
   // user Info
-  #startingTermId: number = 0;
+  startingTermId: number = 0;
   // maps and sets
   courseIds: Set<number> = new Set();
   courseInfoMap: Map<number, CourseInformation> = new Map();
   path: TermInformation[] = [];
-  #colourMap: Map<string, { bg: string; text: string }> = new Map(); // CS: {bg: yellow, text: blue}
+  #colourMap: Map<string, { bg: string; text: string; line: string }> = new Map(); // CS: {bg: yellow, text: blue}
   #connectingIds: [number, number][] = [];
   #connectionLines: LineType[] = [];
   //Update functions
@@ -74,9 +74,8 @@ export class AllCourseInformation {
       if (!this.#colourMap.has(striped)) {
         this.#colourMap.set(striped, generateRandomColours());
       }
-      const bg = this.#colourMap.get(striped)!.bg;
-      const text = this.#colourMap.get(striped)!.text;
-      return { bg, text };
+      const colour = this.#colourMap.get(striped);
+      return colour!;
     });
 
     // Await the backend response (requirements / links)
@@ -87,8 +86,7 @@ export class AllCourseInformation {
       this.courseInfoMap.set(course.id, {
         ...course,
         ...bkResponse[course.code]!, // BK info keyed by course code
-        bgColour: colours[index]!.bg,
-        textColour: colours[index]!.text,
+        colour: colours[index]!,
         termInfo: new Map(), // populated below based on this.path
       });
     });
@@ -117,9 +115,9 @@ export class AllCourseInformation {
       const response = await res.json().catch(() => {});
 
       const studentPath: [string, number[]][] = response.path;
-      this.#startingTermId = response.started_term_id;
+      this.startingTermId = response.started_term_id;
 
-      let currTerm = this.#startingTermId;
+      let currTerm = this.startingTermId;
       this.path = studentPath.map(([termName, courseIds]) => {
         const termId = currTerm;
         currTerm = termOperation(termId, 1);
@@ -363,6 +361,9 @@ export class AllCourseInformation {
     //TODO: improve this with more efficient version
     this.courseIds = new Set();
     this.courseInfoMap = new Map();
+    this.#colourMap = new Map();
+    this.#ReqsOnCount = 0;
+    this.scale = 1;
     await this.init();
     this.#updateCourseLocations();
   }

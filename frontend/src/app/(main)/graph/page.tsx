@@ -149,10 +149,10 @@ type overlayInterface = {
 };
 
 export default function GraphPage() {
-  // TODO: add a report issue button
-  //       add the option to increase the distance between courses
+  // TODO: add the checks for program
   //       add the option to reorder classes
-  //       add the checks for program
+  //       add leads to for each course
+  //       add a report issue button
   // settings:
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
   //versions

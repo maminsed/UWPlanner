@@ -84,8 +84,11 @@ export type BKCourseInfo = {
 
 export type CourseInformation = {
   termInfo: Map<number, CourseTermInfo>; // termId: CourseTermInfo
-  bgColour: string;
-  textColour: string;
+  colour: {
+    bg: string;
+    text: string;
+    line: string;
+  };
 } & BKCourseInfo &
   UWFCourseInfo;
 

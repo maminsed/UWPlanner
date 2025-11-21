@@ -24,7 +24,7 @@ export default function Lines({ connections, allCourses }: LinesProps) {
     if (isHidden(start, end)) {
       return '#34d9ef61';
     }
-    return '#349EEF';
+    return allCourses.getCourseInfoId(end.courseId)?.colour.line || '#349EEF';
   }
 
   return (
@@ -36,6 +36,7 @@ export default function Lines({ connections, allCourses }: LinesProps) {
             key={i}
             d={`M ${startLoc.x} ${startLoc.y} C ${startLoc.x + width * 0.5} ${startLoc.y} ${endLoc.x - width * 0.5} ${endLoc.y} ${endLoc.x} ${endLoc.y}`}
             stroke={getColour(startCourse, endCourse)}
+            opacity={0.9}
             strokeWidth="3"
             fill="none"
           />

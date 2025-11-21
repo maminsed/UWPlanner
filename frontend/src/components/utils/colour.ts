@@ -14,9 +14,11 @@ export function mixColourRandomly(start: rgbColour) {
 export function generateRandomColours() {
   const bg = mixColourRandomly({ r: 255, g: 255, b: 255 });
   const text = mixColourRandomly({ r: 10, g: 10, b: 10 });
+  const line = mixColourRandomly({ r: 52, g: 158, b: 239 });
 
   return {
     bg: `rgba(${bg.r}, ${bg.g}, ${bg.b}, 0.7)`,
     text: `rgb(${text.r}, ${text.g}, ${text.b})`,
+    line: `rgb(${line.r}, ${line.g}, ${line.b})`,
   };
 }

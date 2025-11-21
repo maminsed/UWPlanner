@@ -47,6 +47,7 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
 
   const courseInfo = allCourses.getCourseInfoId(courseId)!;
   const termInfo = courseInfo.termInfo.get(termId);
+  const colour = courseInfo.colour;
   let hoverMessage = '';
   if (termInfo?.allReqsMet === undefined || termInfo?.termCompatible === undefined) {
     hoverMessage = 'Loading';
@@ -66,13 +67,13 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
         !termInfo?.visible ? 'opacity-40' : '',
       )}
       style={{
-        backgroundColor: courseInfo.bgColour,
-        color: courseInfo.textColour,
+        backgroundColor: colour.bg,
+        color: colour.text,
       }}
       onClick={onClick}
     >
       <div className="w-full h-full flex items-center relative">
-        <div className="h-full w-2" style={{ background: courseInfo.textColour }} />
+        <div className="h-full w-2" style={{ background: colour.text }} />
         <div className="flex flex-col justify-between h-full py-1 pl-1">
           <LuMoveDiagonal
             onClick={() => viewCourse(courseId, termId)}
@@ -83,7 +84,7 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
             className="h-auto w-[0.9rem] text-red-950 hover:text-red-700 cursor-pointer duration-150"
           />
         </div>
-        <span className="py-5 px-1 min-w-25" style={{ color: courseInfo.textColour }}>
+        <span className="py-5 px-1 min-w-25" style={{ color: colour.text }}>
           {courseInfo.code.toUpperCase()}
         </span>
         {termInfo?.visible ? (

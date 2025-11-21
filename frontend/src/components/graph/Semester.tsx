@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { LuArrowLeft, LuSettings, LuArrowRight, LuCirclePlus, LuDelete } from 'react-icons/lu';
 
 import HoverEffect from '../HoverEffect';
-import { getCurrentTermId, termOperation } from '../utils/termUtils';
+import { getCurrentTermId, getTermDistance, termOperation } from '../utils/termUtils';
 
 import Course from './Course';
 import { AllCourseInformation } from './CourseClass';
@@ -26,6 +26,7 @@ export default function Semester({
   const [settingOpen, setSettingOpen] = useState<boolean>(false);
   const term = allCourses.getTermsInfo({ termId: termId })!;
   const { deleteCourse, addToTerm } = useCourseCtx();
+  const distanceToStart = getTermDistance(allCourses.startingTermId, termId);
 
   // TODO: add a delete and + button at the buttom of each semester
   return (
@@ -36,8 +37,9 @@ export default function Semester({
     >
       <div
         className={clsx(
-          'px-6 py-2 rounded-3xl bg-white shadow-xs mb-3 w-full font-semibold text-center text-lg whitespace-nowrap',
+          'px-6 py-2 rounded-3xl bg-white shadow-xs w-full font-semibold text-center text-lg whitespace-nowrap',
           termId == getCurrentTermId() && 'ring ring-dark-green',
+          distanceToStart % 2 == 0 ? '' : 'mb-5',
         )}
       >
         {term.termName} - {term.termSeason}

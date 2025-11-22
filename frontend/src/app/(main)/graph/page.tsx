@@ -151,7 +151,6 @@ type overlayInterface = {
 export default function GraphPage() {
   // TODO: add the checks for program
   //       add the option to reorder classes
-  //       add leads to for each course
   //       add a report issue button
   // settings:
   const [showPreReq, setShowPreReq] = useState<boolean>(true);
@@ -256,6 +255,7 @@ export default function GraphPage() {
           <CourseInfoPage
             close={closeFn}
             allCourses={allCourses.current}
+            deleteCourse={deleteCourse}
             courseId={overlay.overlayCourseId}
             termId={overlay.overlayTermId}
           />
@@ -278,6 +278,23 @@ export default function GraphPage() {
     await allCourses.current.generateConnectionLines();
   }
 
+  function deleteCourse({
+    courseId,
+    termId,
+    groupOfCourses,
+  }: {
+    courseId?: number;
+    termId?: number;
+    groupOfCourses?: { termId: number; courseId: number }[];
+  }) {
+    setOverlay({
+      overlayType: 'delete_indiv',
+      overlayCourseId: courseId || 0,
+      overlayTermId: termId || 0,
+      groupOfCourses,
+    });
+  }
+
   return (
     <section>
       {overlay.overlayType != 'none' && (
@@ -289,14 +306,7 @@ export default function GraphPage() {
         <CourseContext.Provider
           value={{
             updateLocation: courseLocationsVersion,
-            deleteCourse: ({ courseId, termId, groupOfCourses }) => {
-              setOverlay({
-                overlayType: 'delete_indiv',
-                overlayCourseId: courseId || 0,
-                overlayTermId: termId || 0,
-                groupOfCourses,
-              });
-            },
+            deleteCourse,
             addToTerm: (termId) => {
               setOverlay({
                 overlayType: 'add_single',

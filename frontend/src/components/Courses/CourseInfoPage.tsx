@@ -13,6 +13,7 @@ import { GetReqIcon } from './utils';
 type CourseInfoPageProps = {
   close: () => void;
   updatePage?: () => void;
+  deleteCourse: (info: { courseId: number; termId: number }) => void;
   allCourses: AllCourseInformation;
   courseId: number;
   termId: number;
@@ -257,12 +258,11 @@ function LoadingVersion() {
 export default function CourseInfoPage({
   close,
   allCourses,
+  deleteCourse,
   courseId,
   termId,
 }: CourseInfoPageProps) {
-  //TODO: get the actual prereqs from the correct websites
-  //      get as much links as you can
-  //      delete functionality
+  //TODO: get as much links as you can
   const [status, setStatus] = useState<'error' | 'idle'>('idle');
   const [message, setMessage] = useState<string>('');
 
@@ -278,7 +278,10 @@ export default function CourseInfoPage({
         <a target="_blank" href={`https://uwflow.com/course/${course?.code}`} rel="noreferrer">
           FLOW
         </a>
-        <LuTrash2 className="w-4 font-semibold h-auto cursor-pointer text-red-900" />
+        <LuTrash2
+          className="w-4 font-semibold h-auto cursor-pointer text-red-900"
+          onClick={() => deleteCourse({ courseId, termId })}
+        />
         <LuX className="w-4 font-semibold h-auto cursor-pointer" onClick={close} />
       </div>
       {status === 'idle' && course ? <NormalVersion course={course} termId={termId} /> : ''}

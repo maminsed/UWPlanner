@@ -70,6 +70,14 @@ export type UWFCourseInfo = {
     filled_count?: number;
   };
   sections: { term_id: number }[];
+  postrequisites?: {
+    is_corequisite: boolean;
+    postrequisite: {
+      code: string;
+      name: string;
+      id: number;
+    };
+  }[];
 };
 
 export type BKCourseInfo = {

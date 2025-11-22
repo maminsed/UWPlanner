@@ -142,22 +142,30 @@ export class AllCourseInformation {
     if (!this.courseIds.size) return [];
 
     const GQL_QUERY = `
-        query Course($course_ids: [Int!]) {
-          course(where: { id: { _in: $course_ids } }) {
-              code
-              id
-              description
-              name
-              rating {
-                  easy
-                  liked
-                  useful
-                  filled_count
-              }
-              sections(distinct_on: [term_id]) {
-                  term_id
-              }
+      query Course($course_ids: [Int!]) {
+        course(where: { id: { _in: $course_ids } }) {
+          code
+          id
+          description
+          name
+          rating {
+            easy
+            liked
+            useful
+            filled_count
           }
+          sections(distinct_on: [term_id]) {
+            term_id
+          }
+          postrequisites {
+            is_corequisite
+            postrequisite {
+                code
+                name
+                id
+            }
+          }
+        }
       }
       `;
     try {

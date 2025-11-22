@@ -5,6 +5,7 @@ import { LuTrash2, LuX } from 'react-icons/lu';
 
 import { AllCourseInformation } from '../graph/CourseClass';
 import { CourseInformation, Requirement } from '../interface';
+import { URL_RESOURCES } from '../utils/constants';
 import { getTermSeason } from '../utils/termUtils';
 
 import { GetReqIcon } from './utils';
@@ -199,6 +200,27 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
         </div>
       </ul>
 
+      {course.postrequisites && course.postrequisites.length > 0 && (
+        <div>
+          <h3 className={subHeaderClsx}>Leads to: </h3>
+          <ul className="list-inside list-disc">
+            {course.postrequisites.map(({ postrequisite: { code, name } }, index) => (
+              <li key={index}>
+                <a
+                  href={URL_RESOURCES.UWFLOW_COURSE(code)}
+                  target="_blank"
+                  className="underline"
+                  rel="noreferrer"
+                >
+                  {code.toUpperCase()}:
+                </a>
+                <span> {name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="mt-6 font-normal text-[0.9rem] text-red-600">
         Confirm all details with the official Undergraduate Calendar
       </p>
@@ -208,7 +230,7 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
           <a
             className="underline"
             target="_blank"
-            href={`https://uwflow.com/course/${course.name}`}
+            href={URL_RESOURCES.UWFLOW_COURSE(course.code)}
             rel="noreferrer"
           >
             UWFLOW

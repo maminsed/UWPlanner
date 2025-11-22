@@ -25,8 +25,8 @@ export default function ExpandPanel({
       </button>
       <div
         className={clsx(
-          'overflow-y-hidden transition-height duration-300 min-w-50',
-          on ? 'max-h-50 overflow-y-auto' : 'max-h-0',
+          'transition-height duration-300 min-w-50',
+          on ? 'max-h-40 overflow-y-auto scroller' : 'max-h-0 overflow-y-hidden',
         )}
       >
         {children}

@@ -121,19 +121,27 @@ function ClassPanel({ allCourses, updateClassPanelCourses }: ClassPanelInterface
     return newMap;
   }, [updateClassPanelCourses]);
 
+  function toSort(a: [string, [number[], boolean]], b: [string, [number[], boolean]]): number {
+    if (a[0] === 'all') return 1;
+    else if (a[0] < b[0]) return -1;
+    return 1;
+  }
+
   return (
     <div className="py-1">
-      {Array.from(internalVisbilityMap.entries()).map(([cg, [courseIds, value]]) => (
-        <label key={cg} className="flex gap-1 items-center pl-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value}
-            className="rounded-full accent-green-500"
-            onChange={() => allCourses.setVisibilityGrouped(courseIds, !value)}
-          />
-          {cg.toUpperCase()}
-        </label>
-      ))}
+      {Array.from(internalVisbilityMap.entries())
+        .sort(toSort)
+        .map(([cg, [courseIds, value]]) => (
+          <label key={cg} className="flex gap-1 items-center pl-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={value}
+              className="rounded-full accent-green-500"
+              onChange={() => allCourses.setVisibilityGrouped(courseIds, !value)}
+            />
+            {cg.toUpperCase()}
+          </label>
+        ))}
     </div>
   );
 }

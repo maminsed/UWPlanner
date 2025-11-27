@@ -10,6 +10,7 @@ from .extraction import (
     update_major_info,
 )
 from .selenium.course_reqs import get_course_reqs
+from .selenium.extract_programs import get_program_reqs
 from .selenium.major_scrapper import major_checking
 from .selenium.sequence_scraper import scrape_math, scrape_sequences
 
@@ -36,6 +37,13 @@ def update_major_info_ep() -> tuple[str, int]:
 def update_prereqs_ep() -> tuple[str, int]:
     """Endpoint to update prereqs information for majors."""
     message = get_course_reqs()
+    return jsonify({"message": message}), 200
+
+
+@school_info_bp.route("/get_programs", methods=["GET"])
+def get_programs() -> tuple[str, int]:
+    """Endpoint to get all the programs."""
+    message = get_program_reqs()
     return jsonify({"message": message}), 200
 
 

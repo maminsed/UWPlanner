@@ -63,18 +63,19 @@ conditionDict: dict[str, tuple[str, str]] = {
     "not completed or concurrently enrolled in the following": ("not_any", "both"),
     "not complete nor concurrently enrolled in the following": ("not_any", "both"),
     "not completed": ("not_any", "complete"),
-    "must have completed 1 of the following": ("any", "complete"),
-    "must have completed at least 1 of the following": ("any", "complete"),
-    "complete 1 of the following": ("any", "complete"),
-    "completed or concurrently enrolled in at least 1 of the following": (
-        "any",
-        "both",
-    ),
+    # "must have completed 1 of the following": ("any", "complete"),
+    "choose any of the following": ("any", "complete"),
+    # "must have completed at least 1 of the following": ("any", "complete"),
+    # "complete 1 of the following": ("any", "complete"),
+    # "completed or concurrently enrolled in at least 1 of the following": (
+    #     "any",
+    #     "both",
+    # ),
     "must have completed": ("all", "complete"),
     "must have completed the following": ("all", "complete"),
-    "must have completed at least 2 of the following": ("two", "complete"),
-    "must have completed at least 3 of the following": ("three", "complete"),
-    "must have completed at least 4 of the following": ("four", "complete"),
+    # "must have completed at least 2 of the following": ("two", "complete"),
+    # "must have completed at least 3 of the following": ("three", "complete"),
+    # "must have completed at least 4 of the following": ("four", "complete"),
     "complete all of the following": ("all", "complete"),
     "completed or concurrently enrolled in the following": ("all", "both"),
     "completed or concurrently enrolled in": ("all", "both"),
@@ -93,7 +94,62 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         r"^earned a minimum grade of ([0-9]*)% in at least 1 of the following",
         ("any", "complete"),
     ),
+    (r"^must have completed ([0-9]|all|any) of the following", ("regex", "complete")),
+    (
+        r"^must have completed at least ([0-9]|all|any) of the following",
+        ("regex", "complete"),
+    ),
+    (r"^complete ([0-9]|all|any) of the following", ("regex", "complete")),
+    (r"^complete ([0-9]|all|any) the following", ("regex", "complete")),
+    (
+        r"^completed or concurrently enrolled in at least ([0-9]|all|any) of the following",
+        ("regex", "both"),
+    ),
+    (r"^choose ([0-9]|all|any) of the following", ("regex", "complete")),
+    (r"^choose at least ([0-9]|all|any) of the following", ("regex", "complete")),
+    (
+        r"^complete ([0-9]|any) additional course at the (([0-9]00)- or )?([0-9]00)-level( or from the courses listed below)?",
+        ("regex", "complete"),
+    ),
+    (
+        r"^complete ([0-9]|any) additional (.*) courses at the ([0-9]00)-level",
+        ("regex", "complete"),
+    ),
+    (
+        r"^complete ([0-9]|any) additional courses from any (.*) course at the (([0-9]00)- or )?([0-9]00)-level( or from the courses listed below)?",
+        ("regex", "complete"),
+    ),
 ]
+
+
+def numberTranslator(matched_regex: str, id: str, infoDictionary: dict):
+    matchedNum = 0
+    if matched_regex == "all":
+        return "all"
+    elif matched_regex == "any":
+        matchedNum = 1
+    else:
+        try:
+            matchedNum = int(matched_regex)
+        except Exception:
+            print(f"120: error occured in numberTranslator for {id}-{matched_regex}")
+            infoDictionary["differentErrors"].append(
+                f"ATTENTION:ATTENTION:ERROR:120: error occured in numberTranslator for {id}-{matched_regex}"
+            )
+    lst = [
+        "error139",
+        "any",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+    ]
+
+    return lst[matchedNum]
 
 
 def safe_find_element(element: WebElement, by, value):
@@ -103,23 +159,59 @@ def safe_find_element(element: WebElement, by, value):
         return None
 
 
+def extract_condition_onStatus(
+    conditionText: str, id: str, infoDictionary: dict, strict: bool = False
+):
+    """Returns: tuple(found,matchedText,onStatus)
+    found: boolean,
+    matchedText:str,
+    onStatus: (conditionedOn, conditionedStatus),
+    """
+    conditionText = conditionText.lower()
+    found = ""
+    onStatus = ()
+    if not strict:
+        for key in conditionDict.keys():
+            if conditionText.lower().startswith(key) and len(key) > len(found):
+                found = key
+                onStatus = conditionDict[key]
+    elif conditionText.lower() in conditionDict:
+        found = conditionText
+        onStatus = conditionDict[conditionText.lower()]
+    if not len(found):
+        for regex, condition in conditionRegExList:
+            matched = re.match(regex, conditionText.lower())
+            if matched is not None:
+                found = matched.group(0)
+                onStatus = condition
+                if onStatus[0] == "regex":
+                    onStatus = (
+                        numberTranslator(matched.group(1), id, infoDictionary),
+                        found[1],
+                    )
+                break
+    return len(found) > 0, found, onStatus
+
+
 # TODO: remove courseCode, containerType + implement
-def extract_non_ul_container_info(element: WebElement, courseCode: str):
+def extract_non_ul_container_info(
+    element: WebElement, courseCode: str, infoDictionary: dict
+):
     res = {}
     conditionText = element.text.replace("\n", "").strip()
-    found = ""
-    for key in conditionDict.keys():
-        if conditionText.lower().startswith(key) and len(key) > len(found):
-            found = key
+    found, matchedText, onStatus = extract_condition_onStatus(
+        conditionText.lower(), courseCode, infoDictionary
+    )
 
+    # TODO: add a new type course-level which basically covers one ACTS course in 300 level.
     relatedLinks = []
-    if len(found) > 0:
+    if found:
         newConditionText = (
-            conditionText[len(found) :].replace(":", "").replace("\n", "").strip()
+            conditionText[len(matchedText) :].replace(":", "").replace("\n", "").strip()
         )
         relatedLinks = [
             {"value": r.strip(), "url": "", "linkType": "course"}
-            for r in re.sub(r"[.,!?><\\/]", "", newConditionText).split(" ")
+            for r in re.sub(r"[.,!?><\\/]", " ", newConditionText).split(" ")
             if r.strip() != ""
         ]
         res["appliesTo"] = [
@@ -131,28 +223,31 @@ def extract_non_ul_container_info(element: WebElement, courseCode: str):
                 "relatedLinks": relatedLinks,
             }
         ]
-        res["conditionedOn"], res["conditionStatus"] = conditionDict[found]
-        res["conditionText"] = found
+        res["conditionedOn"], res["conditionStatus"] = onStatus
+        res["conditionText"] = matchedText
     else:
         res["conditionedOn"] = "final"
         res["conditionStatus"] = "none"
-        differentConditionText[conditionText] = courseCode
         res["conditionText"] = conditionText
         res["appliesTo"] = []
 
     links = element.find_elements(By.TAG_NAME, "a")
     for link in links:
         relatedLinks.append(getLinkAttr(link))
-    if len(found) > 0:
+    if found:
         res["appliesTo"][0]["relatedLinks"] = relatedLinks
         res["relatedLinks"] = []
     else:
+        if len(links) == 0:
+            infoDictionary["differentConditionText"][conditionText] = courseCode
         res["relatedLinks"] = relatedLinks
     return res
 
 
 # startpoint has to be the ul
-def extractNested(startPoint: WebElement, courseCode: str, containerType: str):
+def extractNested(
+    startPoint: WebElement, courseCode: str, containerType: str, infoDictionary: dict
+):
     listItemsCSS = ":scope li:not(:scope li li)"
 
     listItems = startPoint.find_elements(By.CSS_SELECTOR, listItemsCSS)
@@ -174,41 +269,49 @@ def extractNested(startPoint: WebElement, courseCode: str, containerType: str):
             )
             currRes["conditionText"] = conditionText
             # extract status and type
-            differentSectionTypes[conditionText] = courseCode
-            found = []
-            for regex, condition in conditionRegExList:
-                if re.match(regex, conditionText.lower()):
-                    found = condition
-                    break
-            if len(found):
-                currRes["conditionedOn"], currRes["conditionStatus"] = found
-            elif conditionText.lower() in conditionDict:
-                currRes["conditionedOn"], currRes["conditionStatus"] = conditionDict[
-                    conditionText.lower()
-                ]
+            infoDictionary["differentSectionTypes"][conditionText] = courseCode
+            found, _, onStatus = extract_condition_onStatus(
+                conditionText.lower(), f"{courseCode}-{containerType}", infoDictionary
+            )
+            if found:
+                currRes["conditionedOn"], currRes["conditionStatus"] = onStatus
             else:
                 currRes["conditionedOn"], currRes["conditionStatus"] = (
                     "unclassified",
                     "none",
                 )
-                differentErrors.append(
+                print(
+                    f"ATTENTION:ATTENTION:ERROR:{conditionText} not in conditionDict at {courseCode}-{containerType}"
+                )
+                infoDictionary["differentErrors"].append(
                     f"{conditionText} not in conditionDict at {courseCode}-{containerType}"
                 )
 
             # extract members
-            currRes["appliesTo"] = extractNested(members, courseCode, containerType)
+            currRes["appliesTo"] = extractNested(
+                members, courseCode, containerType, infoDictionary
+            )
             currRes["relatedLinks"] = []
         # if it does not have an inner ul then it's
         else:
-            currRes = extract_non_ul_container_info(listItem, courseCode)
+            currRes = extract_non_ul_container_info(
+                listItem, courseCode, infoDictionary
+            )
         res.append(currRes)
     if not len(listItems):
-        differentErrors.append(f"{courseCode}-{containerType} does not have any nested")
+        print(
+            f"ATTENTION:ATTENTION:ERROR:{courseCode}-{containerType} does not have any nested"
+        )
+        infoDictionary["differentErrors"].append(
+            f"{courseCode}-{containerType} does not have any nested"
+        )
     return res
 
 
 # TODO:get rid of courseCode and upper
-def extractContainerInfo(section: WebElement, courseCode: str, containerType: str):
+def extractContainerInfo(
+    section: WebElement, courseCode: str, containerType: str, infoDictionary: dict
+):
     # section has to be a top level ul
     """return:
     ListInfo: {
@@ -228,7 +331,7 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
             sectionHeader = safe_find_element(
                 firstList, By.CSS_SELECTOR, ":scope > span"
             ).text
-            differentSectionTypes[sectionHeader] = courseCode
+            infoDictionary["differentSectionTypes"][sectionHeader] = courseCode
         except:
             pass
 
@@ -244,15 +347,22 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
             ]
         else:
             res["conditionedOn"], res["conditionStatus"] = "unclassified", "none"
-            differentErrors[f"{sectionHeader} not in conditionDict"] = courseCode
+            print(
+                f"ATTENTION:ATTENTION:ERROR:{sectionHeader} not in conditionDict - {courseCode}"
+            )
+            infoDictionary["differentErrors"][
+                f"{sectionHeader} not in conditionDict"
+            ] = courseCode
         res["relatedLinks"] = []
-        res["appliesTo"] = extractNested(nestedUl, courseCode, containerType)
+        res["appliesTo"] = extractNested(
+            nestedUl, courseCode, containerType, infoDictionary
+        )
     # if we werent then we are one of the children
     else:
-        results = extractNested(section, courseCode, containerType)
+        results = extractNested(section, courseCode, containerType, infoDictionary)
         if len(results) == 0:
             results = extract_non_ul_container_info(
-                section, courseCode
+                section, courseCode, infoDictionary
             )  # TODO: test MSE121
         if len(results) == 1:
             res = results[0]
@@ -262,21 +372,19 @@ def extractContainerInfo(section: WebElement, courseCode: str, containerType: st
             res["conditionText"] = ""
             res["appliesTo"] = results
             res["relatedLinks"] = []
-            differentErrors.append(f"{courseCode}-{containerType}-119")
+            print(f"ATTENTION:ATTENTION:ERROR:{courseCode}-{containerType}-119")
+            infoDictionary["differentErrors"].append(
+                f"{courseCode}-{containerType}-119"
+            )
     return res
 
 
-# TODO: remove
-differentSectionTypes = {}
-differentHeaders = {}
-differentErrors = []
-differentConditionText = {}
-# differentCourseJsons = {}
-differentUpdated = []
-total = 0
-
-
-def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriver):
+def addGroupTodb(
+    group_name: str,
+    members: list[dict[str, str]],
+    driver: WebDriver,
+    infoDictionary: dict,
+):
     paran_start = group_name.index("(")
     paran_end = group_name.index(")")
     group_code = group_name[paran_start + 1 : paran_end].strip()
@@ -324,19 +432,19 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
         for section in sections:
             header = safe_find_element(section, By.CSS_SELECTOR, sectionHeadersCSS)
             if not header:
-                differentErrors.append(f"course.code-{227}")
+                infoDictionary["differentErrors"].append(f"course.code-{227}")
                 continue
             header = header.text.lower()
             # checking for cross-listed
 
             if header not in searchingHeaders:
-                differentHeaders[header] = course.code
+                infoDictionary["differentHeaders"][header] = course.code
                 continue
             container = safe_find_element(
                 section, By.CSS_SELECTOR, sectionTextContainerCSS
             )
             if not container:
-                differentErrors.append(f"{course.code}-239")
+                infoDictionary["differentErrors"].append(f"{course.code}-239")
                 continue
 
             if header == "cross-listed courses":
@@ -348,18 +456,21 @@ def addGroupTodb(group_name: str, members: list[dict[str, str]], driver: WebDriv
 
             if listVersion:
                 print("list found")
-                course_json = extractContainerInfo(listVersion, course.code, header)
+                course_json = extractContainerInfo(
+                    listVersion, course.code, header, infoDictionary
+                )
             else:
                 print("list not found")
-                course_json = extract_non_ul_container_info(container, course.code)
+                course_json = extract_non_ul_container_info(
+                    container, course.code, infoDictionary
+                )
             courseInfo[header] = course_json
         # Adding course information to db
         # differentCourseJsons[course.code] = courseInfo
         courseInfo = json.dumps(courseInfo)
-        global total
-        total += 1
+        infoDictionary["total"] += 1
         if courseInfo != course.courseInfo:
-            differentUpdated.append(course.code)
+            infoDictionary["differentUpdated"].append(course.code)
             course.courseInfo = courseInfo
             db.session.add(course)
             db.session.flush()
@@ -376,6 +487,16 @@ def get_course_reqs():
     classGroupCSS = 'div[class*="style__collapsibleBox___"]'
     expandButtonCSS = 'h2[class*="style__title___"]'
     linkContainerCSS = 'div[class*="style__columns___"]'
+    infoDictionary = {
+        "differentSectionTypes": {},
+        "differentConditionText": {},
+        "differntHeaders": {},
+        "differentErrors": [],
+        # "differentCourseJsons": differentCourseJsons,
+        "differentUpdated": [],
+        # "_info": f"updated: {len(differentUpdated)} of {total} courses",
+        "total": 0,
+    }
 
     UNDERGRAD_LINK = (
         "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
@@ -457,7 +578,12 @@ def get_course_reqs():
                 EC.element_to_be_clickable((By.CSS_SELECTOR, expandButtonCSS))
             )
             expandButton.click()
-            addGroupTodb(updateGroup["group_name"], updateGroup["members"], driver)
+            addGroupTodb(
+                updateGroup["group_name"],
+                updateGroup["members"],
+                driver,
+                infoDictionary,
+            )
             # waiting for it to actualy close
             try:
                 expandGroup = cg.find_element(
@@ -474,15 +600,9 @@ def get_course_reqs():
     finally:
         if driver:
             driver.quit()
-        global total
-        return {
-            "groups": groups,
-            "differentSectionTypes": differentSectionTypes,
-            "differentConditionText": differentConditionText,
-            "differntHeaders": differentHeaders,
-            "_differentErrors": differentErrors,
-            # "differentCourseJsons": differentCourseJsons,
-            "differentUpdated": differentUpdated,
-            "_info": f"updated: {len(differentUpdated)} of {total} courses",
-            "i": i + offset,
-        }
+        infoDictionary["i"] = i + offset
+        infoDictionary["groups"] = groups
+        infoDictionary["_info"] = (
+            f"updated: {len(infoDictionary['differentUpdated'])} of {infoDictionary['total']} courses"
+        )
+        return infoDictionary

@@ -89,19 +89,20 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
 
 count = r"(\d(?:\.\d)?|any)(?: additional)?"
 courses = r"(?!additional\b)(\S+)" + r"(?:(?: and| or|, and|, or|,) (\S+))?" * 10
-level = r"(?:([0-9]00)- or )?([0-9]00-|any )level(?:(?: or)? (below|above))?"
+level = r"(?:([0-9]00)- or )?(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
+sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above))?"
 groupConditionRegExList: list[tuple[str, tuple[int, int, tuple[int], tuple[int]]]] = [
     # count, unit, levels, sources
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any) {level}(?: or)? from the course(?:s)? listed (below|above)(?:[^a-zA-Z0-9]*)?$",
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
         (1, 2, (3, 4, 5), (6,)),
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any|of) {courses} course(?:s)? (?:at|from)(?: the| any)? {level}(?: or from the course(?:s)? listed(?: or)? (below|above))?(?:[^a-zA-Z0-9]*)?$",
+        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any|of) {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
         (1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17)),
     ),
     (
-        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from)(?: the| any)? {level}(?: or from the course(?:s)? listed (below|above))?(?:[^a-zA-Z0-9]*)?$",
+        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from)(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
         (1, 13, (14, 15, 16), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17)),
     ),
     (
@@ -141,12 +142,15 @@ def numberTranslator(matched_regex: str, infoInstance: InfoClass):
         return "error139"
 
 
-def process_source(sources: list[str]):
+def process_source(sources: list[str], infoInstance: InfoClass):
     res = []
     for source in sources:
         source = source.lower().strip()
         if not source.startswith("list") and " " in source:
-            print("ATTENTION:ATTENTION:ERROR: 158: you have issues")
+            infoInstance.add(
+                "differentErrors",
+                f"158: source: {source} does not start with list and has space",
+            )
         res.append(source)
     return res
 
@@ -208,14 +212,18 @@ def extract_conditionText(
                     "count": float(matched[count]) if matched[count] != "any" else 1.0,
                     "unit": matched[unit],
                     "levels": [
-                        int(level) if level != "any" else level for level in levels
+                        int(level)
+                        if level != "any" and level != "above" and level != "bellow"
+                        else level
+                        for level in levels
                     ],
                     "sources": process_source(
                         [
                             matched[source]
                             for source in sources
                             if matched[source] is not None
-                        ]
+                        ],
+                        infoInstance,
                     ),
                 },
             )
@@ -280,7 +288,7 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
         res["relatedLinks"] = []
     else:
         if len(links) == 0 and found == "none":
-            infoInstance("differentConditionText", conditionText, infoInstance.id)
+            infoInstance.add("differentConditionText", conditionText, infoInstance.id)
         res["relatedLinks"] = relatedLinks
     return res
 
@@ -321,13 +329,13 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
                 currRes["conditionedOn"] = numberTranslator(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
                 currRes["groupCondition"] = payload
-                infoInstance(
+                infoInstance.add(
                     "differentGroupedCondition", conditionText.lower(), payload
                 )
             else:
                 currRes["conditionedOn"] = "unclassified"
                 currRes["conditionStatus"] = "none"
-                infoInstance(
+                infoInstance.add(
                     "differentErrors",
                     f"352: {conditionText} not in conditionDict at {infoInstance.id}",
                 )
@@ -340,7 +348,9 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
             currRes = extract_non_ul_container_info(listItem, infoInstance)
         res.append(currRes)
     if not len(listItems):
-        infoInstance("differentErrors", f"{infoInstance.id} does not have any nested")
+        infoInstance.add(
+            "differentErrors", f"{infoInstance.id} does not have any nested"
+        )
     return res
 
 
@@ -355,7 +365,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         groupCondition?: {
             count: float;
             unit: 'unit' | 'course';
-            levels: [100|200|300|400|500|any|above];
+            levels: [100|200|300|400|500|"any"|"above"];
             sources: str[] #e.g. List A, MATH, CS, bellow
         }
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
@@ -370,7 +380,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             sectionHeader = safe_find_element(
                 firstList, By.CSS_SELECTOR, ":scope > span"
             ).text
-            infoInstance("differentSectionTypes", sectionHeader, infoInstance.id)
+            infoInstance.add("differentSectionTypes", sectionHeader, infoInstance.id)
         except:
             pass
 
@@ -390,7 +400,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             res["conditionedOn"] = numberTranslator(count, infoInstance)
             res["conditionStatus"] = "complete"
             res["groupCondition"] = payload
-            infoInstance("differentGroupedCondition", sectionHeader, payload)
+            infoInstance.add("differentGroupedCondition", sectionHeader, payload)
         else:
             res["conditionedOn"], res["conditionStatus"] = "unclassified", "none"
             infoInstance.add(

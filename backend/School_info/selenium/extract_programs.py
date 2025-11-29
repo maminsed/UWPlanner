@@ -227,6 +227,7 @@ def get_program_reqs():
         "differentCourseReqsSections": {},
         "differentConditionText": {},
         "differentCourseReqs": {},
+        "differentGroupedCondition": {},
     }
 
     UNDERGRAD_LINK = (
@@ -267,8 +268,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0
-    limit = 6
+    offset = 1
+    limit = 2
     i = 0
     groups = {}
     print(

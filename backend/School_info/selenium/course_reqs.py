@@ -107,17 +107,28 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
     ),
     (r"^choose ([0-9]|all|any) of the following", ("regex", "complete")),
     (r"^choose at least ([0-9]|all|any) of the following", ("regex", "complete")),
+]
+
+count = r"(\d(?:\.\d)?|any)(?: additional)?"
+courses = r"(?!additional\b)(\S+)" + r"(?:(?: and| or|, and|, or|,) (\S+))?" * 10
+level = r"(?:([0-9]00)- or )?([0-9]00-|any )level(?:(?: or)? (below|above))?"
+groupConditionRegExList: list[tuple[str, tuple[int, int, tuple[int], tuple[int]]]] = [
+    # count, unit, levels, sources
     (
-        r"^complete ([0-9]|any) additional course at the (([0-9]00)- or )?([0-9]00)-level( or from the courses listed below)?",
-        ("regex", "complete"),
+        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any) {level}(?: or)? from the course(?:s)? listed (below|above)(?:[^a-zA-Z0-9]*)?$",
+        (1, 2, (3, 4, 5), (6,)),
     ),
     (
-        r"^complete ([0-9]|any) additional (.*) courses at the ([0-9]00)-level",
-        ("regex", "complete"),
+        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any|of) {courses} course(?:s)? (?:at|from)(?: the| any)? {level}(?: or from the course(?:s)? listed(?: or)? (below|above))?(?:[^a-zA-Z0-9]*)?$",
+        (1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17)),
     ),
     (
-        r"^complete ([0-9]|any) additional courses from any (.*) course at the (([0-9]00)- or )?([0-9]00)-level( or from the courses listed below)?",
-        ("regex", "complete"),
+        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from)(?: the| any)? {level}(?: or from the course(?:s)? listed (below|above))?(?:[^a-zA-Z0-9]*)?$",
+        (1, 13, (14, 15, 16), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17)),
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any) {level}(?: course(?:s)?)? from: {courses}(?:[^a-zA-Z0-9]*)?$",
+        (1, 2, (3, 4, 5), (6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)),
     ),
 ]
 
@@ -134,7 +145,7 @@ def numberTranslator(matched_regex: str, id: str, infoDictionary: dict):
         except Exception:
             print(f"120: error occured in numberTranslator for {id}-{matched_regex}")
             infoDictionary["differentErrors"].append(
-                f"ATTENTION:ATTENTION:ERROR:120: error occured in numberTranslator for {id}-{matched_regex}"
+                f"120: error occured in numberTranslator for {id}-{matched_regex}"
             )
     lst = [
         "error139",
@@ -152,6 +163,16 @@ def numberTranslator(matched_regex: str, id: str, infoDictionary: dict):
     return lst[matchedNum]
 
 
+def process_source(sources: list[str]):
+    res = []
+    for source in sources:
+        source = source.lower().strip()
+        if not source.startswith("list") and " " in source:
+            print("ATTENTION:ATTENTION:ERROR: 158: you have issues")
+        res.append(source)
+    return res
+
+
 def safe_find_element(element: WebElement, by, value):
     try:
         return element.find_element(by, value)
@@ -159,38 +180,67 @@ def safe_find_element(element: WebElement, by, value):
         return None
 
 
-def extract_condition_onStatus(
+def extract_conditionText(
     conditionText: str, id: str, infoDictionary: dict, strict: bool = False
 ):
     """Returns: tuple(found,matchedText,onStatus)
-    found: boolean,
+    found: 'none'|'onStatus'|'grouped',
     matchedText:str,
-    onStatus: (conditionedOn, conditionedStatus),
+    payload: (conditionedOn, conditionedStatus)|groupCondition,
     """
-    conditionText = conditionText.lower()
+    conditionText = re.sub(r"\s+", " ", conditionText.lower()).strip()
     found = ""
-    onStatus = ()
+    paylaod = ()
     if not strict:
         for key in conditionDict.keys():
             if conditionText.lower().startswith(key) and len(key) > len(found):
                 found = key
-                onStatus = conditionDict[key]
+                paylaod = conditionDict[key]
     elif conditionText.lower() in conditionDict:
         found = conditionText
-        onStatus = conditionDict[conditionText.lower()]
+        paylaod = conditionDict[conditionText.lower()]
     if not len(found):
         for regex, condition in conditionRegExList:
             matched = re.match(regex, conditionText.lower())
             if matched is not None:
                 found = matched.group(0)
-                onStatus = condition
-                if onStatus[0] == "regex":
-                    onStatus = (
+                paylaod = condition
+                if paylaod[0] == "regex":
+                    paylaod = (
                         numberTranslator(matched.group(1), id, infoDictionary),
                         found[1],
                     )
                 break
-    return len(found) > 0, found, onStatus
+    if len(found) > 0:
+        return "onStatus", found, paylaod
+    for regex, condition in groupConditionRegExList:
+        matched = re.split(regex, conditionText.lower(), flags=re.IGNORECASE)
+        if len(matched) > 1:
+            count, unit, levels, sources = condition
+            levels = [
+                matched[level].replace("-", "").strip()
+                for level in levels
+                if matched[level] is not None
+            ]
+            return (
+                "grouped",
+                re.match(regex, conditionText.lower()).group(0),
+                {
+                    "count": float(matched[count]) if matched[count] != "any" else 1.0,
+                    "unit": matched[unit],
+                    "levels": [
+                        int(level) if level != "any" else level for level in levels
+                    ],
+                    "sources": process_source(
+                        [
+                            matched[source]
+                            for source in sources
+                            if matched[source] is not None
+                        ]
+                    ),
+                },
+            )
+    return "none", "", ()
 
 
 # TODO: remove courseCode, containerType + implement
@@ -199,13 +249,12 @@ def extract_non_ul_container_info(
 ):
     res = {}
     conditionText = element.text.replace("\n", "").strip()
-    found, matchedText, onStatus = extract_condition_onStatus(
+    found, matchedText, payload = extract_conditionText(
         conditionText.lower(), courseCode, infoDictionary
     )
 
-    # TODO: add a new type course-level which basically covers one ACTS course in 300 level.
     relatedLinks = []
-    if found:
+    if found == "onStatus":
         newConditionText = (
             conditionText[len(matchedText) :].replace(":", "").replace("\n", "").strip()
         )
@@ -223,22 +272,35 @@ def extract_non_ul_container_info(
                 "relatedLinks": relatedLinks,
             }
         ]
-        res["conditionedOn"], res["conditionStatus"] = onStatus
+        res["conditionedOn"], res["conditionStatus"] = payload
         res["conditionText"] = matchedText
-    else:
+    elif found == "none":
         res["conditionedOn"] = "final"
         res["conditionStatus"] = "none"
         res["conditionText"] = conditionText
         res["appliesTo"] = []
+    else:
+        res["conditionedOn"] = "final"
+        res["conditionStatus"] = "complete"
+        res["conditionText"] = conditionText
+        res["groupCondition"] = payload
+        res["appliesTo"] = []
+        if not len(payload["levels"]) or not len(payload["sources"]):
+            infoDictionary["differentErrors"].append(
+                f"267: {conditionText.lower()}-{courseCode}'s levels or sources is empty"
+            )
+        infoDictionary["differentGroupedCondition"][
+            f"{conditionText.lower()}/-/{courseCode}"
+        ] = payload
 
     links = element.find_elements(By.TAG_NAME, "a")
     for link in links:
         relatedLinks.append(getLinkAttr(link))
-    if found:
+    if found == "onStatus":
         res["appliesTo"][0]["relatedLinks"] = relatedLinks
         res["relatedLinks"] = []
     else:
-        if len(links) == 0:
+        if len(links) == 0 and found == "none":
             infoDictionary["differentConditionText"][conditionText] = courseCode
         res["relatedLinks"] = relatedLinks
     return res
@@ -270,18 +332,27 @@ def extractNested(
             currRes["conditionText"] = conditionText
             # extract status and type
             infoDictionary["differentSectionTypes"][conditionText] = courseCode
-            found, _, onStatus = extract_condition_onStatus(
+            found, _, payload = extract_conditionText(
                 conditionText.lower(), f"{courseCode}-{containerType}", infoDictionary
             )
-            if found:
-                currRes["conditionedOn"], currRes["conditionStatus"] = onStatus
+            if found == "onStatus":
+                currRes["conditionedOn"], currRes["conditionStatus"] = payload
+            elif found == "grouped":
+                count = payload["count"]
+                if count != "any":
+                    count = count * (1 if payload["unit"] == "course" else 2)
+                currRes["conditionedOn"] = numberTranslator(
+                    count, f"{courseCode}-{containerType}", infoDictionary
+                )
+                currRes["conditionStatus"] = "complete"
+                currRes["groupCondition"] = payload
+                infoDictionary["differentGroupedCondition"][conditionText.lower()] = (
+                    payload
+                )
             else:
                 currRes["conditionedOn"], currRes["conditionStatus"] = (
                     "unclassified",
                     "none",
-                )
-                print(
-                    f"ATTENTION:ATTENTION:ERROR:{conditionText} not in conditionDict at {courseCode}-{containerType}"
                 )
                 infoDictionary["differentErrors"].append(
                     f"{conditionText} not in conditionDict at {courseCode}-{containerType}"
@@ -315,10 +386,16 @@ def extractContainerInfo(
     # section has to be a top level ul
     """return:
     ListInfo: {
-        conditionedOn: 'all' | 'any' | 'two' | 'three' | 'four' | 'not_all' | 'not_any' | 'final' | 'unclassified',
-        conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none'
+        conditionedOn: 'all' | 'any' | 'two'-'nine' | 'not_any' | 'final' | 'unclassified',
+        conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none',
         conditionText: str,
-        appliesTo: ListInfo[]
+        appliesTo: ListInfo[],
+        groupCondition?: {
+            count: float;
+            unit: 'unit' | 'course';
+            levels: [100|200|300|400|500|any|above];
+            sources: str[] #e.g. List A, MATH, CS, bellow
+        }
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }
 

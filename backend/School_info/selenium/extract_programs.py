@@ -13,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
+from .calendar_utils import InfoClass
 from .course_reqs import extractContainerInfo, safe_find_element
 
 delayAmount = 15
@@ -97,7 +98,7 @@ def bringIntoView(driver: WebDriver, element: WebElement):
     time.sleep(1)
 
 
-def find_type(programName: str, infoDictionary: dict):
+def find_type(programName: str, infoInstance: InfoClass):
     programName = programName.lower()
     # weird cases
     if programName.startswith("mathematical optimization"):
@@ -109,16 +110,16 @@ def find_type(programName: str, infoDictionary: dict):
             if "joint" in res or "double" in res or "degree" == "res":
                 continue
             elif res != "" and res != programType:
-                infoDictionary["differentErrors"].append(
-                    f"55: {programName} has both {keyword} and {res}"
+                infoInstance.add(
+                    "differentErrors", f"55: {programName} has both {keyword} and {res}"
                 )
             else:
                 res = programType
                 # TODO: after confirimng behvaiour uncomment:
                 # break
     if not res:
-        infoDictionary["differentErrors"].append(
-            f"60: {programName} does not have any types"
+        infoInstance.add(
+            "differentErrors", f"60: {programName} does not have any types"
         )
         res = "none"
     return res
@@ -128,7 +129,7 @@ def find_type(programName: str, infoDictionary: dict):
 # differentCourseReqs = {}
 
 
-def courseReqs(sectionEl: WebElement, programName: str, infoDictionary: dict):
+def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
     """For now SectionEl has to be as outer as possible. (within the section obv)"""
     rulesWrapperCSS = "div.rules-wrapper"
     innerSectionsCSS = "section:not(section section)"
@@ -139,8 +140,9 @@ def courseReqs(sectionEl: WebElement, programName: str, infoDictionary: dict):
     # TODO: just get the first one
     rules = sectionEl.find_elements(By.CSS_SELECTOR, rulesWrapperCSS)
     if len(rules) != 1:
-        infoDictionary["differentErrors"].append(
-            f"140: {programName}'s Course Requirements has {len(rules)} rules-wrappers"
+        infoInstance.add(
+            "differentErrors",
+            f"140: {infoInstance.id}'s Course Requirements has {len(rules)}!=1 rules-wrappers",
         )
     if len(rules) < 1:
         # TODO: extract markdown
@@ -148,31 +150,30 @@ def courseReqs(sectionEl: WebElement, programName: str, infoDictionary: dict):
     innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
     for innerSection in innerSections:
         header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
-        infoDictionary["differentCourseReqsSections"][header] = programName
+        infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
         biggestuls = innerSection.find_elements(By.CSS_SELECTOR, biggestulCSS)
         if len(biggestuls) != 1:
-            infoDictionary["differentErrors"].append(
-                f"153: one of {programName}'s innerSections has {len(biggestuls)} biggest uls"
+            infoInstance.add(
+                "differentErrors",
+                f"153: one of {infoInstance.id}'s innerSections has {len(biggestuls)}!=1 biggest uls",
             )
         if len(biggestuls) == 0:
             # TODO: extract markdown
             continue
         try:
-            listInfo = extractContainerInfo(
-                biggestuls[0], programName, "", infoDictionary
-            )
-            infoDictionary["differentCourseReqs"][programName] = listInfo
+            listInfo = extractContainerInfo(biggestuls[0], infoInstance)
+            infoInstance.add("differentCourseReqs", infoInstance.id, listInfo)
         except Exception as e:
-            print(f"161: error occured when extractingContainerInfo for {programName}")
             print(f"Error: {e}")
             print(f"Traceback:\n{traceback.format_exc()}")
-            infoDictionary["differentErrors"].append(
-                f"161: error occured when extractingContainerInfo for {programName}"
+            infoInstance.add(
+                "differentErrors",
+                f"161: error occured when extractingContainerInfo for {infoInstance.id}",
             )
 
 
 def addGroupTodb(
-    groupName: str, programs: list, driver: WebDriver, infoDictionary: dict
+    groupName: str, programs: list, driver: WebDriver, infoInstance: InfoClass
 ):
     """programs: {program: str, url:str}[]"""
     programHeaderCSS = 'div[class*="program-view__itemTitleAndTranslationButton___"]'
@@ -184,7 +185,8 @@ def addGroupTodb(
 
     for program in programs:
         programName = program["program"]
-        programType = find_type(programName, infoDictionary)
+        infoInstance.id = programName
+        programType = find_type(programName, infoInstance)
         programInfo = {}
         print(f"currently at {programName}")
 
@@ -198,37 +200,38 @@ def addGroupTodb(
         for section in sections:
             header = safe_find_element(section, By.CSS_SELECTOR, sectionHeadersCSS)
             if not header:
-                infoDictionary["differentErrors"].append(
-                    f"135: {programName} does not have sectionHeadersCSS at one of sections"
+                infoInstance.add(
+                    "differentErrors",
+                    f"135: {programName} does not have sectionHeadersCSS at one of sections",
                 )
                 continue
             section_type = header.text
             if section_type not in processedSectionTypes:
-                infoDictionary["differentSectionTypes"][section_type] = program[
-                    "program"
-                ]
-
+                infoInstance.add(
+                    "differentSectionTypes", section_type, program["program"]
+                )
             if section_type == "Course Requirements":
-                courseReqs(section, programName, infoDictionary)
+                courseReqs(section, infoInstance)
 
+        print("process finished")
         driver.close()
         driver.switch_to.window(main_window)
 
 
 def get_program_reqs():
-    # Refactor infoDictionary to use class with getters and setters
     classGroupCSS = 'div[class*="style__collapsibleBox___"]'
     expandButtonCSS = 'h2[class*="style__title___"]'
     linkContainerCSS = 'div[class*="style__columns___"]'
-    infoDictionary = {
-        # "differentPrograms": differentPrograms,
-        "differentSectionTypes": {},
-        "differentErrors": [],
-        "differentCourseReqsSections": {},
-        "differentConditionText": {},
-        "differentCourseReqs": {},
-        "differentGroupedCondition": {},
-    }
+    infoInstance = InfoClass(
+        [
+            ("differentErrors", []),
+            ("differentConditionText", {}),
+            ("differentGroupedCondition", {}),
+            ("differentCourseReqs", {}),
+            ("differentSectionTypes", {}),
+            ("differentCourseReqsSections", {}),
+        ]
+    )
 
     UNDERGRAD_LINK = (
         "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs"
@@ -320,7 +323,7 @@ def get_program_reqs():
                 updateGroup["group_name"],
                 updateGroup["members"],
                 driver,
-                infoDictionary,
+                infoInstance,
             )
             # waiting for it to actualy close
             try:
@@ -338,6 +341,4 @@ def get_program_reqs():
     finally:
         if driver:
             driver.quit()
-        infoDictionary["groups"] = groups
-        infoDictionary["i"] = i + offset
-        return infoDictionary
+        return infoInstance.returnJson({"groups": groups, "i": i + offset})

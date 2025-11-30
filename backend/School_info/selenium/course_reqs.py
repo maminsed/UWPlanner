@@ -106,13 +106,8 @@ sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?
 groupConditionRegExList: list[
     tuple[str, list[tuple[int, int, tuple[int], tuple[int]]]]
 ] = [
-    # count, unit, levels, sources
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5, 6, 7), (8,))],
-    ),
-    (
-        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\S+ electives?(?: from list [0-9a-zA-Z])?(?: or list [0-9a-zA-Z])?)[^a-zA-Z0-9]*$",
+        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\\S+ electives?(?: from list [0-9a-zA-Z])?(?: or list [0-9a-zA-Z])?)[^a-zA-Z0-9]*$",
         [(1, -1, (-1,), (2,))],
     ),
     (
@@ -120,35 +115,39 @@ groupConditionRegExList: list[
         [(1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (3, 4, 5, 6, 7), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 2, (3, 4, 5, 6, 7), (8,))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\\.\\s\\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
         [(1, 2, (-1,), (3,))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3,))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\\.\\s\\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        [
+            (1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+            (19, 20, (21, 22, 23, 24, 25), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+        ],
     ),
     (
         rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
         [(1, 13, (14, 15, 16, 17, 18), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5, 6, 7), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))],
-    ),
-    (
-        rf"^complete {count}(?:(?!additional\b) \S+)? (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))],
-    ),
-    (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3,))],
-    ),
-    (
         rf"^complete {count} {courses} (course|unit)(?:s)?[^a-zA-Z0-9]*$",
         [(1, 13, (-1,), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
-        [
-            (1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
-            (19, 20, (21, 22, 23, 24, 25), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
-        ],
+        rf"^complete {count}(?:(?!additional\x08) \\S+)? (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \\S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))],
     ),
 ]
 

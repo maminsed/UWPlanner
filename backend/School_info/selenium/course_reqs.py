@@ -65,15 +65,20 @@ conditionDict: dict[str, tuple[str, str]] = {
     "must have completed the following": ("all", "complete"),
     "completed or concurrently enrolled in the following": ("all", "both"),
     "completed or concurrently enrolled in": ("all", "both"),
+    "the following cannot be used towards this academic plan": ("not_any", "both"),
 }
 
 conditionRegExList: list[tuple[str, tuple[str, str]]] = [
     (
-        r"^earned a minimum grade of ([0-9]*)% in each of the following",
+        r"^earned a minimum grade of ([0-9\.]*)% in each of the following",
         ("all", "complete"),
     ),
     (
-        r"^earned a minimum grade of (?:[0-9]*)% in (any|all|[0-9]) of the following",
+        r"complete the following courses with a( minimum)? cumulative \S+ average of ([0-9\.]*)%",
+        ("all", "complete"),
+    ),
+    (
+        r"^earned a minimum grade of (?:[0-9\.]*)% in (any|all|[0-9]) of the following",
         ("regex", "complete"),
     ),
     (
@@ -85,11 +90,18 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("regex", "both"),
     ),
     (r"^choose(?: at least)? ([0-9]|all|any) of the following", ("regex", "complete")),
+    (
+        r"^complete no more than ([0-9]) from the following",
+        ("regex-less_than", "complete"),
+    ),
 ]
 
 count = r"(\d(?:\.\d)?|any)(?: additional)?"
 courses = r"(?!additional\b)(\S+)" + r"(?:(?: and| or|, and|, or|,) (\S+))?" * 10
-level = r"(?:([0-9]00)- or )?(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
+level = (
+    r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
+    + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
+)
 sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above))?"
 groupConditionRegExList: list[
     tuple[str, list[tuple[int, int, tuple[int], tuple[int]]]]
@@ -97,11 +109,15 @@ groupConditionRegExList: list[
     # count, unit, levels, sources
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5), (6,))],
+        [(1, 2, (3, 4, 5, 6, 7), (8,))],
+    ),
+    (
+        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\S+ electives?(?: from list [0-9a-zA-Z])?(?: or list [0-9a-zA-Z])?)[^a-zA-Z0-9]*$",
+        [(1, -1, (-1,), (2,))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17))],
+        [(1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
@@ -109,11 +125,15 @@ groupConditionRegExList: list[
     ),
     (
         rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 13, (14, 15, 16), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17))],
+        [(1, 13, (14, 15, 16, 17, 18), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5), (6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))],
+        [(1, 2, (3, 4, 5, 6, 7), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))],
+    ),
+    (
+        rf"^complete {count}(?:(?!additional\b) \S+)? (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
@@ -126,8 +146,8 @@ groupConditionRegExList: list[
     (
         rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
         [
-            (1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
-            (17, 18, (19, 20, 21), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+            (1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+            (19, 20, (21, 22, 23, 24, 25), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
         ],
     ),
 ]
@@ -170,6 +190,14 @@ def safe_find_element(element: WebElement, by, value):
         return None
 
 
+def process_source(source: str):
+    return (
+        source.replace("electives", "elective")
+        .replace(" from list", "-list")
+        .replace(" or list", "-list")
+    )
+
+
 def extract_conditionText(
     conditionText: str, infoInstance: InfoClass, strict: bool = False
 ) -> tuple[Literal["none", "onStatus", "grouped"], str, tuple | dict]:
@@ -195,9 +223,10 @@ def extract_conditionText(
             if matched is not None:
                 found = matched.group(0)
                 paylaod = condition
-                if paylaod[0] == "regex":
+                if paylaod[0].startswith("regex"):
                     paylaod = (
-                        numberTranslator(matched.group(1), infoInstance),
+                        f"{paylaod[0].replace('-', '').replace('regex', '')}"
+                        + numberTranslator(matched.group(1), infoInstance),
                         condition[1],
                     )
                 break
@@ -219,7 +248,7 @@ def extract_conditionText(
                         "count": float(matched[count])
                         if matched[count] != "any"
                         else 1.0,
-                        "unit": matched[unit],
+                        "unit": matched[unit] if unit != -1 else "course",
                         "levels": [
                             int(level)
                             if level != "any" and level != "above" and level != "bellow"
@@ -228,7 +257,7 @@ def extract_conditionText(
                         ],
                         "additional": "additional" in conditionText,
                         "sources": [
-                            matched[source]
+                            process_source(matched[source])
                             for source in sources
                             if matched[source] is not None
                         ],
@@ -378,7 +407,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             unit: 'unit' | 'course';
             additional: bool
             levels: [100|200|300|400|500|"any"|"above"|"below"];
-            sources: [courseCode|"above"|"below"|"courses list"]
+            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2 ..."]
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }

@@ -43,7 +43,10 @@ processedSectionTypes = {
 
 """
     Requirements:
-        - Course Requirements
+        - Course Requirements?: {
+            overall?: ListInfo
+            [1-5][AB]?: ListInfo
+        }
         - Degree Requirements: only for degrees
         - Graduation Requirements
         - Admission Requirements
@@ -132,7 +135,7 @@ def find_type(programName: str, infoInstance: InfoClass):
 def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
     """For now SectionEl has to be as outer as possible. (within the section obv)"""
     rulesWrapperCSS = "div.rules-wrapper"
-    innerSectionsCSS = "section:not(section section)"
+    innerSectionsCSS = "section"
     headerCSS = 'div[class*="style__itemHeaderH2"]'
     biggestulCSS = ":scope ul:not(:scope ul ul)"
     courseRequirement = {}
@@ -148,11 +151,14 @@ def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
         # TODO: extract markdown
         return
     innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
-    for innerSection in innerSections:
+    for index, innerSection in enumerate(innerSections):
         header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
         infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
+        if header.lower().startswith("list"):
+            # TODO: route to course Lists
+            continue
         biggestuls = innerSection.find_elements(By.CSS_SELECTOR, biggestulCSS)
-        if len(biggestuls) != 1:
+        if len(biggestuls) != 1 and not (index == 0 and len(innerSections) != 1):
             infoInstance.add(
                 "differentErrors",
                 f"153: one of {infoInstance.id}'s innerSections has {len(biggestuls)}!=1 biggest uls",
@@ -288,9 +294,12 @@ def get_program_reqs():
             expandButton = pg.find_element(By.CSS_SELECTOR, expandButtonCSS)
 
             # Math and Comp only
-            # if "math" not in expandButton.text.lower() and "computer" not in expandButton.text.lower():
-            #     limit+=1
-            #     continue
+            if (
+                "math" not in expandButton.text.lower()
+                and "computer" not in expandButton.text.lower()
+            ):
+                limit += 1
+                continue
 
             # bringing the button into view
             bringIntoView(driver, expandButton)

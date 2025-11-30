@@ -158,6 +158,7 @@ type overlayInterface = {
 
 export default function GraphPage() {
   // TODO: add the checks for program
+  //       ability to change the status of a requirement
   //       add the option to reorder classes
   //       add a report issue button
   // settings:

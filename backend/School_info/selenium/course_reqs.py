@@ -91,23 +91,44 @@ count = r"(\d(?:\.\d)?|any)(?: additional)?"
 courses = r"(?!additional\b)(\S+)" + r"(?:(?: and| or|, and|, or|,) (\S+))?" * 10
 level = r"(?:([0-9]00)- or )?(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
 sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above))?"
-groupConditionRegExList: list[tuple[str, tuple[int, int, tuple[int], tuple[int]]]] = [
+groupConditionRegExList: list[
+    tuple[str, list[tuple[int, int, tuple[int], tuple[int]]]]
+] = [
     # count, unit, levels, sources
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
-        (1, 2, (3, 4, 5), (6,)),
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 2, (3, 4, 5), (6,))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any|of) {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
-        (1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17)),
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 17))],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from)(?: the| any)? {level}{sourceBellowAbove}(?:[^a-zA-Z0-9]*)?$",
-        (1, 13, (14, 15, 16), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17)),
+        rf"^complete {count} (course|unit)(?:s)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3,))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at the|from any) {level}(?: course(?:s)?)? from: {courses}(?:[^a-zA-Z0-9]*)?$",
-        (1, 2, (3, 4, 5), (6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)),
+        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 13, (14, 15, 16), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (3, 4, 5), (6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3,))],
+    ),
+    (
+        rf"^complete {count} {courses} (course|unit)(?:s)?[^a-zA-Z0-9]*$",
+        [(1, 13, (-1,), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))],
+    ),
+    (
+        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        [
+            (1, 2, (14, 15, 16), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+            (17, 18, (19, 20, 21), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+        ],
     ),
 ]
 
@@ -140,19 +161,6 @@ def numberTranslator(matched_regex: str, infoInstance: InfoClass):
             f"120: error occured in numberTranslator for {infoInstance.id}-{matched_regex}",
         )
         return "error139"
-
-
-def process_source(sources: list[str], infoInstance: InfoClass):
-    res = []
-    for source in sources:
-        source = source.lower().strip()
-        if not source.startswith("list") and " " in source:
-            infoInstance.add(
-                "differentErrors",
-                f"158: source: {source} does not start with list and has space",
-            )
-        res.append(source)
-    return res
 
 
 def safe_find_element(element: WebElement, by, value):
@@ -196,37 +204,37 @@ def extract_conditionText(
     if len(found) > 0:
         return "onStatus", found, paylaod
 
-    for regex, condition in groupConditionRegExList:
+    for regex, conditions in groupConditionRegExList:
         matched = re.split(regex, conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
-            count, unit, levels, sources = condition
-            levels = [
-                matched[level].replace("-", "").strip()
-                for level in levels
-                if matched[level] is not None
-            ]
-            return (
-                "grouped",
-                re.match(regex, conditionText).group(0),
-                {
-                    "count": float(matched[count]) if matched[count] != "any" else 1.0,
-                    "unit": matched[unit],
-                    "levels": [
-                        int(level)
-                        if level != "any" and level != "above" and level != "bellow"
-                        else level
-                        for level in levels
-                    ],
-                    "sources": process_source(
-                        [
+            res = []
+            for count, unit, levels, sources in conditions:
+                levels = [
+                    matched[level].replace("-", "").strip() if level != -1 else "any"
+                    for level in levels
+                    if matched[level] is not None
+                ]
+                res.append(
+                    {
+                        "count": float(matched[count])
+                        if matched[count] != "any"
+                        else 1.0,
+                        "unit": matched[unit],
+                        "levels": [
+                            int(level)
+                            if level != "any" and level != "above" and level != "bellow"
+                            else level
+                            for level in levels
+                        ],
+                        "additional": "additional" in conditionText,
+                        "sources": [
                             matched[source]
                             for source in sources
                             if matched[source] is not None
                         ],
-                        infoInstance,
-                    ),
-                },
-            )
+                    }
+                )
+            return ("grouped", re.match(regex, conditionText).group(0), res)
     return "none", "", ()
 
 
@@ -267,9 +275,12 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
         res["conditionedOn"] = "final"
         res["conditionStatus"] = "complete"
         res["conditionText"] = conditionText
-        res["groupCondition"] = payload
+        res["groupConditions"] = payload
         res["appliesTo"] = []
-        if not len(payload["levels"]) or not len(payload["sources"]):
+        if any(
+            not groupCondition["levels"] or not groupCondition["sources"]
+            for groupCondition in payload
+        ):
             infoInstance.add(
                 "differentErrors",
                 f"267: {conditionText.lower()}-{infoInstance.id} levels or sources is empty",
@@ -323,12 +334,12 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
             if found == "onStatus":
                 currRes["conditionedOn"], currRes["conditionStatus"] = payload
             elif found == "grouped":
-                count = payload["count"]
+                count = max(gc["count"] for gc in payload)
                 if count != "any":
-                    count = count * (1 if payload["unit"] == "course" else 2)
+                    count = count * (1 if payload[0]["unit"] == "course" else 2)
                 currRes["conditionedOn"] = numberTranslator(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
-                currRes["groupCondition"] = payload
+                currRes["groupConditions"] = payload
                 infoInstance.add(
                     "differentGroupedCondition", conditionText.lower(), payload
                 )
@@ -362,12 +373,13 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none',
         conditionText: str,
         appliesTo: ListInfo[],
-        groupCondition?: {
+        groupConditions?: {
             count: float;
             unit: 'unit' | 'course';
-            levels: [100|200|300|400|500|"any"|"above"];
-            sources: str[] #e.g. List A, MATH, CS, bellow
-        }
+            additional: bool
+            levels: [100|200|300|400|500|"any"|"above"|"below"];
+            sources: [courseCode|"above"|"below"|"courses list"]
+        }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }
 
@@ -394,12 +406,12 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         if found == "onStatus":
             res["conditionedOn"], res["conditionStatus"] = payload
         elif found == "grouped":
-            count = payload["count"]
+            count = max(gc["count"] for gc in payload)
             if count != "any":
-                count = count * (1 if payload["unit"] == "course" else 2)
+                count = count * (1 if payload[0]["unit"] == "course" else 2)
             res["conditionedOn"] = numberTranslator(count, infoInstance)
             res["conditionStatus"] = "complete"
-            res["groupCondition"] = payload
+            res["groupConditions"] = payload
             infoInstance.add("differentGroupedCondition", sectionHeader, payload)
         else:
             res["conditionedOn"], res["conditionStatus"] = "unclassified", "none"

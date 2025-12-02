@@ -278,7 +278,7 @@ def get_program_reqs():
     )
 
     offset = 0
-    limit = 6
+    limit = 3
     i = 0
     groups = {}
     print(

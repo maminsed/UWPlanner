@@ -86,13 +86,17 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("regex", "complete"),
     ),
     (
+        r"^complete ([0-9]|all|any) courses from the following choices",
+        ("regex", "complete"),
+    ),
+    (
         r"^completed or concurrently enrolled in at least ([0-9]|all|any) of the following",
         ("regex", "both"),
     ),
     (r"^choose(?: at least)? ([0-9]|all|any) of the following", ("regex", "complete")),
     (
         r"^complete no more than ([0-9]) from the following",
-        ("regex-less_than", "complete"),
+        ("regex-less_than_", "complete"),
     ),
 ]
 
@@ -103,27 +107,41 @@ level = (
     + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
 )
 sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above))?"
+
+
+def lists(count: bool = False):
+    status = "?:" if count else ""
+    return (
+        rf"({status}list [0-9a-zA-Z])"
+        + rf"(?:(?:, |, or| or)? ({status}list [0-9a-zA-Z]))?" * 3
+    )
+
+
+levelArray = lambda x: tuple([i + x for i in range(5)])
+coursesArray = lambda x: tuple([i + x for i in range(11)])
+listsArray = lambda x: tuple([i + x for i in range(4)])
 groupConditionRegExList: list[
     tuple[str, list[tuple[int, int, tuple[int], tuple[int]]]]
 ] = [
+    # count,unit,level,course
     (
-        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\\S+ electives?(?: from list [0-9a-zA-Z])?(?: or list [0-9a-zA-Z])?)[^a-zA-Z0-9]*$",
+        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\S+ electives?(?: from {lists()})?)[^a-zA-Z0-9]*$",
         [(1, -1, (-1,), (2,))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19))],
+        [(1, 2, levelArray(14), coursesArray(3) + (19,))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5, 6, 7), (8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18))],
+        [(1, 2, levelArray(3), coursesArray(8))],
     ),
     (
         rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, (3, 4, 5, 6, 7), (8,))],
+        [(1, 2, levelArray(3), (8,))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\\.\\s\\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
         [(1, 2, (-1,), (3,))],
     ),
     (
@@ -131,23 +149,30 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (3,))],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\\.\\s\\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
         [
-            (1, 2, (14, 15, 16, 17, 18), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
-            (19, 20, (21, 22, 23, 24, 25), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)),
+            (1, 2, levelArray(14), coursesArray(3)),
+            (19, 20, levelArray(21), coursesArray(3)),
+        ],
+    ),
+    (
+        rf"^complete {count} {courses} (course|unit)(?:s)?(?: at {level})?,(?: at least)? {count} (course|unit)(?:s)?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        [
+            (1, 13, levelArray(14) + (-1,), coursesArray(2)),
+            (19, 20, levelArray(21), coursesArray(2)),
         ],
     ),
     (
         rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 13, (14, 15, 16, 17, 18), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 19))],
+        [(1, 13, levelArray(14), coursesArray(2) + (19,))],
     ),
     (
         rf"^complete {count} {courses} (course|unit)(?:s)?[^a-zA-Z0-9]*$",
-        [(1, 13, (-1,), (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12))],
+        [(1, 13, (-1,), coursesArray(2))],
     ),
     (
-        rf"^complete {count}(?:(?!additional\x08) \\S+)? (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \\S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13))],
+        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), levelArray(3))],
     ),
 ]
 
@@ -190,10 +215,8 @@ def safe_find_element(element: WebElement, by, value):
 
 
 def process_source(source: str):
-    return (
-        source.replace("electives", "elective")
-        .replace(" from list", "-list")
-        .replace(" or list", "-list")
+    return re.sub(
+        r"(,|, or| or| from) list", "-list", source.replace("electives", "elective")
     )
 
 
@@ -237,23 +260,25 @@ def extract_conditionText(
         if len(matched) > 1:
             res = []
             for count, unit, levels, sources in conditions:
-                levels = [
-                    matched[level].replace("-", "").strip() if level != -1 else "any"
-                    for level in levels
-                    if matched[level] is not None
-                ]
+                resLevels = []
+                for levelIdx in levels:
+                    if levelIdx == -1:
+                        if len(levels) == 1:
+                            resLevels.append("any")
+                        continue
+                    level: str = matched[levelIdx].replace("-", "").strip()
+                    if level == "any" or level == "above" or level == "bellow":
+                        resLevels.append(level)
+                    elif level is not None:
+                        resLevels.append(int(level))
+
                 res.append(
                     {
                         "count": float(matched[count])
                         if matched[count] != "any"
                         else 1.0,
                         "unit": matched[unit] if unit != -1 else "course",
-                        "levels": [
-                            int(level)
-                            if level != "any" and level != "above" and level != "bellow"
-                            else level
-                            for level in levels
-                        ],
+                        "levels": resLevels,
                         "additional": "additional" in conditionText,
                         "sources": [
                             process_source(matched[source])

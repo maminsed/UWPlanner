@@ -101,100 +101,142 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
 ]
 
 count = r"(\d(?:\.\d)?|any)(?: additional)?"
-courses = r"(?!additional\b)(\S+)" + r"(?:(?: and| or|, and|, or|,) (\S+))?" * 10
+courses = (
+    r"(?!additional\b)([0-9a-z\\/]+)"
+    + r"(?:(?: and| or|, and|, or|,) ([0-9a-z\\/]+))?" * 10
+)
 level = (
     r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
     + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
 )
-sourceBellowAbove = r"(?:(?: or)? from the(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above))?"
+sourceBellowAbove = (
+    r"(?:(?: or)? from the(?: list of)? courses?(?: listed)?(?: or)? (below|above))?"
+)
 
 
 def lists(count: bool = False):
-    status = "?:" if count else ""
+    status = "?:" if not count else ""
     return (
         rf"({status}list [0-9a-zA-Z])"
-        + rf"(?:(?:, |, or| or)? ({status}list [0-9a-zA-Z]))?" * 3
+        + rf"(?:(?:, |, or| or| and)? ({status}list [0-9a-zA-Z]))?" * 3
     )
 
 
 levelArray = lambda x: tuple([i + x for i in range(5)])
 coursesArray = lambda x: tuple([i + x for i in range(11)])
 listsArray = lambda x: tuple([i + x for i in range(4)])
+
+# count,unit,level,sources,subjectCodesCondition:(limit,status)
+"""
+Special Conditions:
+    - count = -1: unit = full source
+    - unit = -1: unit = course
+    - level = -1 and len(levels) == 1: level = [any]
+"""
 groupConditionRegExList: list[
-    tuple[str, list[tuple[int, int, tuple[int], tuple[int]]]]
+    tuple[
+        str, list[tuple[int, int, tuple[int], tuple[int], tuple[int, int | str] | None]]
+    ]
 ] = [
-    # count,unit,level,course
     (
-        rf"^complete {count} (?:at|from|of)?(?: the| any)?(\S+ electives?(?: from {lists()})?)[^a-zA-Z0-9]*$",
-        [(1, -1, (-1,), (2,))],
+        rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)[^a-zA-Z0-9]*$",
+        [(1, -1, (-1,), (2,), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {courses} course(?:s)?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(14), coursesArray(3) + (19,))],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options)? in {lists(True)}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), listsArray(3), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}(?: course(?:s)?)? from: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(3), coursesArray(8))],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 2, levelArray(14), coursesArray(3) + (19,), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(3), (8,))],
+        rf"^complete the {lists(True)} requirements?(?: below| above)?[^a-zA-Z0-9]*$",
+        [(-1, -1, (-1,), listsArray(1), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3,))],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}(?: courses?)? from: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, levelArray(3), coursesArray(8), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: list of)? course(?:s)?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3,))],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 2, levelArray(3), (8,), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)(?:s)? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3,), None)],
+    ),
+    (
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: list of)? courses?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), (3,), None)],
+    ),
+    (
+        rf"^complete {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
         [
-            (1, 2, levelArray(14), coursesArray(3)),
-            (19, 20, levelArray(21), coursesArray(3)),
+            (1, 2, levelArray(14) + (-1,), coursesArray(3), None),
+            (19, 20, levelArray(21) + (-1,), coursesArray(3), None),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)(?:s)?(?: at {level})?,(?: at least)? {count} (course|unit)(?:s)?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
         [
-            (1, 13, levelArray(14) + (-1,), coursesArray(2)),
-            (19, 20, levelArray(21), coursesArray(2)),
+            (1, 13, levelArray(14) + (-1,), coursesArray(2), None),
+            (19, 20, levelArray(21), coursesArray(2), None),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)(?:s)? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 13, levelArray(14), coursesArray(2) + (19,))],
+        rf"^complete {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
+        [(1, 13, levelArray(14), coursesArray(2) + (19,), None)],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)(?:s)?[^a-zA-Z0-9]*$",
-        [(1, 13, (-1,), coursesArray(2))],
+        rf"^complete {count} {courses} (course|unit)s?[^a-zA-Z0-9]*$",
+        [(1, 13, (-1,), coursesArray(2), None)],
     ),
     (
-        rf"^complete {count} (course|unit)(?:s)? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), levelArray(3))],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), levelArray(3), None)],
+    ),
+    (
+        # WARNING: be very careful with this
+        rf"^complete {count} [a-z\-]+ (course|unit)s?,(?: at least)? (\D+) of which is at the {level}, (\D+) from the (same) subject codes?, from the following choices: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        [
+            (1, 2, (-1,), coursesArray(11) + coursesArray(22), None),
+            (3, 2, levelArray(4), coursesArray(11) + coursesArray(22), (9, 10)),
+        ],
+    ),
+    (
+        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)? (?:\(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)? subject codes: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), coursesArray(5) + coursesArray(16), (4, 3))],
+    ),
+    (
+        rf"^complete {count} (course|unit)s?,(?: taken)? from {lists(True)}; choices must be in (at least|at most) (\D+) different subject codes? \(?{courses}\)?, and {count} (course|unit)s? must be at the {level}[^a-zA-Z0-9]*$",
+        [
+            (1, 2, (-1,), coursesArray(9) + listsArray(3), (8, 7)),
+            (20, 21, levelArray(22), coursesArray(9) + listsArray(3), None),
+        ],
     ),
 ]
 
 
-def numberTranslator(matched_regex: str, infoInstance: InfoClass):
+# Map numbers to words
+number_words = {
+    1: "any",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+}
+
+
+def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
     matched_regex = matched_regex.strip().lower()
 
     if matched_regex == "all":
         return "all"
-
-    # Map numbers to words
-    number_words = {
-        1: "any",
-        2: "two",
-        3: "three",
-        4: "four",
-        5: "five",
-        6: "six",
-        7: "seven",
-        8: "eight",
-        9: "nine",
-    }
 
     try:
         num = int(matched_regex) if matched_regex != "any" else 1
@@ -202,9 +244,40 @@ def numberTranslator(matched_regex: str, infoInstance: InfoClass):
     except ValueError:
         infoInstance.add(
             "differentErrors",
-            f"120: error occured in numberTranslator for {infoInstance.id}-{matched_regex}",
+            f"120: error occured in deciToEnglishNumber for {infoInstance.id}-{matched_regex}",
         )
         return "error139"
+
+
+def subjectCodesTranslator(
+    rawInput: None | tuple[int, int | str],
+    splitedRegex: list[str | None],
+    infoInstance: InfoClass,
+):
+    # rawInput:(limit,status)
+    if rawInput is None:
+        return None
+    limit, status = rawInput
+    limit = (splitedRegex[limit] or "").strip()
+    if limit == "one" or limit == "all":
+        limit = "any"
+    statusMap = {
+        "at least": "gt",
+        "at most": "lt",
+        "only": "eq",
+        "all": "eq",
+        "same": "eq",
+    }
+
+    if type(status) == int:
+        status = splitedRegex[status].strip()
+    if not status or status is None or status not in statusMap:
+        infoInstance.add(
+            "differentErrors", f"{rawInput} at {splitedRegex} has status: {status}"
+        )
+        return None
+
+    return {"status": statusMap[status], "limit": limit}
 
 
 def safe_find_element(element: WebElement, by, value):
@@ -217,7 +290,7 @@ def safe_find_element(element: WebElement, by, value):
 def process_source(source: str):
     return re.sub(
         r"(,|, or| or| from) list", "-list", source.replace("electives", "elective")
-    )
+    ).replace("and list", "&list")
 
 
 def extract_conditionText(
@@ -248,7 +321,7 @@ def extract_conditionText(
                 if paylaod[0].startswith("regex"):
                     paylaod = (
                         f"{paylaod[0].replace('-', '').replace('regex', '')}"
-                        + numberTranslator(matched.group(1), infoInstance),
+                        + deciToEnglishNumber(matched.group(1), infoInstance),
                         condition[1],
                     )
                 break
@@ -259,25 +332,40 @@ def extract_conditionText(
         matched = re.split(regex, conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
             res = []
-            for count, unit, levels, sources in conditions:
+            for count, unit, levels, sources, subjectCodesCondition in conditions:
                 resLevels = []
+                hasNegOne = False
                 for levelIdx in levels:
                     if levelIdx == -1:
-                        if len(levels) == 1:
-                            resLevels.append("any")
+                        hasNegOne = True
                         continue
-                    level: str = matched[levelIdx].replace("-", "").strip()
+                    level: str | None = matched[levelIdx]
+                    if level is None:
+                        continue
+                    level = level.replace("-", "").strip()
                     if level == "any" or level == "above" or level == "bellow":
                         resLevels.append(level)
-                    elif level is not None:
+                    else:
                         resLevels.append(int(level))
-
+                if hasNegOne and not len(resLevels):
+                    resLevels.append("any")
+                resCount = 1.0
+                if count != -1:
+                    if matched[count] in number_words.keys():
+                        for deci, eng in number_words.items():
+                            if eng == matched[count]:
+                                resCount = deci
+                    elif matched[count] == "one":
+                        resCount == 1.0
+                    else:
+                        resCount = float(matched[count])
+                resUnit = matched[unit] if unit != -1 else "course"
+                if count == -1:
+                    resUnit = "full source"
                 res.append(
                     {
-                        "count": float(matched[count])
-                        if matched[count] != "any"
-                        else 1.0,
-                        "unit": matched[unit] if unit != -1 else "course",
+                        "count": resCount,
+                        "unit": resUnit,
                         "levels": resLevels,
                         "additional": "additional" in conditionText,
                         "sources": [
@@ -285,6 +373,9 @@ def extract_conditionText(
                             for source in sources
                             if matched[source] is not None
                         ],
+                        "subjectCodesCondition": subjectCodesTranslator(
+                            subjectCodesCondition, matched, infoInstance
+                        ),
                     }
                 )
             return ("grouped", re.match(regex, conditionText).group(0), res)
@@ -390,7 +481,7 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
                 count = max(gc["count"] for gc in payload)
                 if count != "any":
                     count = count * (1 if payload[0]["unit"] == "course" else 2)
-                currRes["conditionedOn"] = numberTranslator(count, infoInstance)
+                currRes["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
                 currRes["groupConditions"] = payload
                 infoInstance.add(
@@ -428,10 +519,15 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         appliesTo: ListInfo[],
         groupConditions?: {
             count: float;
-            unit: 'unit' | 'course';
+            unit: 'unit' | 'course' | 'full sourse';
             additional: bool
             levels: [100|200|300|400|500|"any"|"above"|"below"];
-            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2 ..."]
+            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."]
+            subjectCodesCondition?: {
+                limit: 'all' | 'any' | 'two'-'nine';
+                status: 'lt'|'gt'|'eq':
+                # EX: {limit: 1, status: lt}: at most 1 different subject code
+            }
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }
@@ -462,7 +558,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             count = max(gc["count"] for gc in payload)
             if count != "any":
                 count = count * (1 if payload[0]["unit"] == "course" else 2)
-            res["conditionedOn"] = numberTranslator(count, infoInstance)
+            res["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
             res["conditionStatus"] = "complete"
             res["groupConditions"] = payload
             infoInstance.add("differentGroupedCondition", sectionHeader, payload)

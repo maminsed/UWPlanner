@@ -120,7 +120,7 @@ years = (
     rf"(\d|any|{'|'.join(countingYears)})"
     + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
 )
-course = r"[a-z]{1,8} ?[0-9]{,3}[a-z]?(?:-[a-z]{1,8} ?[0-9]{,3}[a-z]?)?"
+course = r"[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?:-[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?)?"
 courses = rf"({course})" + rf"(?:(?: and | or |, and |, or |, |/)({course}))?" * 10
 level = (
     r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
@@ -152,6 +152,7 @@ Special Conditions:
     - unit = -1: unit = course
     - level = -1 and len(levels) == 1: level = [any]
     - course = -1: any
+    - if multiple conditions and two of them have the same count and unit, then it will be as if they have or, else it will count as and
 """
 groupConditionRegExList: list[
     tuple[
@@ -211,10 +212,10 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: subject code| choice| course)?s?: {courses}, {count} {course} (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: subject code| choice| course)?s?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
-            (19, 2, levelArray(20), coursesArray(8), {}),
+            (19, 2, levelArray(21), (20,), {}),
         ],
     ),
     (
@@ -322,7 +323,7 @@ def strNumberToFloat(str_num: str):
                 return float(res)
         for res, year in enumerate(countingYears):
             if year == str_num:
-                return float(res)
+                return float(res + 1)
         raise RuntimeError(f"{str_num} is not a number!")
 
 
@@ -334,6 +335,7 @@ def takenInTranslator(rawInput: None | tuple[int], splitedRegex: list[str | None
         if splitedRegex[idx] is None:
             continue
         res.append(int(strNumberToFloat(splitedRegex[idx])))
+    return res
 
 
 def subjectCodesTranslator(
@@ -378,11 +380,11 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
     processedSources: list[str] = []
     hasNegOne = False
     for sourceIdx in sourceIndecies:
+        if sourceIdx == -1:
+            hasNegOne = True
+            continue
         source = regexMatches[sourceIdx]
         if source is None:
-            continue
-        if source == -1:
-            hasNegOne = True
             continue
         source = (
             re.sub(
@@ -393,8 +395,16 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
             .replace("and list", "&list")
             .strip()
         )
+        if re.match(
+            r"^[a-z]{1,8} [0-9]{3}[a-z]?(?:-[a-z]{1,8} [0-9]{3}[a-z]?)?$", source
+        ):
+            source = source.replace(" ", "")
+        if re.match(r"list of [a-z]* courses?", source):
+            source = (
+                source.replace("list of ", "").replace("courses", "course") + " list"
+            )
         processedSources.append(source)
-    if hasNegOne and len(processedSources) == 1:
+    if hasNegOne and len(processedSources) == 0:
         return ["any"]
     return processedSources
 

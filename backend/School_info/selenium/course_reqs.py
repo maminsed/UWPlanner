@@ -101,10 +101,8 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
 ]
 
 count = r"(\d(?:\.\d)?|any)(?: additional)?"
-courses = (
-    r"(?!additional\b)([0-9a-z\\/]+)"
-    + r"(?:(?: and| or|, and|, or|,) ([0-9a-z\\/]+))?" * 10
-)
+course = r"[a-z]{1,8} ?[0-9]{,3}[a-z]?(?:-[a-z]{1,8} ?[0-9]{,3}[a-z]?)?"
+courses = rf"({course})" + rf"(?:(?: and| or|, and|, or|,) ({course}))?" * 10
 level = (
     r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
     + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
@@ -132,12 +130,18 @@ Special Conditions:
     - count = -1: unit = full source
     - unit = -1: unit = course
     - level = -1 and len(levels) == 1: level = [any]
+    - course = -1: any
 """
 groupConditionRegExList: list[
     tuple[
         str, list[tuple[int, int, tuple[int], tuple[int], tuple[int, int | str] | None]]
     ]
 ] = [
+    (
+        # IMPORTANT TO BE FIRST
+        rf"^complete {count} (course|unit)s?",
+        [(1, 2, (-1,), (-1,), None)],
+    ),
     (
         rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)[^a-zA-Z0-9]*$",
         [(1, -1, (-1,), (2,), None)],
@@ -163,6 +167,10 @@ groupConditionRegExList: list[
         [(1, 2, levelArray(3), (8,), None)],
     ),
     (
+        rf"^complete {count}(?: [a-z]*)? (course|unit)s? (?:chosen )?(?:at|from|of)(?: the| any)? {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), coursesArray(3), None)],
+    ),
+    (
         rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
         [(1, 2, (-1,), (3,), None)],
     ),
@@ -175,6 +183,13 @@ groupConditionRegExList: list[
         [
             (1, 2, levelArray(14) + (-1,), coursesArray(3), None),
             (19, 20, levelArray(21) + (-1,), coursesArray(3), None),
+        ],
+    ),
+    (
+        rf"^Complete {course} (course) from the following: CS440-CS498, any CS course at the 600- or 700-level (see Additional Constraints)[^a-zA-Z0-9]*$",
+        [
+            (1, 13, levelArray(14) + (-1,), coursesArray(2), None),
+            (19, 20, levelArray(21), coursesArray(2), None),
         ],
     ),
     (
@@ -193,19 +208,26 @@ groupConditionRegExList: list[
         [(1, 13, (-1,), coursesArray(2), None)],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: \S*)? subject codes: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), levelArray(3), None)],
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}[^a-zA-Z0-9]*$",
+        [(1, 2, (-1,), coursesArray(3), None)],
+    ),
+    (
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}, any {course} (course|unit)s? at the {level}(?: ?\(see additional constraints\))?[^a-zA-Z0-9]*$",
+        [
+            (1, 2, (-1,), coursesArray(3), None),
+            (1, 2, levelArray(14), coursesArray(3), None),
+        ],
     ),
     (
         # WARNING: be very careful with this
-        rf"^complete {count} [a-z\-]+ (course|unit)s?,(?: at least)? (\D+) of which is at the {level}, (\D+) from the (same) subject codes?, from the following choices: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        rf"^complete {count} [a-z\-]+ (course|unit)s?,(?: at least)? (\D+) of which is at the {level}, (\D+) from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
         [
             (1, 2, (-1,), coursesArray(11) + coursesArray(22), None),
             (3, 2, levelArray(4), coursesArray(11) + coursesArray(22), (9, 10)),
         ],
     ),
     (
-        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)? (?:\(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)? subject codes: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)? (?:\(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
         [(1, 2, (-1,), coursesArray(5) + coursesArray(16), (4, 3))],
     ),
     (
@@ -214,6 +236,12 @@ groupConditionRegExList: list[
             (1, 2, (-1,), coursesArray(9) + listsArray(3), (8, 7)),
             (20, 21, levelArray(22), coursesArray(9) + listsArray(3), None),
         ],
+    ),
+    (
+        [
+            rf"^complete a total of {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?[^a-zA-Z0-9]*$",
+            [(1, 2, (-1,), (3,), None)],
+        ]
     ),
 ]
 
@@ -287,10 +315,29 @@ def safe_find_element(element: WebElement, by, value):
         return None
 
 
-def process_source(source: str):
-    return re.sub(
-        r"(,|, or| or| from) list", "-list", source.replace("electives", "elective")
-    ).replace("and list", "&list")
+def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
+    processedSources: list[str] = []
+    hasNegOne = False
+    for sourceIdx in sourceIndecies:
+        source = regexMatches[sourceIdx]
+        if source is None:
+            continue
+        if source == -1:
+            hasNegOne = True
+            continue
+        source = (
+            re.sub(
+                r"(,|, or| or| from) list",
+                "-list",
+                source.replace("electives", "elective"),
+            )
+            .replace("and list", "&list")
+            .strip()
+        )
+        processedSources.append(source)
+    if hasNegOne and len(processedSources) == 1:
+        return ["any"]
+    return processedSources
 
 
 def extract_conditionText(
@@ -368,11 +415,7 @@ def extract_conditionText(
                         "unit": resUnit,
                         "levels": resLevels,
                         "additional": "additional" in conditionText,
-                        "sources": [
-                            process_source(matched[source])
-                            for source in sources
-                            if matched[source] is not None
-                        ],
+                        "sources": process_sources(matched, sources),
                         "subjectCodesCondition": subjectCodesTranslator(
                             subjectCodesCondition, matched, infoInstance
                         ),
@@ -444,6 +487,7 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
     else:
         if len(links) == 0 and found == "none":
             infoInstance.add("differentConditionText", conditionText, infoInstance.id)
+            print(f"conditionText: {conditionText}")
         res["relatedLinks"] = relatedLinks
     return res
 
@@ -522,7 +566,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             unit: 'unit' | 'course' | 'full sourse';
             additional: bool
             levels: [100|200|300|400|500|"any"|"above"|"below"];
-            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."]
+            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"]
             subjectCodesCondition?: {
                 limit: 'all' | 'any' | 'two'-'nine';
                 status: 'lt'|'gt'|'eq':

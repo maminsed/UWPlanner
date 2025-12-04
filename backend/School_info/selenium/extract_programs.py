@@ -277,7 +277,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0
+    offset = 39
     limit = 3
     i = 0
     groups = {}

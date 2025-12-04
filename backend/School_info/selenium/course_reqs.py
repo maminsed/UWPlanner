@@ -116,7 +116,10 @@ number_words = {
 countingYears = ["first", "second", "third", "fourth", "fifth"]
 
 count = rf"(\d(?:\.\d)?|one|{'|'.join(number_words.values())})(?: additional)?"
-year = rf"(\d|any|{'|'.join(countingYears)})"
+years = (
+    rf"(\d|any|{'|'.join(countingYears)})"
+    + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
+)
 course = r"[a-z]{1,8} ?[0-9]{,3}[a-z]?(?:-[a-z]{1,8} ?[0-9]{,3}[a-z]?)?"
 courses = rf"({course})" + rf"(?:(?: and | or |, and |, or |, |/)({course}))?" * 10
 level = (
@@ -140,8 +143,9 @@ def lists(count: bool = False):
 levelArray = lambda x: tuple([i + x for i in range(5)])
 coursesArray = lambda x: tuple([i + x for i in range(11)])
 listsArray = lambda x: tuple([i + x for i in range(4)])
+yearsArray = lambda x: tuple([i + x for i in range(5)])
 
-# count,unit,level,sources,{subjectCodesCondition:(limit,status)}
+# count,unit,level,sources,{subjectCodesCondition:(limit,status),takenIn:tuple[int]}
 """
 Special Conditions:
     - count = -1: unit = full source
@@ -210,7 +214,7 @@ groupConditionRegExList: list[
         rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: subject code| choice| course)?s?: {courses}, {count} {course} (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
-            (19, 2, levelArray(21), coursesArray(8), {}),
+            (19, 2, levelArray(20), coursesArray(8), {}),
         ],
     ),
     (
@@ -273,10 +277,13 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        [
-            rf"^complete(?: a total of)? {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?{end}",
-            [(1, 2, (-1,), (3,), {})],
-        ]
+        rf"^complete(?: a total of)? {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?{end}",
+        [(1, 2, (-1,), (3,), {})],
+    ),
+    # takenIn:
+    (
+        rf"^complete {count} {courses}(?: elective)? (course|unit)s?(?: (?:at|from|of)(?: the| any)? {level})?,? taken in {years} year",
+        [(1, 13, levelArray(14) + (-1,), coursesArray(2), {"takenIn": yearsArray(19)})],
     ),
 ]
 
@@ -317,6 +324,16 @@ def strNumberToFloat(str_num: str):
             if year == str_num:
                 return float(res)
         raise RuntimeError(f"{str_num} is not a number!")
+
+
+def takenInTranslator(rawInput: None | tuple[int], splitedRegex: list[str | None]):
+    if rawInput is None:
+        return None
+    res = []
+    for idx in rawInput:
+        if splitedRegex[idx] is None:
+            continue
+        res.append(int(strNumberToFloat(splitedRegex[idx])))
 
 
 def subjectCodesTranslator(
@@ -421,7 +438,7 @@ def extract_conditionText(
         matched = re.split(regex, conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
             res = []
-            for count, unit, levels, sources, aditional in conditions:
+            for count, unit, levels, sources, additional in conditions:
                 resLevels = []
                 hasNegOne = False
                 for levelIdx in levels:
@@ -456,9 +473,12 @@ def extract_conditionText(
                         "additional": "additional" in conditionText,
                         "sources": process_sources(matched, sources),
                         "subjectCodesCondition": subjectCodesTranslator(
-                            aditional.get("subjectCodesCondition", None),
+                            additional.get("subjectCodesCondition", None),
                             matched,
                             infoInstance,
+                        ),
+                        "takenIn": takenInTranslator(
+                            additional.get("takenIn", None), matched
                         ),
                     }
                 )
@@ -614,7 +634,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
                 status: 'lt'|'gt'|'eq':
                 # EX: {limit: 1, status: lt}: at most 1 different subject code
             };
-            takenIn?: float[]
+            takenIn?: int[]
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }

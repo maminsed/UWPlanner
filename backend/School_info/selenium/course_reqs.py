@@ -100,7 +100,21 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
     ),
 ]
 
-count = r"(\d(?:\.\d)?|any)(?: additional)?"
+
+# Map numbers to words
+number_words = {
+    1: "any",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+}
+
+count = rf"(\d(?:\.\d)?|one|{'|'.join(number_words.values())})(?: additional)?"
 course = r"[a-z]{1,8} ?[0-9]{,3}[a-z]?(?:-[a-z]{1,8} ?[0-9]{,3}[a-z]?)?"
 courses = rf"({course})" + rf"(?:(?: and| or|, and|, or|,) ({course}))?" * 10
 level = (
@@ -200,6 +214,13 @@ groupConditionRegExList: list[
         ],
     ),
     (
+        rf"^complete {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}[^a-zA-Z0-9]*$",
+        [
+            (1, 2, levelArray(3) + (-1,), coursesArray(8), None),
+            (19, 2, levelArray(3) + (-1,), coursesArray(20), None),
+        ],
+    ),
+    (
         rf"^complete {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
         [(1, 13, levelArray(14), coursesArray(2) + (19,), None)],
     ),
@@ -227,7 +248,7 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)? (?:\(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)?(?: \(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
         [(1, 2, (-1,), coursesArray(5) + coursesArray(16), (4, 3))],
     ),
     (
@@ -246,35 +267,39 @@ groupConditionRegExList: list[
 ]
 
 
-# Map numbers to words
-number_words = {
-    1: "any",
-    2: "two",
-    3: "three",
-    4: "four",
-    5: "five",
-    6: "six",
-    7: "seven",
-    8: "eight",
-    9: "nine",
-}
-
-
 def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
     matched_regex = matched_regex.strip().lower()
 
     if matched_regex == "all":
         return "all"
+    if matched_regex == "one":
+        return "any"
 
     try:
         num = int(matched_regex) if matched_regex != "any" else 1
         return number_words.get(num, "error139")
     except ValueError:
+        if matched_regex in number_words.values:
+            return matched_regex
         infoInstance.add(
             "differentErrors",
             f"120: error occured in deciToEnglishNumber for {infoInstance.id}-{matched_regex}",
         )
         return "error139"
+
+
+def strNumberToFloat(str_num: str):
+    str_num = str_num.lower().strip()
+    try:
+        num = float(str_num)
+        return num
+    except ValueError:
+        if str_num == "one":
+            return 1.0
+        for res, val in number_words.items():
+            if val == str_num:
+                return float(res)
+        raise RuntimeError(f"{str_num} is not a number!")
 
 
 def subjectCodesTranslator(
@@ -396,16 +421,7 @@ def extract_conditionText(
                         resLevels.append(int(level))
                 if hasNegOne and not len(resLevels):
                     resLevels.append("any")
-                resCount = 1.0
-                if count != -1:
-                    if matched[count] in number_words.keys():
-                        for deci, eng in number_words.items():
-                            if eng == matched[count]:
-                                resCount = deci
-                    elif matched[count] == "one":
-                        resCount == 1.0
-                    else:
-                        resCount = float(matched[count])
+                resCount = 1.0 if count == -1 else strNumberToFloat(matched[count])
                 resUnit = matched[unit] if unit != -1 else "course"
                 if count == -1:
                     resUnit = "full source"
@@ -556,22 +572,24 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
 def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
     # section has to be a top level ul
     """return:
+    decimalCount: "any" | "two" - "nine"
     ListInfo: {
-        conditionedOn: 'all' | 'any' | 'two'-'nine' | 'not_any' | 'final' | 'unclassified',
+        conditionedOn: 'all' | decimalCount | 'not_any' | 'final' | 'unclassified',
         conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none',
         conditionText: str,
         appliesTo: ListInfo[],
         groupConditions?: {
             count: float;
             unit: 'unit' | 'course' | 'full sourse';
-            additional: bool
+            additional: bool;
             levels: [100|200|300|400|500|"any"|"above"|"below"];
-            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"]
+            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
             subjectCodesCondition?: {
-                limit: 'all' | 'any' | 'two'-'nine';
+                limit: 'all' | decimalCount;
                 status: 'lt'|'gt'|'eq':
                 # EX: {limit: 1, status: lt}: at most 1 different subject code
-            }
+            };
+            takenIn?: float[]
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }

@@ -113,10 +113,12 @@ number_words = {
     8: "eight",
     9: "nine",
 }
+countingYears = ["first", "second", "third", "fourth", "fifth"]
 
 count = rf"(\d(?:\.\d)?|one|{'|'.join(number_words.values())})(?: additional)?"
+year = rf"(\d|any|{'|'.join(countingYears)})"
 course = r"[a-z]{1,8} ?[0-9]{,3}[a-z]?(?:-[a-z]{1,8} ?[0-9]{,3}[a-z]?)?"
-courses = rf"({course})" + rf"(?:(?: and| or|, and|, or|,) ({course}))?" * 10
+courses = rf"({course})" + rf"(?:(?: and | or |, and |, or |, |/)({course}))?" * 10
 level = (
     r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
     + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
@@ -124,6 +126,7 @@ level = (
 sourceBellowAbove = (
     r"(?:(?: or)? from the(?: list of)? courses?(?: listed)?(?: or)? (below|above))?"
 )
+end = r"(?:[,\.\s\-_]?\(see additional constraints\))?[^a-zA-Z0-9]*$"
 
 
 def lists(count: bool = False):
@@ -138,7 +141,7 @@ levelArray = lambda x: tuple([i + x for i in range(5)])
 coursesArray = lambda x: tuple([i + x for i in range(11)])
 listsArray = lambda x: tuple([i + x for i in range(4)])
 
-# count,unit,level,sources,subjectCodesCondition:(limit,status)
+# count,unit,level,sources,{subjectCodesCondition:(limit,status)}
 """
 Special Conditions:
     - count = -1: unit = full source
@@ -148,120 +151,134 @@ Special Conditions:
 """
 groupConditionRegExList: list[
     tuple[
-        str, list[tuple[int, int, tuple[int], tuple[int], tuple[int, int | str] | None]]
+        str, list[tuple[int, int, tuple[int], tuple[int], dict[str, tuple[int] | int]]]
     ]
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^complete {count} (course|unit)s?",
-        [(1, 2, (-1,), (-1,), None)],
+        rf"^complete {count} (course|unit)s?{end}",
+        [(1, 2, (-1,), (-1,), {})],
     ),
     (
-        rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)[^a-zA-Z0-9]*$",
-        [(1, -1, (-1,), (2,), None)],
+        rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
+        [(1, -1, (-1,), (2,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options)? in {lists(True)}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), listsArray(3), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options)? in {lists(True)}{end}",
+        [(1, 2, (-1,), listsArray(3), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(14), coursesArray(3) + (19,), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}{end}",
+        [(1, 2, levelArray(14), coursesArray(3) + (19,), {})],
     ),
     (
-        rf"^complete the {lists(True)} requirements?(?: below| above)?[^a-zA-Z0-9]*$",
-        [(-1, -1, (-1,), listsArray(1), None)],
+        rf"^complete the {lists(True)} requirements?(?: below| above)?{end}",
+        [(-1, -1, (-1,), listsArray(1), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}(?: courses?)? from: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(3), coursesArray(8), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}(?: courses?)? from: {courses}{end}",
+        [(1, 2, levelArray(3), coursesArray(8), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 2, levelArray(3), (8,), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}{end}",
+        [(1, 2, levelArray(3), (8,), {})],
     ),
     (
-        rf"^complete {count}(?: [a-z]*)? (course|unit)s? (?:chosen )?(?:at|from|of)(?: the| any)? {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), coursesArray(3), None)],
+        rf"^complete {count}(?: [a-z]*)? (course|unit)s? (?:chosen )?(?:at|from|of)(?: the| any)? {courses}{end}",
+        [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: language)? courses from the approved (courses list)(?: below)?[,\.\s\-_](?: see additional constraints)?[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3,), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: language)? courses from the(?: approved)? (courses list)(?: below)?{end}",
+        [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: list of)? courses?(?: listed)?(?: or)? (below|above)[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), (3,), None)],
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: list of)? courses?(?: listed)?(?: or)? (below|above){end}",
+        [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}{end}",
         [
-            (1, 2, levelArray(14) + (-1,), coursesArray(3), None),
-            (19, 20, levelArray(21) + (-1,), coursesArray(3), None),
+            (1, 2, levelArray(14) + (-1,), coursesArray(3), {}),
+            (19, 20, levelArray(21) + (-1,), coursesArray(3), {}),
         ],
     ),
     (
-        rf"^Complete {course} (course) from the following: CS440-CS498, any CS course at the 600- or 700-level (see Additional Constraints)[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?( {level}): {courses}, {count} {course} (?:course|unit)s? at (?:at|from|of)(?: the| any)? {level}{end}",
         [
-            (1, 13, levelArray(14) + (-1,), coursesArray(2), None),
-            (19, 20, levelArray(21), coursesArray(2), None),
+            (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
+            (19, 2, levelArray(21), coursesArray(8), {}),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}{end}",
         [
-            (1, 13, levelArray(14) + (-1,), coursesArray(2), None),
-            (19, 20, levelArray(21), coursesArray(2), None),
+            (1, 13, levelArray(14) + (-1,), coursesArray(2), {}),
+            (19, 20, levelArray(21), coursesArray(2), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}[^a-zA-Z0-9]*$",
+        rf"^complete {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}{end}",
         [
-            (1, 2, levelArray(3) + (-1,), coursesArray(8), None),
-            (19, 2, levelArray(3) + (-1,), coursesArray(20), None),
+            (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
+            (19, 2, levelArray(3) + (-1,), coursesArray(20), {}),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}[^a-zA-Z0-9]*$",
-        [(1, 13, levelArray(14), coursesArray(2) + (19,), None)],
+        rf"^complete {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBellowAbove}{end}",
+        [(1, 13, levelArray(14), coursesArray(2) + (19,), {})],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s?[^a-zA-Z0-9]*$",
-        [(1, 13, (-1,), coursesArray(2), None)],
+        rf"^complete {count} {courses} (course|unit)s?{end}",
+        [(1, 13, (-1,), coursesArray(2), {})],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), coursesArray(3), None)],
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}{end}",
+        [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}, any {course} (course|unit)s? at the {level}(?: ?\(see additional constraints\))?[^a-zA-Z0-9]*$",
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}, any {course} (course|unit)s? at the {level}{end}",
         [
-            (1, 2, (-1,), coursesArray(3), None),
-            (1, 2, levelArray(14), coursesArray(3), None),
+            (1, 2, (-1,), coursesArray(3), {}),
+            (1, 2, levelArray(14), coursesArray(3), {}),
         ],
     ),
     (
         # WARNING: be very careful with this
-        rf"^complete {count} [a-z\-]+ (course|unit)s?,(?: at least)? (\D+) of which is at the {level}, (\D+) from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
+        rf"^complete {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {'(all|' + count[1:]} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
         [
-            (1, 2, (-1,), coursesArray(11) + coursesArray(22), None),
-            (3, 2, levelArray(4), coursesArray(11) + coursesArray(22), (9, 10)),
+            (1, 2, (-1,), coursesArray(11) + coursesArray(22), {}),
+            (
+                3,
+                2,
+                levelArray(4),
+                coursesArray(11) + coursesArray(22),
+                {"subjectCodesCondition": (9, 10)},
+            ),
         ],
     ),
     (
-        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all| at least| at most)(?: from)?(?: any)? (\D+)(?: from)?(?: \(and only \D+\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes)?: {courses}(?:, {courses})?[^a-zA-Z0-9]*$",
-        [(1, 2, (-1,), coursesArray(5) + coursesArray(16), (4, 3))],
+        rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all from| at least| at most)(?: any)? {count}(?: \(and only {count}\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes?| courses?)?: {courses}(?:, {courses})?{end}",
+        [
+            (
+                1,
+                2,
+                (-1,),
+                coursesArray(6) + coursesArray(17),
+                {"subjectCodesCondition": (4, 3)},
+            )
+        ],
     ),
     (
-        rf"^complete {count} (course|unit)s?,(?: taken)? from {lists(True)}; choices must be in (at least|at most) (\D+) different subject codes? \(?{courses}\)?, and {count} (course|unit)s? must be at the {level}[^a-zA-Z0-9]*$",
+        rf"^complete {count} (course|unit)s?,(?: taken)? from {lists(True)}; choices must be in (at least|at most) {count} different subject codes? \({course}(?:, {course})*\), and {count} (course|unit)s? must be at the {level}{end}",
         [
-            (1, 2, (-1,), coursesArray(9) + listsArray(3), (8, 7)),
-            (20, 21, levelArray(22), coursesArray(9) + listsArray(3), None),
+            (1, 2, (-1,), listsArray(3), {"subjectCodesCondition": (8, 7)}),
+            (9, 10, levelArray(11), listsArray(3), {}),
         ],
     ),
     (
         [
-            rf"^complete a total of {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?[^a-zA-Z0-9]*$",
-            [(1, 2, (-1,), (3,), None)],
+            rf"^complete(?: a total of)? {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?{end}",
+            [(1, 2, (-1,), (3,), {})],
         ]
     ),
 ]
@@ -299,6 +316,9 @@ def strNumberToFloat(str_num: str):
         for res, val in number_words.items():
             if val == str_num:
                 return float(res)
+        for res, year in enumerate(countingYears):
+            if year == str_num:
+                return float(res)
         raise RuntimeError(f"{str_num} is not a number!")
 
 
@@ -317,8 +337,8 @@ def subjectCodesTranslator(
     statusMap = {
         "at least": "gt",
         "at most": "lt",
+        "all from": "eq",
         "only": "eq",
-        "all": "eq",
         "same": "eq",
     }
 
@@ -326,7 +346,7 @@ def subjectCodesTranslator(
         status = splitedRegex[status].strip()
     if not status or status is None or status not in statusMap:
         infoInstance.add(
-            "differentErrors", f"{rawInput} at {splitedRegex} has status: {status}"
+            "differentErrors", f"{rawInput} at {splitedRegex} has status: '{status}'"
         )
         return None
 
@@ -404,7 +424,7 @@ def extract_conditionText(
         matched = re.split(regex, conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
             res = []
-            for count, unit, levels, sources, subjectCodesCondition in conditions:
+            for count, unit, levels, sources, aditional in conditions:
                 resLevels = []
                 hasNegOne = False
                 for levelIdx in levels:
@@ -418,7 +438,13 @@ def extract_conditionText(
                     if level == "any" or level == "above" or level == "bellow":
                         resLevels.append(level)
                     else:
-                        resLevels.append(int(level))
+                        try:
+                            resLevels.append(int(level))
+                        except ValueError:
+                            infoInstance.add(
+                                "differentErrors",
+                                f"{conditionText}-{level} is not a valid level",
+                            )
                 if hasNegOne and not len(resLevels):
                     resLevels.append("any")
                 resCount = 1.0 if count == -1 else strNumberToFloat(matched[count])
@@ -433,7 +459,9 @@ def extract_conditionText(
                         "additional": "additional" in conditionText,
                         "sources": process_sources(matched, sources),
                         "subjectCodesCondition": subjectCodesTranslator(
-                            subjectCodesCondition, matched, infoInstance
+                            aditional.get("subjectCodesCondition", None),
+                            matched,
+                            infoInstance,
                         ),
                     }
                 )

@@ -164,8 +164,12 @@ groupConditionRegExList: list[
         [(1, -1, (-1,), (2,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options)? in {lists(True)}{end}",
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}{end}",
         [(1, 2, (-1,), listsArray(3), {})],
+    ),
+    (
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? (list of [a-z]* courses?),(?: where)? at least {count} (course|unit)s? must be (?:at|from|of)(?: the| any)? {level}",
+        [(1, 2, (-1,), (3,), {}), (4, 5, levelArray(6), (3,), {})],
     ),
     (
         rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}{end}",
@@ -203,7 +207,7 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?( {level}): {courses}, {count} {course} (?:course|unit)s? at (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: subject code| choice| course)?s?: {courses}, {count} {course} (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
             (19, 2, levelArray(21), coursesArray(8), {}),
@@ -236,13 +240,6 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}, any {course} (course|unit)s? at the {level}{end}",
-        [
-            (1, 2, (-1,), coursesArray(3), {}),
-            (1, 2, levelArray(14), coursesArray(3), {}),
-        ],
-    ),
-    (
         # WARNING: be very careful with this
         rf"^complete {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {'(all|' + count[1:]} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
         [
@@ -269,7 +266,7 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count} (course|unit)s?,(?: taken)? from {lists(True)}; choices must be in (at least|at most) {count} different subject codes? \({course}(?:, {course})*\), and {count} (course|unit)s? must be at the {level}{end}",
+        rf"^complete {count} (course|unit)s?,(?: taken)? (?:at|from|of)(?: the| any)? {lists(True)}; choices must be in (at least|at most) {count} different subject codes? \({course}(?:, {course})*\), and {count} (course|unit)s? must be at the {level}{end}",
         [
             (1, 2, (-1,), listsArray(3), {"subjectCodesCondition": (8, 7)}),
             (9, 10, levelArray(11), listsArray(3), {}),

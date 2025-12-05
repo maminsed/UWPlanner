@@ -1,4 +1,3 @@
-import random
 import time
 import traceback
 
@@ -161,19 +160,18 @@ def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
         # TODO: extract markdown
         return
     innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
-    for index, innerSection in enumerate(innerSections):
+    for innerSection in innerSections:
         header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
         infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
         if header.lower().startswith("list"):
             # TODO: route to course Lists
             continue
         biggestuls = innerSection.find_elements(By.CSS_SELECTOR, biggestulCSS)
-        if len(biggestuls) != 1 and not (index == 0 and len(innerSections) != 1):
+        if len(biggestuls) == 0:
             infoInstance.add(
                 "differentErrors",
-                f"153: one of {infoInstance.id}'s innerSections has {len(biggestuls)}!=1 biggest uls",
+                f"153: one of {infoInstance.id}'s innerSections has 0 biggest uls",
             )
-        if len(biggestuls) == 0:
             # TODO: extract markdown
             continue
         try:
@@ -201,7 +199,7 @@ def addGroupTodb(
 
     for program in programs:
         programName = program["program"]
-        infoInstance.id = programName
+        infoInstance.id = f"{groupName}-{programName}"
         programType = find_type(programName, infoInstance)
         programInfo = {}
         print(f"currently at {programName}")
@@ -287,18 +285,19 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0
-    limit = 10
+    offset = 11
+    limit = 25
     i = 0
     groups = {}
     print(
         f"Hi, were starting with {len(porogramGroups)} cgs - going up to {min(limit, len(porogramGroups) - offset)}"
     )
+    # random.seed(12)
     try:
         while i < min(limit, len(porogramGroups) - offset):
             # random choices
-            j = random.randint(0, len(porogramGroups))
-            pg = porogramGroups[j]  # TODO: reset this to: j -> offset + i
+            # j = random.randint(0, len(porogramGroups))
+            pg = porogramGroups[offset + i]  # TODO: reset this to: j -> offset + i
             i += 1
             updateGroup = {}
             expandButton = pg.find_element(By.CSS_SELECTOR, expandButtonCSS)
@@ -322,7 +321,7 @@ def get_program_reqs():
             group_name = expandButton.text
             updateGroup["group_name"] = group_name
             groups[group_name] = "open"
-
+            print(f"Starting at group: {group_name}")
             linkContainers = pg.find_elements(By.CSS_SELECTOR, linkContainerCSS)
             updateGroup["members"] = []
             for linkContainer in linkContainers:

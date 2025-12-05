@@ -113,9 +113,9 @@ number_words = {
     8: "eight",
     9: "nine",
 }
-countingYears = ["first", "second", "third", "fourth", "fifth"]
+countingYears = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh"]
 
-count = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+count = rf"(?:a total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
 countWithAll = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?"
 years = (
     rf"(\d|any|{'|'.join(countingYears)})"
@@ -136,8 +136,8 @@ end = r"(?:[,\.\s\-_]?\(see additional constraints\))?[^a-zA-Z0-9]*$"
 def lists(count: bool = False):
     status = "?:" if not count else ""
     return (
-        rf"({status}list [0-9a-zA-Z])"
-        + rf"(?:(?:, |, or| or| and)? ({status}list [0-9a-zA-Z]))?" * 3
+        rf"({status}(?:[a-z]*\s?[a-z]* )?list(?: [0-9a-zA-Z])?)"
+        + rf"(?:(?:,|, or| or| and)? ({status}list [0-9a-zA-Z]))?" * 3
     )
 
 
@@ -162,11 +162,15 @@ groupConditionRegExList: list[
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^complete {count} (course|unit)s?(?: of (?:additional )?courses)?(?: \({count} unit\))?(?: from the (following list|above|below)(?: lists?)?)?{end}",
-        [(1, 2, (-1,), (-1, 3), {})],
+        rf"^complete {count} (course|unit)s?(?: of (?:additional )?courses)?(?: \({count} unit\))?(?:(?: at| from| of)?(?: the| any)?(?: lists?)? (following lists?|above|below)(?: lists?)?)?(?:; the {years} course can be taken from {lists()})?{end}",
+        [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
-        rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
+        rf"^complete a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?",
+        [(1, 2, (-1,), (-1, 4), {}), (3, 4, (-1,), (-1, 4), {})],
+    ),
+    (
+        rf"^complete {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
         [(1, -1, (-1,), (2,), {})],
     ),
     (
@@ -283,6 +287,10 @@ groupConditionRegExList: list[
             (1, 2, (-1,), listsArray(3), {"subjectCodesCondition": (8, 7)}),
             (9, 10, levelArray(11), listsArray(3), {}),
         ],
+    ),
+    (
+        rf"^complete {count} {courses} (course|unit)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?, or (course|unit)s? in an area related to an entrepreneurial endeavor or entrepreneurship, as approved by the conrad associate (director), undergraduate studies{end}",
+        [(1, 13, levelArray(14) + (-1,), coursesArray(2) + (20,), {})],
     ),
     (
         rf"^complete {count} (unit|course)s? of any {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
@@ -411,11 +419,13 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
         )
         if source == "following list":
             source = "bellow"
-        if re.match(
+        elif source == "following lists":
+            source = "course lists"
+        elif re.match(
             r"^[a-z]{1,8} [0-9]{3}[a-z]?(?:-[a-z]{1,8} [0-9]{3}[a-z]?)?$", source
         ):
             source = source.replace(" ", "")
-        if re.match(r"list of [a-z]* courses?", source):
+        elif re.match(r"list of [a-z]* courses?", source):
             source = (
                 source.replace("list of ", "").replace("courses", "course") + " list"
             )

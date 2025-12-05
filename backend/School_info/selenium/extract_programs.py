@@ -1,3 +1,4 @@
+import random
 import time
 import traceback
 
@@ -286,7 +287,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 107
+    offset = 0
     limit = 10
     i = 0
     groups = {}
@@ -296,19 +297,19 @@ def get_program_reqs():
     try:
         while i < min(limit, len(porogramGroups) - offset):
             # random choices
-            # j = random.randint(0,len(porogramGroups))
-            pg = porogramGroups[offset + i]  # TODO: reset this to: j -> offset + i
+            j = random.randint(0, len(porogramGroups))
+            pg = porogramGroups[j]  # TODO: reset this to: j -> offset + i
             i += 1
             updateGroup = {}
             expandButton = pg.find_element(By.CSS_SELECTOR, expandButtonCSS)
 
             # Math and Comp only
-            if (
-                "math" not in expandButton.text.lower()
-                and "computer" not in expandButton.text.lower()
-            ):
-                limit += 1
-                continue
+            # if (
+            #     "math" not in expandButton.text.lower()
+            #     and "computer" not in expandButton.text.lower()
+            # ):
+            #     limit += 1
+            #     continue
 
             # bringing the button into view
             bringIntoView(driver, expandButton)

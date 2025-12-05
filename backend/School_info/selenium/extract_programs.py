@@ -80,13 +80,13 @@ program_type_map = [
     ["joint major", "joint major"],
     ["joint bachelor", "joint major"],
     ["double degree", "double degree"],
+    ["specialization", "specialization"],
+    ["option", "option"],
+    ["minor", "minor"],
     ["bachelor", "major"],
     ["honours", "major"],
     ["major", "major"],
     ["arts and business", "major"],  # ?
-    ["minor", "minor"],
-    ["specialization", "specialization"],
-    ["option", "option"],
     ["phd", "phd"],
     ["doctor", "doctorate"],
     ["masters", "masters"],
@@ -110,7 +110,16 @@ def find_type(programName: str, infoInstance: InfoClass):
     res = ""
     for keyword, programType in program_type_map:
         if keyword in programName:
-            if "joint" in res or "double" in res or "degree" == "res":
+            if (
+                "joint" in res
+                or "double" in res
+                or "degree" == res
+                or (
+                    "(bachelor of" in programName
+                    and res != ""
+                    and programType == "major"
+                )
+            ):
                 continue
             elif res != "" and res != programType:
                 infoInstance.add(
@@ -277,8 +286,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 104
-    limit = 3
+    offset = 107
+    limit = 10
     i = 0
     groups = {}
     print(

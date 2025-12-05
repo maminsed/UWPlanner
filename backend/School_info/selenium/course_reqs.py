@@ -115,7 +115,8 @@ number_words = {
 }
 countingYears = ["first", "second", "third", "fourth", "fifth"]
 
-count = rf"(\d(?:\.\d)?|one|{'|'.join(number_words.values())})(?: additional)?"
+count = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+countWithAll = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?"
 years = (
     rf"(\d|any|{'|'.join(countingYears)})"
     + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
@@ -161,8 +162,8 @@ groupConditionRegExList: list[
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^complete {count} (course|unit)s?{end}",
-        [(1, 2, (-1,), (-1,), {})],
+        rf"^complete {count} (course|unit)s?(?: of (?:additional )?courses)?(?: \({count} unit\))?(?: from the (following list|above|below)(?: lists?)?)?{end}",
+        [(1, 2, (-1,), (-1, 3), {})],
     ),
     (
         rf"^complete {count} (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
@@ -177,7 +178,7 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (3,), {}), (4, 5, levelArray(6), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}{end}",
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses}(?: lecture)? courses?(?: at| from)?(?: the| any)? {level}{sourceBellowAbove}{end}",
         [(1, 2, levelArray(14), coursesArray(3) + (19,), {})],
     ),
     (
@@ -212,10 +213,16 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: subject code| choice| course)?s?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the above requirements\))?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
             (19, 2, levelArray(21), (20,), {}),
+        ],
+    ),
+    (
+        rf"^complete {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}{end}",
+        [
+            (1, 2, levelArray(3) + (-1,), (8,) + coursesArray(9), {}),
         ],
     ),
     (
@@ -246,7 +253,7 @@ groupConditionRegExList: list[
     ),
     (
         # WARNING: be very careful with this
-        rf"^complete {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {'(all|' + count[1:]} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
+        rf"^complete {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {countWithAll} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
         [
             (1, 2, (-1,), coursesArray(11) + coursesArray(22), {}),
             (
@@ -275,6 +282,13 @@ groupConditionRegExList: list[
         [
             (1, 2, (-1,), listsArray(3), {"subjectCodesCondition": (8, 7)}),
             (9, 10, levelArray(11), listsArray(3), {}),
+        ],
+    ),
+    (
+        rf"^complete {count} (unit|course)s? of any {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        [
+            (1, 2, (-1,), coursesArray(3), {}),
+            (14, 15, levelArray(16), coursesArray(3), {}),
         ],
     ),
     (
@@ -395,6 +409,8 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
             .replace("and list", "&list")
             .strip()
         )
+        if source == "following list":
+            source = "bellow"
         if re.match(
             r"^[a-z]{1,8} [0-9]{3}[a-z]?(?:-[a-z]{1,8} [0-9]{3}[a-z]?)?$", source
         ):

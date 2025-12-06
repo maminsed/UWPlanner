@@ -91,16 +91,16 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("regex", "complete"),
     ),
     (
-        r"^complete ([0-9]|all|any) courses from the following choices",
+        r"^(?:complete|choose)? ([0-9]|all|any) courses from the following choices",
         ("regex", "complete"),
     ),
     (
-        r"^completed or concurrently enrolled in at least ([0-9]|all|any) of the following",
+        r"^(?:complete|choose)?d or concurrently enrolled in at least ([0-9]|all|any) of the following",
         ("regex", "both"),
     ),
     (r"^choose(?: at least)? ([0-9]|all|any) of the following", ("regex", "complete")),
     (
-        r"^complete no more than ([0-9]) from the following",
+        r"^(?:complete|choose)? no more than ([0-9]) from the following",
         ("regex-less_than_", "complete"),
     ),
 ]
@@ -167,140 +167,140 @@ groupConditionRegExList: list[
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^complete {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?{end}",
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
-        rf"^complete a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?{end}",
+        rf"^(?:complete|choose)? a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?{end}",
         [(1, 2, (-1,), (-1, 4), {}), (3, 4, (-1,), (-1, 4), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s?,?(?: including| with)? (at least|at most|no more than) {count}(?: {count})? (course|unit)s?(?: course| unit)?s?,(?: at| from| of)?(?: the| any)?(?: following)? ((?:course|below|above) list)(?: {lists(True)})?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?,?(?: including| with)? (at least|at most|no more than) {count}(?: {count})? (course|unit)s?(?: course| unit)?s?,(?: at| from| of)?(?: the| any)?(?: following)? ((?:course|below|above) list)(?: {lists(True)})?{end}",
         [(1, 2, (-1,), (-1,), {}), (4, 6, (-1,), listsArray(8) + (7,), {"cap": 3})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {lists(True)},?(?: including| with)? (at least|at most|no more than) {count} (course|unit)s? from {lists(True)}.",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? {lists(True)},?(?: including| with)? (at least|at most|no more than) {count} (course|unit)s? from {lists(True)}.",
         [(1, 2, (-1,), listsArray(3), {}), (8, 9, (-1,), listsArray(10), {"cap": 7})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? (elective) courses?(?:, with a maximum of 1.0 lab units)?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? (elective) courses?(?:, with a maximum of 1.0 lab units)?{end}",
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count}(?: non-math| elective| labratory)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?:(?: in)? additional)? {courses}(?: courses)?{end}",
+        rf"^(?:complete|choose)? {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?:(?: in)? additional)? {courses}(?: courses)?{end}",
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        rf"^complete {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
+        rf"^(?:complete|choose)? {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
         [(1, -1, (-1,), (2,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: ({course}) courses)? (?:from the|in additional) (following lists?)(?: of ({course}) courses?)?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: ({course}) courses)? (?:from the|in additional) (following lists?)(?: of ({course}) courses?)?{end}",
         [(1, 2, (-1,), (4,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}{end}",
         [(1, 2, (-1,), listsArray(3), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? (list of [a-z]* courses?),(?: where)? at least {count} (course|unit)s? must be (?:at|from|of)(?: the| any)? {level}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? (list of [a-z]* courses?),(?: where)? at least {count} (course|unit)s? must be (?:at|from|of)(?: the| any)? {level}",
         [(1, 2, (-1,), (3,), {}), (4, 5, levelArray(6), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: elective)? {courses}(?: lecture)? courses?,?(?: at| from)?(?: the| any)? {level}{sourceBelowAbove}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: elective| additional| labratory| lecture)? {courses}(?: elective| additional| labratory| lecture)? courses?,?(?: at| from)?(?: the| any)? {level}{sourceBelowAbove}{end}",
         [(1, 2, levelArray(14), coursesArray(3) + (19,), {})],
     ),
     (
-        rf"^complete the {lists(True)} requirements?(?: below| above)?{end}",
+        rf"^(?:complete|choose)? the {lists(True)} requirements?(?: below| above)?{end}",
         [(-1, -1, (-1,), listsArray(1), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}(?: courses?)? from: {courses}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}(?: courses?)? from: {courses}{end}",
         [(1, 2, levelArray(3), coursesArray(8), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}{end}",
         [(1, 2, levelArray(3), (8,), {})],
     ),
+    # (
+    #     rf"^(?:complete|choose)? {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?{end}",
+    #     [(1, 2, levelArray(5), (3, 4), {})],
+    # ),
     (
-        rf"^complete {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?{end}",
-        [(1, 2, levelArray(5), (3, 4), {})],
-    ),
-    (
-        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?{end}",
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}. complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}(?:,? or(?: additional courses)? from {lists(True)})?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}. complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}(?:,? or(?: additional courses)? from {lists(True)})?{end}",
         [
             (1, 2, (-1,), listsArray(3), {}),
             (7, 8, (-1,), listsArray(9) + listsArray(13), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: senior)? {courses}( seminars)?{end}",
+        rf"^(?:complete|choose)? {count}(?: senior)? {courses}( seminars)?{end}",
         [(1, -1, (-1,), coursesArray(2) + (13,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: listed)?(?: or)? (below|above){end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: listed)?(?: or)? (below|above){end}",
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(14) + (-1,), coursesArray(3), {}),
             (19, 20, levelArray(21) + (-1,), coursesArray(3), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the above requirements\))?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^(?:complete|choose)? {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the above requirements\))?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
             (19, 2, levelArray(21), (20,), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))?(?: at| from| of)?(?: the| any)?(?: following)?(?: {level})?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}(?:; excluding courses cross-listed with a {course} course)?{end}",
+        rf"^(?:complete|choose)? {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))?(?: at| from| of)?(?: the| any)?(?: following)?(?: {level})?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}(?:; excluding courses cross-listed with a {course} course)?{end}",
         [
             (1, 2, levelArray(3) + (-1,), (8,) + coursesArray(9), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?,? with (at least|at most|a minimum)(?: of)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)? {level}(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}{end}",
+        rf"^(?:complete|choose)? {count}(?: {course})? (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?,? with (at least|at most|a minimum)(?: of)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)? {level}(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}{end}",
         [
             (1, 2, (-1,), (11,) + coursesArray(12), {}),
             (4, 5, levelArray(6), (11,) + coursesArray(12), {"cap": 3}),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^(?:complete|choose)? {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 13, levelArray(14) + (-1,), coursesArray(2), {}),
             (19, 20, levelArray(21), coursesArray(2), {}),
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}{end}",
+        rf"^(?:complete|choose)? {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}{end}",
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(8), {}),
             (19, 2, levelArray(3) + (-1,), coursesArray(20), {}),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}{end}",
+        rf"^(?:complete|choose)? {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}{end}",
         [(1, 13, levelArray(14), coursesArray(2) + (19,), {})],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s?{end}",
+        rf"^(?:complete|choose)? {count} {courses} (course|unit)s?{end}",
         [(1, 13, (-1,), coursesArray(2), {})],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}{end}",
+        rf"^(?:complete|choose)? {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}{end}",
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
         # WARNING: be very careful with this
-        rf"^complete {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {countWithAll} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
+        rf"^(?:complete|choose)? {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {countWithAll} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?{end}",
         [
             (1, 2, (-1,), coursesArray(11) + coursesArray(22), {}),
             (
@@ -313,14 +313,14 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses}(?: lecture)? courses,?(?: with)?(?: a minimum)? of {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses}(?: lecture)? courses,?(?: with)?(?: a minimum)? of {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, (-1,), coursesArray(3), {}),
             (14, 15, levelArray(16), coursesArray(3), {}),
         ],
     ),
     (
-        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?((?: list of)? courses?(?: list)?),? or the {level} {course}(?: approved)? courses? listed (above|below)",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?((?: list of)? courses?(?: list)?),? or the {level} {course}(?: approved)? courses? listed (above|below)",
         [(1, 2, (-1,), (3,), {}), (1, 2, levelArray(4), (9,), {})],
     ),
     (
@@ -336,30 +336,30 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count} (course|unit)s?,(?: taken)? (?:at|from|of)(?: the| any)? {lists(True)}; choices must be in (at least|at most) {count} different subject codes? \({course}(?:, {course})*\), and {count} (course|unit)s? must be at the {level}{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?,(?: taken)? (?:at|from|of)(?: the| any)? {lists(True)}; choices must be in (at least|at most) {count} different subject codes? \({course}(?:, {course})*\), and {count} (course|unit)s? must be at the {level}{end}",
         [
             (1, 2, (-1,), listsArray(3), {"subjectCodesCondition": (8, 7)}),
             (9, 10, levelArray(11), listsArray(3), {}),
         ],
     ),
     (
-        rf"^complete {count} {courses} (course|unit)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?, or (course|unit)s? in an area related to an entrepreneurial endeavor or entrepreneurship, as approved by the conrad associate (director), undergraduate studies{end}",
+        rf"^(?:complete|choose)? {count} {courses} (course|unit)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?, or (course|unit)s? in an area related to an entrepreneurial endeavor or entrepreneurship, as approved by the conrad associate (director), undergraduate studies{end}",
         [(1, 13, levelArray(14) + (-1,), coursesArray(2) + (20,), {})],
     ),
     (
-        rf"^complete {count} (unit|course)s? (?:at|from|of)(?: the| any)? {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^(?:complete|choose)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, (-1,), coursesArray(3), {}),
             (14, 15, levelArray(16), coursesArray(3), {}),
         ],
     ),
     (
-        rf"^complete(?: a total of)? {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?{end}",
+        rf"^(?:complete|choose)?(?: a total of)? {count} (unit|course)s? (?:at|from|of)(?: the| any)?(?: non-math)? (?:unit|course)s? satisfying the ([a-z\s0-9]*) requirement(?: listed under (?:[a-z]* requirements?|additional constraints|course lists))?{end}",
         [(1, 2, (-1,), (3,), {})],
     ),
     # takenIn:
     (
-        rf"^complete {count} {courses}(?: elective)? (course|unit)s?(?: (?:at|from|of)(?: the| any)? {level})?, taken in {years} year{end}",
+        rf"^(?:complete|choose)? {count} {courses}(?: elective)? (course|unit)s?(?: (?:at|from|of)(?: the| any)? {level})?, taken in {years} year{end}",
         [(1, 13, levelArray(14) + (-1,), coursesArray(2), {"takenIn": yearsArray(19)})],
     ),
 ]

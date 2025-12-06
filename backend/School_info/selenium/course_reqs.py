@@ -63,7 +63,8 @@ conditionDict: dict[str, tuple[str, str]] = {
     "not completed": ("not_any", "complete"),
     "must have completed": ("all", "complete"),
     "must have completed the following": ("all", "complete"),
-    "completed or concurrently enrolled in the following": ("all", "both"),
+    "complete of the following": ("any", "complete"),
+    "completed or concurrently enrolled in the following": ("all", "complete"),
     "completed or concurrently enrolled in": ("all", "both"),
     "the following cannot be used towards this academic plan": ("not_any", "both"),
 }
@@ -170,7 +171,7 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
-        rf"^complete a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?",
+        rf"^complete a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?{end}",
         [(1, 2, (-1,), (-1, 4), {}), (3, 4, (-1,), (-1, 4), {})],
     ),
     (
@@ -222,7 +223,7 @@ groupConditionRegExList: list[
         [(1, 2, levelArray(3), (8,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?",
+        rf"^complete {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?{end}",
         [(1, 2, levelArray(5), (3, 4), {})],
     ),
     (

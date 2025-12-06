@@ -78,6 +78,10 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("all", "complete"),
     ),
     (
+        r"^if [0-9a-z]* is taken, the following courses? can be used( towards this requirement)?:",
+        ("any", "both"),
+    ),
+    (
         r"^earned a minimum grade of (?:[0-9\.]*)% in (any|all|[0-9]) of the following",
         ("regex", "complete"),
     ),
@@ -121,11 +125,11 @@ years = (
     rf"(\d|any|{'|'.join(countingYears)})"
     + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
 )
-course = r"(?!(?:unit|course|additional|elective|lab)\b)[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?:-[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?)?"
+course = r"(?!(?:unit|course|additional|elective|lab)\b)[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?: ?- ?[a-z]{,8} ?(?:[0-9]{3})?[a-z]?)?"
 courses = rf"({course})" + rf"(?:(?: and | or |, and |, or |, |/)({course}))?" * 10
 level = (
-    r"(?:([0-9]00)-(?:,|, or| or) )?" * 3
-    + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above))?"
+    r"(?:([0-9]00)-(?:,|, or| or|or) )?" * 3
+    + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above|higher))?"
 )
 sourceBelowAbove = (
     r"(?:(?: or)? from the(?: list of)? courses?(?: listed)?(?: or)? (below|above))?"
@@ -162,7 +166,7 @@ groupConditionRegExList: list[
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^complete {count} (course|unit)s?(?: of (?:additional )?courses)?(?: \({count} unit\))?(?:(?: at| from| of)?(?: the| any)?(?: lists?)? (following lists?|above|below)(?: of courses)?(?: lists?)?)?(?:; the {years} course can be taken from {lists()})?{end}",
+        rf"^complete {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?{end}",
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
@@ -182,12 +186,16 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: additional)? {courses} courses{end}",
+        rf"^complete {count}(?: non-math| elective| labratory)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?:(?: in)? additional)? {courses}(?: courses)?{end}",
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
         rf"^complete {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?){end}",
         [(1, -1, (-1,), (2,), {})],
+    ),
+    (
+        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: ({course}) courses)? (?:from the|in additional) (following lists?)(?: of ({course}) courses?)?{end}",
+        [(1, 2, (-1,), (4,), {})],
     ),
     (
         rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}{end}",
@@ -214,12 +222,23 @@ groupConditionRegExList: list[
         [(1, 2, levelArray(3), (8,), {})],
     ),
     (
-        rf"^complete {count}(?: [a-z]*)? (course|unit)s?(?: chosen)?(?: at| from| of)(?: the| any)?(?: additional)? {courses}{end}",
-        [(1, 2, (-1,), coursesArray(3), {})],
+        rf"^complete {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?",
+        [(1, 2, levelArray(5), (3, 4), {})],
     ),
     (
-        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: language)? courses from the(?: approved)? (courses list)(?: below)?{end}",
+        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?{end}",
         [(1, 2, (-1,), (3,), {})],
+    ),
+    (
+        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}. complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}(?:,? or(?: additional courses)? from {lists(True)})?{end}",
+        [
+            (1, 2, (-1,), listsArray(3), {}),
+            (7, 8, (-1,), listsArray(9) + listsArray(13), {}),
+        ],
+    ),
+    (
+        rf"^complete {count}(?: senior)? {courses}( seminars)?{end}",
+        [(1, -1, (-1,), coursesArray(2) + (13,), {})],
     ),
     (
         rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: listed)?(?: or)? (below|above){end}",
@@ -240,9 +259,16 @@ groupConditionRegExList: list[
         ],
     ),
     (
-        rf"^complete {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}{end}",
+        rf"^complete {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))?(?: at| from| of)?(?: the| any)?(?: following)?(?: {level})?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}(?:; excluding courses cross-listed with a {course} course)?{end}",
         [
             (1, 2, levelArray(3) + (-1,), (8,) + coursesArray(9), {}),
+        ],
+    ),
+    (
+        rf"^complete {count}(?: {course})? (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?,? with (at least|at most|a minimum)(?: of)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)? {level}(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}{end}",
+        [
+            (1, 2, (-1,), (11,) + coursesArray(12), {}),
+            (4, 5, levelArray(6), (11,) + coursesArray(12), {"cap": 3}),
         ],
     ),
     (
@@ -286,6 +312,17 @@ groupConditionRegExList: list[
         ],
     ),
     (
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses}(?: lecture)? courses,?(?: with)?(?: a minimum)? of {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        [
+            (1, 2, (-1,), coursesArray(3), {}),
+            (14, 15, levelArray(16), coursesArray(3), {}),
+        ],
+    ),
+    (
+        rf"^complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?((?: list of)? courses?(?: list)?),? or the {level} {course}(?: approved)? courses? listed (above|below)",
+        [(1, 2, (-1,), (3,), {}), (1, 2, levelArray(4), (9,), {})],
+    ),
+    (
         rf"^(?:subject concentration: )?complete {count} (course|unit)s?,( all from| at least| at most)(?: any)? {count}(?: \(and only {count}\))? (?:at|from|of)(?: the| any)?(?: following)?(?: subject codes?| courses?)?: {courses}(?:, {courses})?{end}",
         [
             (
@@ -309,7 +346,7 @@ groupConditionRegExList: list[
         [(1, 13, levelArray(14) + (-1,), coursesArray(2) + (20,), {})],
     ),
     (
-        rf"^complete {count} (unit|course)s? of any {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        rf"^complete {count} (unit|course)s? (?:at|from|of)(?: the| any)? {courses} courses,(?: with(?: a minimum of)?)? {count} (unit|course)s? (?:at|from|of)(?: the| any)? {level}{end}",
         [
             (1, 2, (-1,), coursesArray(3), {}),
             (14, 15, levelArray(16), coursesArray(3), {}),
@@ -339,7 +376,7 @@ def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
         num = int(matched_regex) if matched_regex != "any" else 1
         return number_words.get(num, "error139")
     except ValueError:
-        if matched_regex in number_words.values:
+        if matched_regex in number_words.values():
             return matched_regex
         infoInstance.add(
             "differentErrors",
@@ -422,7 +459,7 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
             hasNegOne = True
             continue
         source = regexMatches[sourceIdx]
-        if source is None:
+        if source is None or source == "":
             continue
         source = (
             re.sub(
@@ -438,7 +475,7 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
         elif source == "following lists":
             source = "course lists"
         elif re.match(
-            r"^[a-z]{1,8} [0-9]{3}[a-z]?(?:-[a-z]{1,8} [0-9]{3}[a-z]?)?$", source
+            r"^[a-z]{1,8} [0-9]{3}[a-z]?(?: ?- ?[a-z]{,8} [0-9]{3}[a-z]?)?$", source
         ):
             source = source.replace(" ", "")
         elif re.match(r"list of [a-z]* courses?", source):
@@ -501,7 +538,12 @@ def extract_conditionText(
                     if level is None:
                         continue
                     level = level.replace("-", "").strip()
-                    if level == "any" or level == "above" or level == "below":
+                    if (
+                        level == "any"
+                        or level == "above"
+                        or level == "below"
+                        or level == "higher"
+                    ):
                         resLevels.append(level)
                     else:
                         try:
@@ -658,7 +700,9 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
             elif found == "grouped":
                 count = max(gc["count"] for gc in payload)
                 if count != "any":
-                    count = count * (1 if payload[0]["unit"] == "course" else 2)
+                    count = str(
+                        int(count * (1 if payload[0]["unit"] == "course" else 2))
+                    )
                 currRes["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
                 currRes["groupConditions"] = payload
@@ -700,7 +744,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             count: float;
             unit: 'unit' | 'course' | 'full sourse';
             additional: bool;
-            levels: [100|200|300|400|500|"any"|"above"|"below"];
+            levels: [100|200|300|400|500|"any"|"above"|"below"|"higher"];
             sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
             subjectCodesCondition?: {
                 limit: 'all' | decimalCount;
@@ -738,7 +782,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         elif found == "grouped":
             count = max(gc["count"] for gc in payload)
             if count != "any":
-                count = count * (1 if payload[0]["unit"] == "course" else 2)
+                count = str(int(count * (1 if payload[0]["unit"] == "course" else 2)))
             res["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
             res["conditionStatus"] = "complete"
             res["groupConditions"] = payload

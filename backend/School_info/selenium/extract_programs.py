@@ -184,6 +184,9 @@ def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
                 "differentErrors",
                 f"161: error occured when extractingContainerInfo for {infoInstance.id}",
             )
+            infoInstance.add(
+                "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"
+            )
 
 
 def addGroupTodb(
@@ -244,6 +247,7 @@ def get_program_reqs():
             ("differentCourseReqs", {}),
             ("differentSectionTypes", {}),
             ("differentCourseReqsSections", {}),
+            ("traces", {}),
         ]
     )
 
@@ -285,7 +289,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 11
+    offset = 36
     limit = 25
     i = 0
     groups = {}
@@ -359,4 +363,11 @@ def get_program_reqs():
     finally:
         if driver:
             driver.quit()
-        return infoInstance.returnJson({"groups": groups, "i": i + offset})
+        print("Traces: ")
+        for key, trace in infoInstance.get("traces"):
+            print("\n\n---------------")
+            print(f"key: {key}")
+            print(trace)
+        return infoInstance.returnJson(
+            {"groups": groups, "i": i + offset}, removedTags={"traces"}
+        )

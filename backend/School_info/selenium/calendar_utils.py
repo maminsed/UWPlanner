@@ -30,9 +30,12 @@ class InfoClass:
     def get(self, tag: str):
         return self.infoDictionary[tag]
 
-    def returnJson(self, additionalTags: dict):
+    def returnJson(self, additionalTags: dict, removedTags: set[str] = set()):
         self.infoDictionary.update(additionalTags)
         for i, key in enumerate(self.priortrizedTags):
-            self.infoDictionary[f"{i}_{key}"] = self.infoDictionary.pop(key)
+            if key in removedTags:
+                self.infoDictionary.pop(key)
+            else:
+                self.infoDictionary[f"{i}_{key}"] = self.infoDictionary.pop(key)
         print(f"notReturnedTags: {self.notReturnedTags}")
         return self.infoDictionary

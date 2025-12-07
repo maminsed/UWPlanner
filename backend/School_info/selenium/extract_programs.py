@@ -364,7 +364,7 @@ def get_program_reqs():
         if driver:
             driver.quit()
         print("Traces: ")
-        for key, trace in infoInstance.get("traces"):
+        for key, trace in infoInstance.get("traces").items():
             print("\n\n---------------")
             print(f"key: {key}")
             print(trace)

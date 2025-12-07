@@ -120,14 +120,24 @@ number_words = {
 }
 countingYears = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh"]
 
-count = rf"(?:a total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+count = rf"(?:the equivalent of )?(?:a total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
 countWithAll = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?"
 years = (
     rf"(\d|any|{'|'.join(countingYears)})"
     + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
 )
-course = r"(?!(?:unit|course|additional|elective|lab)\b)[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?: ?- ?[a-z]{,8} ?(?:[0-9]{3})?[a-z]?)?"
-courses = rf"({course})" + rf"(?:(?: and | or |, and |, or |, |/)({course}))?" * 10
+preCourse = (
+    r"(?:(?:elective|in|additional) )?(?!(?:unit|course|labratory|lecture|language))"
+)
+postCourse = (
+    r"(?: (?:elective|labratory|lecture|additional|language))?(?!(?:unit|course))"
+)
+course = r"[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?: ?- ?[a-z]{,8} ?(?:[0-9]{3})?[a-z]?)?"
+courses = (
+    rf"{preCourse}({course}){postCourse}"
+    + rf"(?:(?: and | or |, and |, or |, |/| and/or ){preCourse}({course}){postCourse})?"
+    * 10
+)
 level = (
     r"(?:([0-9]00)-(?:,|, or| or|or) )?" * 3
     + r"(?:([0-9]00-|any )level)?(?:(?: or)? (below|above|higher))?"
@@ -135,7 +145,7 @@ level = (
 sourceBelowAbove = (
     r"(?:(?: or)? from the(?: list of)? courses?(?: listed)?(?: or)? (below|above))?"
 )
-end = r"(?:[,\.\s\-_]{,3}\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
+end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? institutions other than the university of waterloo)?(?: ?\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
 
 
 def lists(count: bool = False):
@@ -167,7 +177,7 @@ groupConditionRegExList: list[
 ] = [
     (
         # IMPORTANT TO BE FIRST
-        rf"^(?:complete|choose)? {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?{end}",
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?{end}",
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
@@ -219,6 +229,14 @@ groupConditionRegExList: list[
         [(1, 2, levelArray(3), coursesArray(8), {})],
     ),
     (
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of|in)(?: the| any)? {courses} (?:course|unit)s?(?:,? (?:at|from|of|in)(?: the| any)? {level})?{end}",
+        [(1, 2, (-1,) + levelArray(14), coursesArray(3), {})],
+    ),
+    (
+        rf"^(?:complete|choose)? {count} {courses} (course|unit)s?,? or courses (?:at|from|of|in)(?: the| any)? {level}(?: in an area related to an entrepreneurial endeavor or entrepreneurship)?,? as approved by the [a-z]*(?: associate)? (director)(?:, undergraduate studies)?{end}",
+        [(1, 13, (-1,), coursesArray(2), {}), (1, 13, levelArray(14), (19,), {})],
+    ),
+    (
         rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}{end}",
         [(1, 2, levelArray(3), (8,), {})],
     ),
@@ -229,6 +247,10 @@ groupConditionRegExList: list[
     (
         rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?{end}",
         [(1, 2, (-1,), (3,), {})],
+    ),
+    (
+        rf"^(?:complete|choose) {count} (?:at|from|of)(?: the| any)? (this list) or any(?: additional)? {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{end}",
+        [(1, 14, levelArray(15), (2,) + coursesArray(3), {})],
     ),
     (
         rf"^(?:complete|choose)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}. complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}(?:,? or(?: additional courses)? from {lists(True)})?{end}",
@@ -242,8 +264,8 @@ groupConditionRegExList: list[
         [(1, -1, (-1,), coursesArray(2) + (13,), {})],
     ),
     (
-        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: listed)?(?: or)? (below|above){end}",
-        [(1, 2, (-1,), (3,), {})],
+        rf"^(?:complete|choose)? {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: or subjects?)?(?: listed)?(?: or)? (below|above)(?: or (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?{end}",
+        [(1, 2, (-1,), (3,) + listsArray(4), {})],
     ),
     (
         rf"^(?:complete|choose)? {count} (course|unit)s? of {courses} courses (?:at|from|of)(?: the| any)? {level}[,\.\s\-_] {count} (course|unit)s? of which must be (?:at|from|of)(?: the| any)? {level}{end}",
@@ -310,6 +332,18 @@ groupConditionRegExList: list[
                 coursesArray(11) + coursesArray(22),
                 {"subjectCodesCondition": (9, 10)},
             ),
+        ],
+    ),
+    (
+        rf"^complete {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)? courses from {count} of the(?: following)? (?:subject code|course)s?:? ?{courses}(?:, {courses})?{end}",
+        [
+            (
+                1,
+                2,
+                (-1,),
+                coursesArray(4) + coursesArray(15),
+                {"subjectCodesCondition": (3, "eq")},
+            )
         ],
     ),
     (
@@ -432,6 +466,7 @@ def subjectCodesTranslator(
         "all from": "eq",
         "only": "eq",
         "same": "eq",
+        "eq": "eq",
     }
 
     if type(status) == int:

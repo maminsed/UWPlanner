@@ -132,7 +132,7 @@ preCourse = (
 postCourse = (
     r"(?: (?:elective|labratory|lecture|additional|language))?(?!(?:unit|course))"
 )
-course = r"[a-z]{1,8} ?(?:[0-9]{3})?[a-z]?(?: ?- ?[a-z]{,8} ?(?:[0-9]{3})?[a-z]?)?"
+course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
 courses = (
     rf"{preCourse}({course}){postCourse}"
     + rf"(?:(?: and | or |, and |, or |, |/| and/or ){preCourse}({course}){postCourse})?"
@@ -175,11 +175,6 @@ groupConditionRegExList: list[
         str, list[tuple[int, int, tuple[int], tuple[int], dict[str, tuple[int] | int]]]
     ]
 ] = [
-    (
-        # IMPORTANT TO BE FIRST
-        rf"^(?:complete|choose)? {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
-        [(1, 2, (-1,), (-1, 4), {})],
-    ),
     (
         rf"^(?:complete|choose)? a minimum of {count} (course|unit)s?(?: totaling {count} (course|unit)s?)?(?: or greater)? (?:according to the requirements (below))?",
         [(1, 2, (-1,), (-1, 4), {}), (3, 4, (-1,), (-1, 4), {})],
@@ -396,6 +391,11 @@ groupConditionRegExList: list[
         rf"^(?:complete|choose)? {count} {courses}(?: elective)? (course|unit)s?(?: (?:at|from|of)(?: the| any)? {level})?, taken in {years} year",
         [(1, 13, levelArray(14) + (-1,), coursesArray(2), {"takenIn": yearsArray(19)})],
     ),
+    (
+        # IMPORTANT TO BE LAST
+        rf"^(?:complete|choose)? {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
+        [(1, 2, (-1,), (-1, 4), {})],
+    ),
 ]
 
 
@@ -562,79 +562,97 @@ def extract_conditionText(
     for regex, conditions in groupConditionRegExList:
         matched = re.split(rf"{regex}{end}", conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
-            res = []
-            for count, unit, levels, sources, additional in conditions:
-                resLevels = []
-                hasNegOne = False
-                for levelIdx in levels:
-                    if levelIdx == -1:
-                        hasNegOne = True
-                        continue
-                    level: str | None = matched[levelIdx]
-                    if level is None:
-                        continue
-                    level = level.replace("-", "").strip()
-                    if (
-                        level == "any"
-                        or level == "above"
-                        or level == "below"
-                        or level == "higher"
-                    ):
-                        resLevels.append(level)
-                    else:
-                        try:
-                            resLevels.append(int(level))
-                        except ValueError:
-                            infoInstance.add(
-                                "differentErrors",
-                                f"{conditionText}-{level} is not a valid level",
-                            )
-                if hasNegOne and not len(resLevels):
-                    resLevels.append("any")
-                resCount = 1.0 if count == -1 else strNumberToFloat(matched[count])
-                resUnit = matched[unit] if unit != -1 else "course"
-                if count == -1:
-                    resUnit = "full source"
-
-                cap = additional.get("cap", None)
-                capDict = {
-                    "no more than": "max",
-                    "no more": "max",
-                    "max": "max",
-                    "min": "min",
-                    "at least": "min",
-                    "at most": "max",
-                }
-                if cap is not None:
-                    if type(cap) == int:
-                        cap = matched[cap]
-                    if cap in capDict:
-                        cap = capDict[cap]
-                    elif cap != "":
-                        infoInstance.add(
-                            f"{conditionText} is supposed to have cap but it actually has: {cap}"
-                        )
-                        cap = None
-                res.append(
-                    {
-                        "count": resCount,
-                        "unit": resUnit,
-                        "levels": resLevels,
-                        "additional": "additional" in conditionText,
-                        "sources": process_sources(matched, sources),
-                        "subjectCodesCondition": subjectCodesTranslator(
-                            additional.get("subjectCodesCondition", None),
-                            matched,
-                            infoInstance,
-                        ),
-                        "takenIn": takenInTranslator(
-                            additional.get("takenIn", None), matched
-                        ),
-                        "cap": cap,
-                    }
-                )
+            res = extractGroupCondition(
+                conditionText, infoInstance, matched, conditions
+            )
+            return ("grouped", re.match(rf"{regex}{end}", conditionText).group(0), res)
+    for regex, conditions in groupConditionRegExList:
+        matched = re.split(regex, conditionText, flags=re.IGNORECASE)
+        if len(matched) > 1:
+            res = extractGroupCondition(
+                conditionText, infoInstance, matched, conditions
+            )
+            infoInstance.add(
+                "carefullGroupedCondition",
+                f"{conditionText.lower()}/-/{infoInstance.id}",
+                res,
+            )
             return ("grouped", re.match(regex, conditionText).group(0), res)
     return "none", "", ()
+
+
+def extractGroupCondition(conditionText, infoInstance, matched, conditions):
+    res = []
+    for count, unit, levels, sources, additional in conditions:
+        resLevels = []
+        hasNegOne = False
+        for levelIdx in levels:
+            if levelIdx == -1:
+                hasNegOne = True
+                continue
+            level: str | None = matched[levelIdx]
+            if level is None:
+                continue
+            level = level.replace("-", "").strip()
+            if (
+                level == "any"
+                or level == "above"
+                or level == "below"
+                or level == "higher"
+            ):
+                resLevels.append(level)
+            else:
+                try:
+                    resLevels.append(int(level))
+                except ValueError:
+                    infoInstance.add(
+                        "differentErrors",
+                        f"{conditionText}-{level} is not a valid level",
+                    )
+        if hasNegOne and not len(resLevels):
+            resLevels.append("any")
+        resCount = 1.0 if count == -1 else strNumberToFloat(matched[count])
+        resUnit = matched[unit] if unit != -1 else "course"
+        if count == -1:
+            resUnit = "full source"
+
+        cap = additional.get("cap", None)
+        capDict = {
+            "no more than": "max",
+            "no more": "max",
+            "max": "max",
+            "min": "min",
+            "at least": "min",
+            "at most": "max",
+        }
+        if cap is not None:
+            if type(cap) == int:
+                cap = matched[cap]
+            if cap in capDict:
+                cap = capDict[cap]
+            elif cap != "":
+                infoInstance.add(
+                    f"{conditionText} is supposed to have cap but it actually has: {cap}"
+                )
+                cap = None
+        res.append(
+            {
+                "count": resCount,
+                "unit": resUnit,
+                "levels": resLevels,
+                "additional": "additional" in conditionText,
+                "sources": process_sources(matched, sources),
+                "subjectCodesCondition": subjectCodesTranslator(
+                    additional.get("subjectCodesCondition", None),
+                    matched,
+                    infoInstance,
+                ),
+                "takenIn": takenInTranslator(additional.get("takenIn", None), matched),
+                "cap": cap,
+            }
+        )
+
+    return res
 
 
 def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):

@@ -243,6 +243,7 @@ def get_program_reqs():
         [
             ("differentErrors", []),
             ("differentConditionText", {}),
+            ("carefullGroupedCondition", {}),
             ("differentGroupedCondition", {}),
             ("differentCourseReqs", {}),
             ("differentSectionTypes", {}),

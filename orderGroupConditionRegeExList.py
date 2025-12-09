@@ -2,141 +2,151 @@ import re
 from backend.School_info.selenium.course_reqs import groupConditionRegExList
 import os.path as path
 
-def parseGeneral(text:str,i:int)->tuple[int,int]:
-    """legnth, ending"""
-    if text[i] == "\\":
-        return parseCount(text,i+2)
-    if text[i] == "^" or text[i] == "$":
-        return 0, i+1
-    if re.match(r"[a-z0-9A-Z. /^\-,:;]",text[i]):
-        return parseCount(text,i+1)
-    print(text[:i]+"<"+text[i]+">"+text[i+1:])
-    raise RuntimeError(f"'{text[i]}' is not a general character")
+def parse_general(text: str, index: int) -> tuple[int, int]:
+    """Returns (length, ending_index)"""
+    if text[index] == "\\":
+        return parse_count(text, index + 2)
+    if text[index] == "^" or text[index] == "$":
+        return 0, index + 1
+    if re.match(r"[a-z0-9A-Z. /^\-,:;]", text[index]):
+        return parse_count(text, index + 1)
+    print(text[:index] + "<" + text[index] + ">" + text[index + 1:])
+    raise RuntimeError(f"'{text[index]}' is not a general character")
 
-def parseCount(text:str,i:int)->tuple[int,int]:
-    #count,i
-    if i >= len(text):
-        return 1,i
-    if text[i] == "{":
-        otherEnd = text.index("}",i)
-        smallest = 0 if text[i+1] == "," else int(text[i+1])
-        return smallest,otherEnd+1
-    elif text[i] == "+":
-        return 1,i+1
-    elif text[i] == "*" or text[i] == "?":
-        return 0,i+1
-    return 1,i
+def parse_count(text: str, index: int) -> tuple[int, int]:
+    """Returns (count, ending_index)"""
+    if index >= len(text):
+        return 1, index
+    if text[index] == "{":
+        closing_brace_index = text.index("}", index)
+        min_count = 0 if text[index + 1] == "," else int(text[index + 1])
+        return min_count, closing_brace_index + 1
+    elif text[index] == "+":
+        return 1, index + 1
+    elif text[index] == "*" or text[index] == "?":
+        return 0, index + 1
+    return 1, index
 
-def parseParan(text:str,i:int)->tuple[int,int]:
-    # length, ending
-    length = 0
-    isOr = False
-    isExclamationMark = False
-    currentLength = 0
-    i+=1
+def parse_parenthesis(text: str, index: int) -> tuple[int, int]:
+    """Returns (length, ending_index)"""
+    total_length = 0
+    is_or_expression = False
+    is_negative_lookahead = False
+    current_branch_length = 0
+    index += 1
 
-    while i < len(text):
-        deltaL = 0
-        if text[i] == "(":
-            deltaL,i = parseParan(text,i,)
-        elif text[i] == "[":
-            deltaL,i = parseSquareBraket(text,i)
-        elif text[i] == "?" or text[i] == ":":
-            i+=1
-        elif text[i] == "!":
-            isExclamationMark = True
-            i+=1
-        elif text[i] == "|":
-            if not isOr:
-                isOr = True
-                currentLength=length
+    while index < len(text):
+        char_length = 0
+        if text[index] == "(":
+            char_length, index = parse_parenthesis(text, index)
+        elif text[index] == "[":
+            char_length, index = parse_square_bracket(text, index)
+        elif text[index] == "?" or text[index] == ":":
+            index += 1
+        elif text[index] == "!":
+            is_negative_lookahead = True
+            index += 1
+        elif text[index] == "|":
+            if not is_or_expression:
+                is_or_expression = True
+                current_branch_length = total_length
             else:
-                length = min(length,currentLength)
-            i+=1
-            currentLength = 0
-        elif text[i] == ")":
-            l,i = parseCount(text,i+1)
-            length = l*min(length,currentLength)
+                total_length = min(total_length, current_branch_length)
+            index += 1
+            current_branch_length = 0
+        elif text[index] == ")":
+            multiplier, index = parse_count(text, index + 1)
+            total_length = multiplier * min(total_length, current_branch_length)
             break
         else:
-            deltaL,i = parseGeneral(text,i)
-        if isOr:
-            currentLength+=deltaL
+            char_length, index = parse_general(text, index)
+        
+        if is_or_expression:
+            current_branch_length += char_length
         else:
-            length+=deltaL
-    if isExclamationMark:
-        length = 0
-    return length,i
-
-def parseSquareBraket(text:str,i:int) -> tuple[int,int]:
-    end=text.find("]",i)
-    return parseCount(text,end+1)
-
-def parseTotal(text:str)->int:
-    i = 0
-    length = 0
-    while i < len(text):
-        if text[i] == "(":
-            l,i = parseParan(text,i)
-        elif text[i] == "[":
-            l,i= parseSquareBraket(text,i)
-        else:
-            l,i = parseGeneral(text,i)
-        length+=l
-    return length
-
-def extractTemplateRegExList(keys:list[int]):
-    res = []
-    file_path = path.join(path.dirname(__file__),"backend","School_info","selenium","course_reqs.py")
-    print(f"file_path: {file_path}")
-    searchList = [
-        (lambda x: x.startswith("groupConditionRegExList:")),
-        (lambda x: "=" in x and "[" in x),
-        # (lambda x: x.startswith("]")),
-    ]
-    j=0
-    print(len(searchList))
-    startParanCount=0
-    endParanCount=0
-    current = ""
-    count = 0
-    with open(file_path, "r") as f:
-        for i,line in enumerate(f):
-            if j < len(searchList) and searchList[j](line):
-                print(f"{i}: '{line}'")
-                j+=1
-            elif j == len(searchList):
-                startParanCount+=line.count("(")
-                endParanCount+=line.count(")")
-                if startParanCount != 0 and startParanCount == endParanCount:
-                    current+=line
-                    startParanCount = 0
-                    endParanCount = 0
-                    count+=1
-                    res.append(current)
-                    current=""
-                else:
-                    current+=line
-
-                if count == len(keys):
-                    break
-    print(f"count: {count} and size: {len(keys)}")
-    newres = [""]*len(keys)
-    for i in range(len(res)):
-        newres[i] = res[keys[i]]
-    with open("test.text","w") as f:
-        for line in newres:
-            f.write(line)
+            total_length += char_length
     
-                    
+    if is_negative_lookahead:
+        total_length = 0
+    return total_length, index
+
+def parse_square_bracket(text: str, index: int) -> tuple[int, int]:
+    """Returns (count, ending_index)"""
+    closing_bracket_index = text.find("]", index)
+    return parse_count(text, closing_bracket_index + 1)
+
+def parse_total(text: str) -> int:
+    """Parse entire regex and return total minimum match length"""
+    index = 0
+    total_length = 0
+    while index < len(text):
+        if text[index] == "(":
+            char_length, index = parse_parenthesis(text, index)
+        elif text[index] == "[":
+            char_length, index = parse_square_bracket(text, index)
+        else:
+            char_length, index = parse_general(text, index)
+        total_length += char_length
+    return total_length
+
+def extract_template_regex_list(sorted_indices: list[int]):
+    """Extract regex patterns in specified order and write to file"""
+    extracted_patterns = []
+    file_path = path.join(path.dirname(__file__), "backend", "School_info", "selenium", "course_reqs.py")
+    print(f"file_path: {file_path}")
+    
+    search_criteria = [
+        (lambda line: line.startswith("groupConditionRegExList:")),
+        (lambda line: "=" in line and "[" in line),
+    ]
+    search_index = 0
+    print(len(search_criteria))
+    
+    open_paren_count = 0
+    close_paren_count = 0
+    current_pattern = ""
+    pattern_count = 0
+    
+    with open(file_path, "r") as f:
+        for line_number, line in enumerate(f):
+            if search_index < len(search_criteria) and search_criteria[search_index](line):
+                print(f"{line_number}: '{line}'")
+                search_index += 1
+            elif search_index == len(search_criteria):
+                open_paren_count += line.count("(")
+                close_paren_count += line.count(")")
+                
+                if open_paren_count != 0 and open_paren_count == close_paren_count:
+                    current_pattern += line
+                    open_paren_count = 0
+                    close_paren_count = 0
+                    pattern_count += 1
+                    extracted_patterns.append(current_pattern)
+                    current_pattern = ""
+                else:
+                    current_pattern += line
+
+                if pattern_count == len(sorted_indices):
+                    break
+    
+    print(f"pattern_count: {pattern_count} and size: {len(sorted_indices)}")
+    
+    reordered_patterns = [""] * len(sorted_indices)
+    for i in range(len(extracted_patterns)):
+        reordered_patterns[i] = extracted_patterns[sorted_indices[i]]
+    
+    with open("test.text", "w") as f:
+        for pattern in reordered_patterns:
+            f.write(pattern)
 
 if __name__ == "__main__":
-    dic = {}
-    for i,(id,regex,_) in enumerate(groupConditionRegExList):
-        length = parseTotal(regex)
-        dic[i] = length
-    #length,index
-    resKeys:list[tuple[int,int]] = [(v,k) for k,v in dic.items()]
-    resKeys.sort()
-    print(resKeys)
-    extractTemplateRegExList([i[1] for i in resKeys])
+    length_by_index = {}
+    for index, (regex_id, regex_pattern, _) in enumerate(groupConditionRegExList):
+        min_length = parse_total(regex_pattern)
+        length_by_index[index] = min_length
+    
+    # Create list of (length, index) tuples
+    sorted_by_length = [(length, index) for index, length in length_by_index.items()]
+    sorted_by_length.sort()
+    print(sorted_by_length)
+    extract_template_regex_list([item[1] for item in sorted_by_length])

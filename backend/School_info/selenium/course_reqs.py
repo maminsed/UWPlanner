@@ -238,7 +238,7 @@ groupConditionRegExList: list[
     (
         "0013",
         rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of|in)(?: the| any)? {courses} (?:course|unit)s?(?:,? (?:at|from|of|in)(?: the| any)? {level})?",
-        [(1, 2, (-1,) + levelArray(14), coursesArray(3), {})],
+        [(1, 2, levelArray(14) + (-1,), coursesArray(3), {})],
     ),
     (
         "0014",
@@ -250,10 +250,6 @@ groupConditionRegExList: list[
         rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
         [(1, 2, levelArray(3), (8,), {})],
     ),
-    # (
-    #     rf"^(?:complete|choose) {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?",
-    #     [(1, 2, levelArray(5), (3, 4), {})],
-    # ),
     (
         "0016",
         rf"^(?:complete|choose) {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?",
@@ -262,7 +258,7 @@ groupConditionRegExList: list[
     (
         "0017",
         rf"^(?:complete|choose) {count} (?:at|from|of)(?: the| any)? (this list) or any(?: additional)? {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}",
-        [(1, 14, levelArray(15), (2,) + coursesArray(3), {})],
+        [(1, 14, levelArray(15), coursesArray(3) + (2,), {})],
     ),
     (
         "0018",
@@ -280,7 +276,7 @@ groupConditionRegExList: list[
     (
         "0020",
         rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: or subjects?)?(?: listed)?(?: or)? (below|above)(?: or (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?",
-        [(1, 2, (-1,), (3,) + listsArray(4), {})],
+        [(1, 2, (-1,), listsArray(4) + (3,), {})],
     ),
     (
         "0021",
@@ -302,15 +298,15 @@ groupConditionRegExList: list[
         "0023",
         rf"^(?:complete|choose) {count}(?: {course})? (course|unit)s?(?: \(\d\.\d units?\))?(?: at| from| of)?(?: the| any)?(?: following)?(?: {level})?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}(?:; excluding courses cross-listed with a {course} course)?",
         [
-            (1, 2, levelArray(3) + (-1,), (8,) + coursesArray(9), {}),
+            (1, 2, levelArray(3) + (-1,), coursesArray(9) + (8,), {}),
         ],
     ),
     (
         "0024",
         rf"^(?:complete|choose) {count}(?: {course})? (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)?(?: subject code| choice| course)?s?,? with (at least|at most|a minimum)(?: of)? {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: following)? {level}(?: \(including any taken to satisfy the (above|below) requirements\))?: {courses}",
         [
-            (1, 2, (-1,), (11,) + coursesArray(12), {}),
-            (4, 5, levelArray(6), (11,) + coursesArray(12), {"cap": 3}),
+            (1, 2, (-1,), coursesArray(12) + (11,), {}),
+            (4, 5, levelArray(6), coursesArray(12) + (11,), {"cap": 3}),
         ],
     ),
     (
@@ -436,6 +432,10 @@ groupConditionRegExList: list[
         rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
         [(1, 2, (-1,), (-1, 4), {})],
     ),
+    # (
+    #     rf"^(?:complete|choose) {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?",
+    #     [(1, 2, levelArray(5), (3, 4), {})],
+    # ),
 ]
 
 

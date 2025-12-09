@@ -1,3 +1,17 @@
+"""
+Regex Parser and Reorderer for Course Requirement Patterns
+
+This module analyzes and reorders regular expression patterns used for parsing course requirements.
+It calculates the minimum match length for each regex pattern and sorts them by length to optimize
+matching order (longer patterns first to make sure if there is a bigger match that matches first). The reordered patterns are then extracted
+from the source file and written to an output file.
+
+Main functionality:
+- parse_total(): Calculates minimum match length for a regex pattern
+- extract_template_regex_list(): Extracts and reorders regex patterns from course_reqs.py
+- Supports parsing of regex constructs: parentheses, square brackets, quantifiers, alternation, etc.
+"""
+
 import re
 from backend.School_info.selenium.course_reqs import groupConditionRegExList
 import os.path as path
@@ -147,6 +161,6 @@ if __name__ == "__main__":
     
     # Create list of (length, index) tuples
     sorted_by_length = [(length, index) for index, length in length_by_index.items()]
-    sorted_by_length.sort()
+    sorted_by_length.sort(reverse=True)
     print(sorted_by_length)
     extract_template_regex_list([item[1] for item in sorted_by_length])

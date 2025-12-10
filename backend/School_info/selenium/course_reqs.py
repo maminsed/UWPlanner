@@ -191,7 +191,7 @@ groupConditionRegExList: list[
     (
         "0030",
         # WARNING: be very careful with this
-        rf"^(?:complete|choose) {count} {course} (course|unit)s?,(?: at least)? {count} of which is at the {level}, {countWithAll} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?",
+        rf"^(?:complete|choose) {count}(?: (?:non-?)?{course})? (course|unit)s?,(?: at least)? {count} of which is at the {level}, {countWithAll} from the (same) subject codes?, from the following(?: choices)?: {courses}(?:, {courses})?",
         [
             (1, 2, (-1,), coursesArray(11) + coursesArray(22), {}),
             (
@@ -605,8 +605,13 @@ def extract_conditionText(
             res = extractGroupCondition(
                 conditionText, infoInstance, matched, conditions
             )
+            infoInstance.add(
+                "differentGroupedCondition",
+                f"{conditionText.lower()}/-/{infoInstance.id}",
+                [id] + res,
+            )
             return ("grouped", re.match(rf"{regex}{end}", conditionText).group(0), res)
-    for regex, conditions in groupConditionRegExList:
+    for id, regex, conditions in groupConditionRegExList:
         matched = re.split(regex, conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
             res = extractGroupCondition(
@@ -615,7 +620,7 @@ def extract_conditionText(
             infoInstance.add(
                 "carefullGroupedCondition",
                 f"{conditionText.lower()}/-/{infoInstance.id}",
-                res,
+                [id] + res,
             )
             return ("grouped", re.match(regex, conditionText).group(0), res)
     return "none", "", ()
@@ -742,11 +747,6 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
                 "differentErrors",
                 f"267: {conditionText.lower()}-{infoInstance.id} levels or sources is empty",
             )
-        infoInstance.add(
-            "differentGroupedCondition",
-            f"{conditionText.lower()}/-/{infoInstance.id}",
-            payload,
-        )
 
     links = element.find_elements(By.TAG_NAME, "a")
     for link in links:
@@ -800,9 +800,6 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
                 currRes["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
                 currRes["groupConditions"] = payload
-                infoInstance.add(
-                    "differentGroupedCondition", conditionText.lower(), payload
-                )
             else:
                 currRes["conditionedOn"] = "unclassified"
                 currRes["conditionStatus"] = "none"
@@ -880,7 +877,6 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             res["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
             res["conditionStatus"] = "complete"
             res["groupConditions"] = payload
-            infoInstance.add("differentGroupedCondition", sectionHeader, payload)
         else:
             res["conditionedOn"], res["conditionStatus"] = "unclassified", "none"
             infoInstance.add(

@@ -120,16 +120,26 @@ number_words = {
 }
 countingYears = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh"]
 
-count = rf"(?:the equivalent of )?(?:a total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+count = rf"(?:a |the )?(?:equivalent of )?(?:total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
 countWithAll = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?"
 years = (
     rf"(\d|any|{'|'.join(countingYears)})"
     + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
 )
+nonCourseWords = [
+    "labratory",
+    "lab",
+    "lecture",
+    "language",
+    "studio",
+    "seminar",
+    "field",
+    "non-math",
+]
 preCourse = (
-    r"(?:(?:elective|in|additional) )?(?!(?:unit|course|labratory|lecture|language))"
+    rf"(?:(?:elective|in|additional|{'|'.join(nonCourseWords)}) )?(?!unit|course|the)"
 )
-postCourse = r"(?: (?:elective|labratory|lecture|additional|language|studio))?(?!(?:unit|course))"
+postCourse = rf"(?: (?:elective|additional|{'|'.join(nonCourseWords)})(?: or (?:{'|'.join(nonCourseWords)}))?)?(?!(?:unit|course))"
 course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
 courses = (
     rf"{preCourse}({course}){postCourse}"
@@ -140,15 +150,16 @@ level = (
     r"(?:([0-9]00)-?(?: ?level)?(?:,|, or| or|or)? )?" * 3
     + r"([0-9]00-?|any)(?: ?level)?(?:(?:,|, or| or|or)? (below|above|higher))?"
 )
-sourceBelowAbove = r"(?: ?( or)? (?:at|from|of)(?: the| any)?(?: following)?(?: approved)? (?:(list of(?: approved)? courses?)|(?:list of )?(?:approved )?courses?(?: list(?:s|ed)?)?( below| above)?))"
+sourceBelowAbove = r"(?: ?( or)? (?:at|from|of)(?: the| any)?(?: following)?(?: approved)? (?:(list of(?: approved)? courses?)|(?:list of )?(?:approved )?courses?(?: list(?:s|ed)?)?( below| above)?))?"
 end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? institutions other than the university of waterloo)?(?: ?\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
 
 
 def lists(count: bool = False):
     status = "?:" if not count else ""
+    singleList = r"list(?: (?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?"
     return (
-        rf"({status}(?:[a-z]*\s?[a-z]* )?list(?: [0-9a-zA-Z]| of courses)?)"
-        + rf"(?:(?:,|, or| or| and)? ({status}list [0-9a-zA-Z]))?" * 3
+        rf"({status}(?:[a-z]*\s?[a-z]* )?{singleList})"
+        + rf"(?:(?:,|, or| or| and)? ({status}{singleList}))?" * 3
     )
 
 
@@ -201,7 +212,7 @@ groupConditionRegExList: list[
     ),
     (
         "0041",
-        rf"^(?:complete|choose) {count}(?: (?:non-?)?{course})? (course|unit)s?(?: of courses?)? (?:at|from|of|in)(?: the| any)? (same) subject(?: codes?)? (?:at|from|in) {countWithAll}(?: of the)?(?: following)?(?: language and culture)?(?: subject code| course)s?: {courses}(?:, {courses})?",
+        rf"^(?:complete|choose) {count}(?: (?:non-?)?{course})? (course|unit)s?(?: of courses?)? (?:at|from|of|in)(?: the| any)? (same) subject(?: codes?)? (?:at|from|in)(?: the| any)?( {countWithAll})?(?: of the)?(?: following)?(?: language and culture)?(?: subject code| course)s?: {courses}(?:, {courses})?",
         [
             (
                 1,
@@ -299,6 +310,11 @@ groupConditionRegExList: list[
         ],
     ),
     (
+        "0042",
+        rf"^(?:complete|choose) additional (?:course|unit)s? of {courses} courses (?:at|from|of|in)(?: the| any)? {level}(?: up)? to {count} (course|unit)s?",
+        [(17, 18, levelArray(11), coursesArray(0), {})],
+    ),
+    (
         "0018",
         rf"^(?:complete|choose) {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}. complete {count} (course|unit)s?(?: at| from| of)?(?: the| any)? {lists(True)}(?:,? or(?: additional courses)? from {lists(True)})?",
         [
@@ -326,6 +342,11 @@ groupConditionRegExList: list[
         ],
     ),
     (
+        "0043",
+        rf"^(?:complete|choose)(?: additional)?(?: associated)?(?: laboratory)? (?:course|unit)s? (?:at|from|of)(?: the| any)? {courses} (course|unit)s? (above|bellow)",
+        [(-1, 11, (-1,), coursesArray(0) + (12,), {})],
+    ),
+    (
         "0022",
         rf"^(?:complete|choose) {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {level})?(?: (?:at|from|of)(?: the| any)?(?: following)?)?(?: subject code| choice| course)?s?(?: \(including any taken to satisfy the above requirements\))?: {courses}, {count} ({course}) (?:course|unit)s? (?:at|from|of)(?: the| any)? {level}",
         [
@@ -340,7 +361,7 @@ groupConditionRegExList: list[
     ),
     (
         "0020",
-        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: or subjects?)?(?: listed)?(?: or)? (below|above)(?: or (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?",
+        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: or subjects?)?(?: listed)?(?: or)? (below|above)(?: or(?: at| from| of)?(?: the| any)?(?: following)? {lists(True)})?",
         [(1, 2, (-1,), listsArray(4) + (3,), {})],
     ),
     (
@@ -386,17 +407,17 @@ groupConditionRegExList: list[
     (
         "0040",
         # IMPORTANT TO BE LAST
-        rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)? (following lists?|above|below)(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
+        rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)?(?: course lists?)?( following lists?| above| below)?(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
         "0029",
-        rf"^(?:complete|choose) {count}(?: {course})? (course|unit)s? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject codes| choices)?: {courses}",
-        [(1, 2, (-1,), coursesArray(3), {})],
+        rf"^(?:complete|choose) {count}(?:(?: of)? {course}(?: courses?)?)? (course|unit)s?(?: {course} course)?(?: (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: list(?:ed|s)?)? (below|above) or(?: an additional)?(?: course)?)? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject code| choice)?s?: {courses}(?:, {courses})?(?:, {courses})?",
+        [(1, 2, (-1,), coursesArray(3) + coursesArray(14) + coursesArray(25), {})],
     ),
     (
         "0027",
-        rf"^(?:complete|choose) {count} {courses} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
+        rf"^(?:complete|choose) {count} {courses} (course|unit)s?(?: \(\d\.\d unit\))? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
         [(1, 13, levelArray(14), coursesArray(2) + (19, 20, 21), {})],
     ),
     (
@@ -416,28 +437,29 @@ groupConditionRegExList: list[
             (1, 2, levelArray(3) + (-1,), coursesArray(9) + (8,), {}),
         ],
     ),
+    # Danger Zone
     (
-        "0028",
+        "0028DZ",
         rf"^(?:complete|choose) {count} {courses} (course|unit)s?",
         [(1, 13, (-1,), coursesArray(2), {})],
     ),
     (
-        "0016",
+        "0016DZ",
         rf"^(?:complete|choose) {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?",
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        "0005",
+        "0005DZ",
         rf"^(?:complete|choose) {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?:(?: in)? additional)? {courses}(?: courses)?",
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        "0019",
+        "0019DZ",
         rf"^(?:complete|choose) {count}(?: senior)? {courses}( seminars)?",
         [(1, -1, (-1,), coursesArray(2) + (13,), {})],
     ),
     (
-        "0006",
+        "0006DZ",
         rf"^(?:complete|choose) {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)",
         [(1, -1, (-1,), (2,), {})],
     ),
@@ -507,7 +529,7 @@ def subjectCodesTranslator(
         return None
     limit, status = rawInput
     limit = (splitedRegex[limit] or "").strip()
-    if limit == "one" or limit == "all":
+    if limit == "one" or limit == "all" or not limit:
         limit = "any"
     statusMap = {
         "at least": "gt",
@@ -527,6 +549,15 @@ def subjectCodesTranslator(
         return None
 
     return {"status": statusMap[status], "limit": limit}
+
+
+def extractExcluding(conditionTextLower: str) -> list[str]:
+    phrase = rf"\((?:excluding|exclusive)? of {courses}\)"
+    matched = re.split(phrase, conditionTextLower)
+    if len(matched) > 1:
+        return process_sources(matched, coursesArray(0))
+    else:
+        return []
 
 
 def safe_find_element(element: WebElement, by, value):
@@ -616,8 +647,8 @@ def extract_conditionText(
             )
             infoInstance.add(
                 "differentGroupedCondition",
-                f"{conditionText.lower()}/-/{infoInstance.id}",
-                [id] + res,
+                conditionText.lower(),
+                [id, infoInstance.id] + res,
             )
             return ("grouped", re.match(rf"{regex}{end}", conditionText).group(0), res)
     for id, regex, conditions in groupConditionRegExList:
@@ -628,14 +659,19 @@ def extract_conditionText(
             )
             infoInstance.add(
                 "carefullGroupedCondition",
-                f"{conditionText.lower()}/-/{infoInstance.id}",
-                [id] + res,
+                conditionText.lower(),
+                [id, infoInstance.id] + res,
             )
             return ("grouped", re.match(regex, conditionText).group(0), res)
     return "none", "", ()
 
 
-def extractGroupCondition(conditionText, infoInstance, matched, conditions):
+def extractGroupCondition(
+    conditionText: str,
+    infoInstance: InfoClass,
+    matched: list[str | None],
+    conditions: list[int | tuple[int] | dict[str]],
+):
     res = []
     for count, unit, levels, sources, additional in conditions:
         resLevels = []
@@ -703,6 +739,7 @@ def extractGroupCondition(conditionText, infoInstance, matched, conditions):
                 ),
                 "takenIn": takenInTranslator(additional.get("takenIn", None), matched),
                 "cap": cap,
+                "excluding": extractExcluding(conditionText.lower()),
             }
         )
 
@@ -853,6 +890,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             };
             takenIn?: int[]
             cap?: "max"|"min"|"exact"
+            excluding: courseCode[]
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }
@@ -1012,6 +1050,8 @@ def addGroupTodb(
 
 
 def get_course_reqs():
+    # TODO:  add excluding to the end
+    #       update courses to have a column with unit (like how many units it is)
     classGroupCSS = 'div[class*="style__collapsibleBox___"]'
     expandButtonCSS = 'h2[class*="style__title___"]'
     linkContainerCSS = 'div[class*="style__columns___"]'

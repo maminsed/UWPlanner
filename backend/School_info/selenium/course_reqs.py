@@ -136,10 +136,8 @@ nonCourseWords = [
     "field",
     "non-math",
 ]
-preCourse = (
-    rf"(?:(?:elective|in|additional|{'|'.join(nonCourseWords)}) )?(?!unit|course|the)"
-)
-postCourse = rf"(?: (?:elective|additional|{'|'.join(nonCourseWords)})(?: or (?:{'|'.join(nonCourseWords)}))?)?(?!(?:unit|course))"
+preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the)"
+postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?: or (?:{'s?|'.join(nonCourseWords)}s?))?)?(?!(?:unit|course))"
 course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
 courses = (
     rf"{preCourse}({course}){postCourse}"
@@ -406,7 +404,7 @@ groupConditionRegExList: list[
     ),
     (
         "0027",
-        rf"^(?:complete|choose) {count} {courses} (course|unit)s?(?: \(\d\.\d unit\))? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
+        rf"^(?:complete|choose) {count} {courses} (course|unit)s?(?: \(\d\.\d units?\))? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
         [(1, 13, levelArray(14), coursesArray(2) + (19, 20, 21), {})],
     ),
     (
@@ -416,7 +414,7 @@ groupConditionRegExList: list[
     ),
     (
         "0029",
-        rf"^(?:complete|choose) {count}(?:(?: of)? {course}(?: courses?)?)? (course|unit)s?(?: {course} course)?(?: (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: list(?:ed|s)?)? (below|above) or(?: an additional)?(?: course)?)? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject code| choice)?s?: {courses}(?:, {courses})?(?:, {courses})?",
+        rf"^(?:complete|choose) {count}(?:(?: of)? {course}(?: courses?)?)? (course|unit)s?(?: of)?(?: {course} courses?)?(?: (?:at|from|of)(?: the| any)?(?: following)?(?: list of)? courses?(?: list(?:ed|s)?)? (below|above) or(?: an additional)?(?: course)?)? (?:at|from|of)(?: the| any)?(?: following)?(?: {course})?(?: subject code| choice)?s?: {courses}(?:, {courses})?(?:, {courses})?",
         [(1, 2, (-1,), coursesArray(3) + coursesArray(14) + coursesArray(25), {})],
     ),
     (
@@ -448,7 +446,7 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (3,), {})],
     ),
     (
-        "0040",
+        "0040DZ",
         # IMPORTANT TO BE LAST
         rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)?(?: course lists?)?( following lists?| above| below)?(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
         [(1, 2, (-1,), (-1, 4), {})],
@@ -552,10 +550,10 @@ def subjectCodesTranslator(
 
 
 def extractExcluding(conditionTextLower: str) -> list[str]:
-    phrase = rf"\((?:excluding|exclusive)? of {courses}\)"
+    phrase = rf"\((?:excluding|exclusive)(?: of)? {courses}\)"
     matched = re.split(phrase, conditionTextLower)
     if len(matched) > 1:
-        return process_sources(matched, coursesArray(0))
+        return process_sources(matched, coursesArray(1))
     else:
         return []
 
@@ -667,47 +665,26 @@ def extract_conditionText(
 
 
 def extractGroupCondition(
-    conditionText: str,
-    infoInstance: InfoClass,
+    condition_text: str,
+    info_instance: InfoClass,
     matched: list[str | None],
     conditions: list[int | tuple[int] | dict[str]],
 ):
-    res = []
-    for count, unit, levels, sources, additional in conditions:
-        resLevels = []
-        hasNegOne = False
-        for levelIdx in levels:
-            if levelIdx == -1:
-                hasNegOne = True
-                continue
-            level: str | None = matched[levelIdx]
-            if level is None:
-                continue
-            level = level.replace("-", "").strip()
-            if (
-                level == "any"
-                or level == "above"
-                or level == "below"
-                or level == "higher"
-            ):
-                resLevels.append(level)
-            else:
-                try:
-                    resLevels.append(int(level))
-                except ValueError:
-                    infoInstance.add(
-                        "differentErrors",
-                        f"{conditionText}-{level} is not a valid level",
-                    )
-        if hasNegOne and not len(resLevels):
-            resLevels.append("any")
-        resCount = 1.0 if count == -1 else strNumberToFloat(matched[count])
-        resUnit = matched[unit] if unit != -1 else "course"
-        if count == -1:
-            resUnit = "full source"
+    result = []
+    for (
+        count_idx,
+        unit_idx,
+        level_indices,
+        source_indices,
+        additional_config,
+    ) in conditions:
+        result_count = 1.0 if count_idx == -1 else strNumberToFloat(matched[count_idx])
+        result_unit = matched[unit_idx] if unit_idx != -1 else "course"
+        if count_idx == -1:
+            result_unit = "full source"
 
-        cap = additional.get("cap", None)
-        capDict = {
+        cap_value = additional_config.get("cap", None)
+        cap_mapping = {
             "no more than": "max",
             "no more": "max",
             "max": "max",
@@ -715,35 +692,66 @@ def extractGroupCondition(
             "at least": "min",
             "at most": "max",
         }
-        if cap is not None:
-            if type(cap) == int:
-                cap = matched[cap]
-            if cap in capDict:
-                cap = capDict[cap]
-            elif cap != "":
-                infoInstance.add(
-                    f"{conditionText} is supposed to have cap but it actually has: {cap}"
+        if cap_value is not None:
+            if type(cap_value) == int:
+                cap_value = matched[cap_value]
+            if cap_value in cap_mapping:
+                cap_value = cap_mapping[cap_value]
+            elif cap_value != "":
+                info_instance.add(
+                    "differentErrors",
+                    f"{condition_text} is supposed to have cap but it actually has: {cap_value}",
                 )
-                cap = None
-        res.append(
-            {
-                "count": resCount,
-                "unit": resUnit,
-                "levels": resLevels,
-                "additional": "additional" in conditionText,
-                "sources": process_sources(matched, sources),
-                "subjectCodesCondition": subjectCodesTranslator(
-                    additional.get("subjectCodesCondition", None),
-                    matched,
-                    infoInstance,
-                ),
-                "takenIn": takenInTranslator(additional.get("takenIn", None), matched),
-                "cap": cap,
-                "excluding": extractExcluding(conditionText.lower()),
-            }
-        )
+                cap_value = None
+        curr_result = {
+            "count": result_count,
+            "unit": result_unit,
+            "levels": extract_condition_lists(
+                condition_text, info_instance, matched, level_indices
+            ),
+            "additional": "additional" in condition_text,
+            "sources": process_sources(matched, source_indices),
+            "subjectCodesCondition": subjectCodesTranslator(
+                additional_config.get("subjectCodesCondition", None),
+                matched,
+                info_instance,
+            ),
+            "takenIn": takenInTranslator(
+                additional_config.get("takenIn", None), matched
+            ),
+            "cap": cap_value,
+            "excluding": extractExcluding(condition_text.lower()),
+        }
+        curr_result = {k: v for k, v in curr_result.items() if v is not None}
+        result.append(curr_result)
 
-    return res
+    return result
+
+
+def extract_condition_lists(condition_text, info_instance, matched, level_indices):
+    result_levels = []
+    has_any_level = False
+    for level_idx in level_indices:
+        if level_idx == -1:
+            has_any_level = True
+            continue
+        level: str | None = matched[level_idx]
+        if level is None:
+            continue
+        level = level.replace("-", "").strip()
+        if level == "any" or level == "above" or level == "below" or level == "higher":
+            result_levels.append(level)
+        else:
+            try:
+                result_levels.append(int(level))
+            except ValueError:
+                info_instance.add(
+                    "differentErrors",
+                    f"{condition_text}-{level} is not a valid level",
+                )
+    if has_any_level and not len(result_levels):
+        result_levels.append("any")
+    return result_levels
 
 
 def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
@@ -880,9 +888,9 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
         groupConditions?: {
             count: float;
             unit: 'unit' | 'course' | 'full sourse';
-            additional: bool;
             levels: [100|200|300|400|500|"any"|"above"|"below"|"higher"];
             sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
+            additional?: bool;
             subjectCodesCondition?: {
                 limit: 'all' | decimalCount;
                 status: 'lt'|'gt'|'eq':
@@ -890,7 +898,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             };
             takenIn?: int[]
             cap?: "max"|"min"|"exact"
-            excluding: courseCode[]
+            excluding?: courseCode[]
         }[]
         relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
     }

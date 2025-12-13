@@ -245,7 +245,7 @@ def get_program_reqs():
             ("differentConditionText", {}),
             ("carefullGroupedCondition", {}),
             ("differentGroupedCondition", {}),
-            ("differentCourseReqs", {}),
+            # ("differentCourseReqs", {}),
             ("differentSectionTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),

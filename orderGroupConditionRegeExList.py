@@ -148,11 +148,14 @@ def extract_template_regex_list(sorted_indices: list[int]):
     reordered_patterns = [""] * len(sorted_indices)
     for i in range(len(extracted_patterns)):
         reordered_patterns[i] = extracted_patterns[sorted_indices[i]]
+    return reordered_patterns
     
-    with open("test.text", "w") as f:
+def save(reordered_patterns):
+    with open("test4.txt", "w") as f:
+        f.write("[")
         for pattern in reordered_patterns:
             f.write(pattern)
-
+        f.write("]")
 if __name__ == "__main__":
     length_by_index = {}
     for index, (regex_id, regex_pattern, _) in enumerate(groupConditionRegExList):
@@ -163,4 +166,5 @@ if __name__ == "__main__":
     sorted_by_length = [(length, index) for index, length in length_by_index.items()]
     sorted_by_length.sort(reverse=True)
     print(sorted_by_length)
-    extract_template_regex_list([item[1] for item in sorted_by_length])
+    reordered_patterns = extract_template_regex_list([item[1] for item in sorted_by_length])
+    save(reordered_patterns)

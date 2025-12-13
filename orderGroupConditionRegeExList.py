@@ -152,19 +152,20 @@ def extract_template_regex_list(sorted_indices: list[int]):
     
 def save(reordered_patterns):
     with open("test4.txt", "w") as f:
-        f.write("[")
+        f.write("[\n")
         for pattern in reordered_patterns:
             f.write(pattern)
         f.write("]")
+
 if __name__ == "__main__":
     length_by_index = {}
     for index, (regex_id, regex_pattern, _) in enumerate(groupConditionRegExList):
         min_length = parse_total(regex_pattern)
-        length_by_index[index] = min_length
+        length_by_index[index] = (min_length,len(regex_pattern),regex_id)
     
     # Create list of (length, index) tuples
-    sorted_by_length = [(length, index) for index, length in length_by_index.items()]
+    sorted_by_length = [(values[0],values[1],index,values[2]) for index, values in length_by_index.items()]
     sorted_by_length.sort(reverse=True)
     print(sorted_by_length)
-    reordered_patterns = extract_template_regex_list([item[1] for item in sorted_by_length])
+    reordered_patterns = extract_template_regex_list([item[2] for item in sorted_by_length])
     save(reordered_patterns)

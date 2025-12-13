@@ -286,14 +286,6 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), listsArray(3), {}), (8, 9, (-1,), listsArray(10), {"cap": 7})],
     ),
     (
-        "0025",
-        rf"^(?:complete|choose) {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}",
-        [
-            (1, 13, levelArray(14) + (-1,), coursesArray(2), {}),
-            (19, 20, levelArray(21), coursesArray(2), {}),
-        ],
-    ),
-    (
         "0026",
         rf"^(?:complete|choose) {count}(?: {course})? (course|unit)s?(?: chosen)? (?:at|from|of)(?: the| any)?(?: {level})? {courses},? with at least {count}(?: courses?)?(?: chosen)? (?:at|from|of)(?: the| any)? {courses}",
         [
@@ -312,6 +304,14 @@ groupConditionRegExList: list[
                 coursesArray(5) + coursesArray(16),
                 {"subjectCodesCondition": (4, 3)},
             )
+        ],
+    ),
+    (
+        "0025",
+        rf"^(?:complete|choose) {count} {courses} (course|unit)s?(?: at {level})?,(?: at least)? {count} (course|unit)s?(?: of which)? must be (?:at|from|of)(?: the| any)? {level}",
+        [
+            (1, 13, levelArray(14) + (-1,), coursesArray(2), {}),
+            (19, 20, levelArray(21), coursesArray(2), {}),
         ],
     ),
     (
@@ -438,14 +438,14 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), coursesArray(3), {})],
     ),
     (
-        "0016DZ",
-        rf"^(?:complete|choose) {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?",
-        [(1, 2, (-1,), (3,), {})],
-    ),
-    (
         "0028DZ",
         rf"^(?:complete|choose) {count} {courses} (course|unit)s?",
         [(1, 13, (-1,), coursesArray(2), {})],
+    ),
+    (
+        "0016DZ",
+        rf"^(?:complete|choose) {count} (course|unit)s?(?: at| from| of)?(?: the| any)?(?: language)?( courses)?(?: at| from| of)?(?: the| any)?(?: approved)? (courses(?: list)?)(?: below)?",
+        [(1, 2, (-1,), (3,), {})],
     ),
     (
         "0040",
@@ -454,14 +454,14 @@ groupConditionRegExList: list[
         [(1, 2, (-1,), (-1, 4), {})],
     ),
     (
-        "0006DZ",
-        rf"^(?:complete|choose) {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)",
-        [(1, -1, (-1,), (2,), {})],
-    ),
-    (
         "0019DZ",
         rf"^(?:complete|choose) {count}(?: senior)? {courses}( seminars)?",
         [(1, -1, (-1,), coursesArray(2) + (13,), {})],
+    ),
+    (
+        "0006DZ",
+        rf"^(?:complete|choose) {count}(?: or \d)? (?:at|from|of)?(?: the| any)?([a-z]+ electives?(?: from {lists()})?)",
+        [(1, -1, (-1,), (2,), {})],
     ),
     # (
     #     rf"^(?:complete|choose) {count} (course|unit)s? of ({course})( laboratory)? courses,?(?:(?: at| from| of)?(?: the| any)? {level})?",

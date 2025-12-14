@@ -59,6 +59,13 @@ def getLinkAttr(link: WebElement):
     return {"value": link.text, "url": url, "linkType": linkType}
 
 
+def safe_find_element(element: WebElement, by, value):
+    try:
+        return element.find_element(by, value)
+    except:
+        return None
+
+
 def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
     matched_regex = matched_regex.strip().lower()
 
@@ -97,7 +104,7 @@ def strNumberToFloat(str_num: str):
         raise RuntimeError(f"{str_num} is not a number!")
 
 
-def takenInTranslator(rawInput: None | tuple[int], splitedRegex: list[str | None]):
+def extract_gc_takenIn(rawInput: None | tuple[int], splitedRegex: list[str | None]):
     if rawInput is None:
         return None
     res = []
@@ -108,7 +115,7 @@ def takenInTranslator(rawInput: None | tuple[int], splitedRegex: list[str | None
     return res
 
 
-def subjectCodesTranslator(
+def extract_gc_subjectCodesCondition(
     rawInput: None | tuple[int, int | str],
     splitedRegex: list[str | None],
     infoInstance: InfoClass,
@@ -140,23 +147,16 @@ def subjectCodesTranslator(
     return {"status": statusMap[status], "limit": limit}
 
 
-def extractExcluding(conditionTextLower: str) -> list[str]:
+def extract_gc_excluding(conditionTextLower: str) -> list[str]:
     phrase = rf"\((?:excluding|exclusive)(?: of)? {courses}\)"
     matched = re.split(phrase, conditionTextLower)
     if len(matched) > 1:
-        return process_sources(matched, coursesArray(1))
+        return extract_gc_sources(matched, coursesArray(1))
     else:
         return []
 
 
-def safe_find_element(element: WebElement, by, value):
-    try:
-        return element.find_element(by, value)
-    except:
-        return None
-
-
-def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
+def extract_gc_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
     processedSources: list[str] = []
     hasNegOne = False
     for sourceIdx in sourceIndecies:
@@ -193,69 +193,33 @@ def process_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
     return processedSources
 
 
-def extract_conditionText(
-    conditionText: str, infoInstance: InfoClass, strict: bool = False
-) -> tuple[Literal["none", "onStatus", "grouped"], str, tuple | dict]:
-    """Returns: tuple(found,matchedText,onStatus)
-    found: 'none'|'onStatus'|'grouped',
-    matchedText:str,
-    payload: (conditionedOn, conditionedStatus)|groupCondition,
-    """
-    conditionText = re.sub(r"\s+", " ", conditionText.lower()).strip()
-    found = ""
-    paylaod = ()
-    if not strict:
-        for key in conditionDict.keys():
-            if conditionText.startswith(key) and len(key) > len(found):
-                found = key
-                paylaod = conditionDict[key]
-    elif conditionText in conditionDict:
-        found = conditionText
-        paylaod = conditionDict[conditionText]
-    if not len(found):
-        for regex, condition in conditionRegExList:
-            matched = re.match(regex, conditionText)
-            if matched is not None:
-                found = matched.group(0)
-                paylaod = condition
-                if paylaod[0].startswith("regex"):
-                    paylaod = (
-                        f"{paylaod[0].replace('-', '').replace('regex', '')}"
-                        + deciToEnglishNumber(matched.group(1), infoInstance),
-                        condition[1],
-                    )
-                break
-    if len(found) > 0:
-        return "onStatus", found, paylaod
-
-    for id, regex, conditions in groupConditionRegExList:
-        matched = re.split(rf"{regex}{end}", conditionText, flags=re.IGNORECASE)
-        if len(matched) > 1:
-            res = extractGroupCondition(
-                conditionText, infoInstance, matched, conditions
-            )
-            infoInstance.add(
-                "differentGroupedCondition",
-                conditionText.lower(),
-                [id, infoInstance.id] + res,
-            )
-            return ("grouped", re.match(rf"{regex}{end}", conditionText).group(0), res)
-    for id, regex, conditions in groupConditionRegExList:
-        matched = re.split(regex, conditionText, flags=re.IGNORECASE)
-        if len(matched) > 1:
-            res = extractGroupCondition(
-                conditionText, infoInstance, matched, conditions
-            )
-            infoInstance.add(
-                "carefullGroupedCondition",
-                conditionText.lower(),
-                [id, infoInstance.id] + res,
-            )
-            return ("grouped", re.match(regex, conditionText).group(0), res)
-    return "none", "", ()
+def extract_gc_lists(condition_text, info_instance, matched, level_indices):
+    result_levels = []
+    has_any_level = False
+    for level_idx in level_indices:
+        if level_idx == -1:
+            has_any_level = True
+            continue
+        level: str | None = matched[level_idx]
+        if level is None:
+            continue
+        level = level.replace("-", "").strip()
+        if level == "any" or level == "above" or level == "below" or level == "higher":
+            result_levels.append(level)
+        else:
+            try:
+                result_levels.append(int(level))
+            except ValueError:
+                info_instance.add(
+                    "differentErrors",
+                    f"{condition_text}-{level} is not a valid level",
+                )
+    if has_any_level and not len(result_levels):
+        result_levels.append("any")
+    return result_levels
 
 
-def extractGroupCondition(
+def extract_group_condition(
     condition_text: str,
     info_instance: InfoClass,
     matched: list[str | None],
@@ -297,21 +261,21 @@ def extractGroupCondition(
         curr_result = {
             "count": result_count,
             "unit": result_unit,
-            "levels": extract_condition_lists(
+            "levels": extract_gc_lists(
                 condition_text, info_instance, matched, level_indices
             ),
             "additional": "additional" in condition_text,
-            "sources": process_sources(matched, source_indices),
-            "subjectCodesCondition": subjectCodesTranslator(
+            "sources": extract_gc_sources(matched, source_indices),
+            "subjectCodesCondition": extract_gc_subjectCodesCondition(
                 additional_config.get("subjectCodesCondition", None),
                 matched,
                 info_instance,
             ),
-            "takenIn": takenInTranslator(
+            "takenIn": extract_gc_takenIn(
                 additional_config.get("takenIn", None), matched
             ),
             "cap": cap_value,
-            "excluding": extractExcluding(condition_text.lower()),
+            "excluding": extract_gc_excluding(condition_text.lower()),
         }
         curr_result = {k: v for k, v in curr_result.items() if v is not None}
         result.append(curr_result)
@@ -319,30 +283,66 @@ def extractGroupCondition(
     return result
 
 
-def extract_condition_lists(condition_text, info_instance, matched, level_indices):
-    result_levels = []
-    has_any_level = False
-    for level_idx in level_indices:
-        if level_idx == -1:
-            has_any_level = True
-            continue
-        level: str | None = matched[level_idx]
-        if level is None:
-            continue
-        level = level.replace("-", "").strip()
-        if level == "any" or level == "above" or level == "below" or level == "higher":
-            result_levels.append(level)
-        else:
-            try:
-                result_levels.append(int(level))
-            except ValueError:
-                info_instance.add(
-                    "differentErrors",
-                    f"{condition_text}-{level} is not a valid level",
-                )
-    if has_any_level and not len(result_levels):
-        result_levels.append("any")
-    return result_levels
+def extract_conditionText(
+    conditionText: str, infoInstance: InfoClass, strict: bool = False
+) -> tuple[Literal["none", "onStatus", "grouped"], str, tuple | dict]:
+    """Returns: tuple(found,matchedText,onStatus)
+    found: 'none'|'onStatus'|'grouped',
+    matchedText:str,
+    payload: (conditionedOn, conditionedStatus)|groupCondition,
+    """
+    conditionText = re.sub(r"\s+", " ", conditionText.lower()).strip()
+    found = ""
+    paylaod = ()
+    if not strict:
+        for key in conditionDict.keys():
+            if conditionText.startswith(key) and len(key) > len(found):
+                found = key
+                paylaod = conditionDict[key]
+    elif conditionText in conditionDict:
+        found = conditionText
+        paylaod = conditionDict[conditionText]
+    if not len(found):
+        for regex, condition in conditionRegExList:
+            matched = re.match(regex, conditionText)
+            if matched is not None:
+                found = matched.group(0)
+                paylaod = condition
+                if paylaod[0].startswith("regex"):
+                    paylaod = (
+                        f"{paylaod[0].replace('-', '').replace('regex', '')}"
+                        + deciToEnglishNumber(matched.group(1), infoInstance),
+                        condition[1],
+                    )
+                break
+    if len(found) > 0:
+        return "onStatus", found, paylaod
+
+    for id, regex, conditions in groupConditionRegExList:
+        matched = re.split(rf"{regex}{end}", conditionText, flags=re.IGNORECASE)
+        if len(matched) > 1:
+            res = extract_group_condition(
+                conditionText, infoInstance, matched, conditions
+            )
+            infoInstance.add(
+                "differentGroupedCondition",
+                conditionText.lower(),
+                [id, infoInstance.id] + res,
+            )
+            return ("grouped", re.match(rf"{regex}{end}", conditionText).group(0), res)
+    for id, regex, conditions in groupConditionRegExList:
+        matched = re.split(regex, conditionText, flags=re.IGNORECASE)
+        if len(matched) > 1:
+            res = extract_group_condition(
+                conditionText, infoInstance, matched, conditions
+            )
+            infoInstance.add(
+                "carefullGroupedCondition",
+                conditionText.lower(),
+                [id, infoInstance.id] + res,
+            )
+            return ("grouped", re.match(regex, conditionText).group(0), res)
+    return "none", "", ()
 
 
 def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
@@ -408,7 +408,7 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
 
 
 # startpoint has to be the ul
-def extractNested(startPoint: WebElement, infoInstance: InfoClass):
+def extract_nested(startPoint: WebElement, infoInstance: InfoClass):
     listItemsCSS = ":scope li:not(:scope li li)"
 
     listItems = startPoint.find_elements(By.CSS_SELECTOR, listItemsCSS)
@@ -454,7 +454,7 @@ def extractNested(startPoint: WebElement, infoInstance: InfoClass):
                 )
 
             # extract members
-            currRes["appliesTo"] = extractNested(members, infoInstance)
+            currRes["appliesTo"] = extract_nested(members, infoInstance)
             currRes["relatedLinks"] = []
         # if it does not have an inner ul then it's
         else:
@@ -530,10 +530,10 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
                 f"{sectionHeader} not in conditionDict-{infoInstance.id}",
             )
         res["relatedLinks"] = []
-        res["appliesTo"] = extractNested(nestedUl, infoInstance)
+        res["appliesTo"] = extract_nested(nestedUl, infoInstance)
     # if we werent then we are one of the children
     else:
-        results = extractNested(section, infoInstance)
+        results = extract_nested(section, infoInstance)
         if len(results) == 0:
             results = extract_non_ul_container_info(section, infoInstance)
         if len(results) == 1:

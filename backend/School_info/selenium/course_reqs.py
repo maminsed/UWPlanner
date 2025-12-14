@@ -364,8 +364,8 @@ groupConditionRegExList: list[
     ),
     (
         "0010",
-        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses} courses?,?(?: at| from)?(?: the| any)? {level}{sourceBelowAbove}",
-        [(1, 2, levelArray(14), coursesArray(3) + (19, 20, 21), {})],
+        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)? {courses}( approved)? courses?,?(?: at| from)?(?: the| any)? {level}{sourceBelowAbove}",
+        [(1, 2, levelArray(15), coursesArray(3) + (14, 20, 21, 22), {})],
     ),
     (
         "0012",

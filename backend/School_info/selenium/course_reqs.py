@@ -32,7 +32,7 @@ from .constants import (
 delayAmount = 15
 
 
-def bringIntoView(driver: WebDriver, element: WebElement):
+def bring_into_view(driver: WebDriver, element: WebElement):
     driver.execute_script(
         "window.scrollTo({top: arguments[0].getBoundingClientRect().top + window.pageYOffset + 4, behavior: 'instant' });",  # , behavior: 'smooth'  # "arguments[0].scrollIntoView({block:'start'});",
         element,
@@ -40,7 +40,7 @@ def bringIntoView(driver: WebDriver, element: WebElement):
     time.sleep(1)
 
 
-def getLinkAttr(link: WebElement):
+def get_link_attr(link: WebElement):
     url = link.get_attribute("href") or ""
     urlPrefixUnderGrad = (
         "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/"
@@ -59,14 +59,14 @@ def getLinkAttr(link: WebElement):
     return {"value": link.text, "url": url, "linkType": linkType}
 
 
-def safe_find_element(element: WebElement, by, value):
+def safe_find_element(element: WebElement, by, value: str):
     try:
         return element.find_element(by, value)
     except:
         return None
 
 
-def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
+def string_to_english(matched_regex: str, infoInstance: InfoClass) -> str:
     matched_regex = matched_regex.strip().lower()
 
     if matched_regex == "all":
@@ -82,12 +82,12 @@ def deciToEnglishNumber(matched_regex: str, infoInstance: InfoClass):
             return matched_regex
         infoInstance.add(
             "differentErrors",
-            f"120: error occured in deciToEnglishNumber for {infoInstance.id}-{matched_regex}",
+            f"120: error occured in string_to_english for {infoInstance.id}-{matched_regex}",
         )
         return "error139"
 
 
-def strNumberToFloat(str_num: str):
+def string_to_float(str_num: str) -> float:
     str_num = str_num.lower().strip()
     try:
         num = float(str_num)
@@ -111,7 +111,7 @@ def extract_gc_takenIn(rawInput: None | tuple[int], splitedRegex: list[str | Non
     for idx in rawInput:
         if splitedRegex[idx] is None:
             continue
-        res.append(int(strNumberToFloat(splitedRegex[idx])))
+        res.append(int(string_to_float(splitedRegex[idx])))
     return res
 
 
@@ -233,7 +233,7 @@ def extract_group_condition(
         source_indices,
         additional_config,
     ) in conditions:
-        result_count = 1.0 if count_idx == -1 else strNumberToFloat(matched[count_idx])
+        result_count = 1.0 if count_idx == -1 else string_to_float(matched[count_idx])
         result_unit = matched[unit_idx] if unit_idx != -1 else "course"
         if count_idx == -1:
             result_unit = "full source"
@@ -311,7 +311,7 @@ def extract_conditionText(
                 if paylaod[0].startswith("regex"):
                     paylaod = (
                         f"{paylaod[0].replace('-', '').replace('regex', '')}"
-                        + deciToEnglishNumber(matched.group(1), infoInstance),
+                        + string_to_english(matched.group(1), infoInstance),
                         condition[1],
                     )
                 break
@@ -395,7 +395,7 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
 
     links = element.find_elements(By.TAG_NAME, "a")
     for link in links:
-        relatedLinks.append(getLinkAttr(link))
+        relatedLinks.append(get_link_attr(link))
     if found == "onStatus":
         res["appliesTo"][0]["relatedLinks"] = relatedLinks
         res["relatedLinks"] = []
@@ -442,7 +442,7 @@ def extract_nested(startPoint: WebElement, infoInstance: InfoClass):
                     count = str(
                         int(count * (1 if payload[0]["unit"] == "course" else 2))
                     )
-                currRes["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
+                currRes["conditionedOn"] = string_to_english(count, infoInstance)
                 currRes["conditionStatus"] = "complete"
                 currRes["groupConditions"] = payload
             else:
@@ -520,7 +520,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             count = max(gc["count"] for gc in payload)
             if count != "any":
                 count = str(int(count * (1 if payload[0]["unit"] == "course" else 2)))
-            res["conditionedOn"] = deciToEnglishNumber(count, infoInstance)
+            res["conditionedOn"] = string_to_english(count, infoInstance)
             res["conditionStatus"] = "complete"
             res["groupConditions"] = payload
         else:
@@ -618,7 +618,7 @@ def addGroupTodb(
 
             if header == "cross-listed courses":
                 links = container.find_elements(By.TAG_NAME, "a")
-                courseInfo[header] = [getLinkAttr(l) for l in links]
+                courseInfo[header] = [get_link_attr(l) for l in links]
                 continue
             counter += 1
             listVersion = safe_find_element(container, By.CSS_SELECTOR, sectionsTextCSS)
@@ -720,7 +720,7 @@ def get_course_reqs():
             updateGroup = {}
             expandButton = cg.find_element(By.CSS_SELECTOR, expandButtonCSS)
             # bringing the button into view
-            bringIntoView(driver, expandButton)
+            bring_into_view(driver, expandButton)
 
             # openning it
             expandButton = WebDriverWait(cg, delayAmount).until(

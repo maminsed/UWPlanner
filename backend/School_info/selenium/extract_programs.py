@@ -141,8 +141,76 @@ def find_type(programName: str, infoInstance: InfoClass):
 # differentCourseReqs = {}
 
 
-def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
-    """For now SectionEl has to be as outer as possible. (within the section obv)"""
+def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
+    """For now SectionEl has to be as outer as possible. (within the section obv)
+
+    Returns:
+        ListInfo & {
+            innerLists: str[] #list of inner list headers
+        }[]
+
+    """
+    # innerSectionCSS = ":scope section:not(:scope section section)"
+    biggestulCSS = ":scope ul:not(:scope ul ul)"
+
+    def find_header(sectionEl: WebElement):
+        headerCSS = 'div[class*="style__itemHeaderH2"]'
+        header = sectionEl.find_element(By.CSS_SELECTOR, headerCSS).text
+        return header
+
+    outerSections = sectionEl.find_elements(By.CSS_SELECTOR, "section")
+    if sectionEl.tag_name == "section":
+        outerSections.append(sectionEl)
+    if len(outerSections) < 1:
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id}'s course list does not have any outerSection",
+        )
+
+    for i, outerSection in enumerate(outerSections):
+        header = find_header(outerSection)
+        innerSections = outerSection.find_elements(By.CSS_SELECTOR, "section")
+        innerHeaders = [find_header(section) for section in innerSections]
+
+        infoInstance.add(
+            "differentCourseListHeaders",
+            f"{infoInstance.id}-{i}",
+            {"header": header, "innerHeaders": innerHeaders},
+        )
+        biggestuls = safe_find_element(outerSection, By.CSS_SELECTOR, biggestulCSS)
+        if biggestuls is None:
+            infoInstance.add(
+                "differentErrors",
+                f"158: one of {infoInstance.id}'s innerSections has 0 biggest uls",
+            )
+            # TODO: extract markdown
+            continue
+        try:
+            infoInstance.id += "-cl"
+            listInfo = extractContainerInfo(biggestuls, infoInstance)
+            infoInstance.add("differentCourseLists", infoInstance.id, listInfo)
+            infoInstance.id = infoInstance.id[:-3]
+        except Exception as e:
+            print(f"Error: {e}")
+            print(f"Traceback:\n{traceback.format_exc()}")
+            infoInstance.add(
+                "differentErrors",
+                f"172: error occured when extractingContainerInfo for {infoInstance.id}",
+            )
+            infoInstance.add(
+                "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"
+            )
+
+
+def extract_course_reqs(sectionEl: WebElement, infoInstance: InfoClass):
+    """For now SectionEl has to be as outer as possible. (within the section obv)
+
+    Returns:
+        ListInfo & {
+            innerLists: str[] #list of inner list headers
+        }[]
+
+    """
     rulesWrapperCSS = "div.rules-wrapper"
     innerSectionsCSS = "section"
     headerCSS = 'div[class*="style__itemHeaderH2"]'
@@ -162,12 +230,12 @@ def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
     innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
     for innerSection in innerSections:
         header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
-        infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
         if header.lower().startswith("list"):
-            # TODO: route to course Lists
+            extract_course_lists(innerSection, infoInstance)
             continue
-        biggestuls = innerSection.find_elements(By.CSS_SELECTOR, biggestulCSS)
-        if len(biggestuls) == 0:
+        infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
+        biggestuls = safe_find_element(innerSection, By.CSS_SELECTOR, biggestulCSS)
+        if biggestuls is None:
             infoInstance.add(
                 "differentErrors",
                 f"153: one of {infoInstance.id}'s innerSections has 0 biggest uls",
@@ -175,7 +243,9 @@ def courseReqs(sectionEl: WebElement, infoInstance: InfoClass):
             # TODO: extract markdown
             continue
         try:
-            listInfo = extractContainerInfo(biggestuls[0], infoInstance)
+            infoInstance.id += "-cr"
+            listInfo = extractContainerInfo(biggestuls, infoInstance)
+            infoInstance.id = infoInstance.id[:-3]
             infoInstance.add("differentCourseReqs", infoInstance.id, listInfo)
         except Exception as e:
             print(f"Error: {e}")
@@ -227,8 +297,11 @@ def addGroupTodb(
                 infoInstance.add(
                     "differentSectionTypes", section_type, program["program"]
                 )
+
             if section_type == "Course Requirements":
-                courseReqs(section, infoInstance)
+                extract_course_reqs(section, infoInstance)
+            elif section_type == "Course Lists":
+                extract_course_lists(section, infoInstance)
 
         print("process finished")
         driver.close()
@@ -243,6 +316,7 @@ def get_program_reqs():
         [
             ("differentErrors", []),
             ("differentConditionText", {}),
+            ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             ("differentGroupedCondition", {}),
             # ("differentCourseReqs", {}),
@@ -290,8 +364,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 150
-    limit = 40
+    offset = 25
+    limit = 25
     i = 0
     groups = {}
     print(

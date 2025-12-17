@@ -147,7 +147,15 @@ def extract_gc_subjectCodesCondition(
     return {"status": statusMap[status], "limit": limit}
 
 
-def extract_gc_excluding(conditionTextLower: str) -> list[str]:
+def extract_gc_excluding(
+    conditionTextLower: str,
+    preset_matches: tuple[int] | None,
+    matched: list[str | None],
+) -> list[str]:
+    if preset_matches is not None:
+        excludes = extract_gc_sources(matched, preset_matches)
+        if len(excludes):
+            return excludes
     phrase = rf"\((?:excluding|exclusive)(?: of)? {courses}\)"
     matched = re.split(phrase, conditionTextLower)
     if len(matched) > 1:
@@ -193,7 +201,7 @@ def extract_gc_sources(regexMatches: list[str | None], sourceIndecies: list[int]
     return processedSources
 
 
-def extract_gc_lists(condition_text, info_instance, matched, level_indices):
+def extract_gc_lists(condition_text, infoInstance, matched, level_indices):
     result_levels = []
     has_any_level = False
     for level_idx in level_indices:
@@ -210,7 +218,7 @@ def extract_gc_lists(condition_text, info_instance, matched, level_indices):
             try:
                 result_levels.append(int(level))
             except ValueError:
-                info_instance.add(
+                infoInstance.add(
                     "differentErrors",
                     f"{condition_text}-{level} is not a valid level",
                 )
@@ -219,11 +227,56 @@ def extract_gc_lists(condition_text, info_instance, matched, level_indices):
     return result_levels
 
 
+def extract_gc_cap(
+    cap_value: int | str | None, condition_text: str, matched, infoInstance: InfoClass
+):
+    cap_mapping = {
+        "no more than": "max",
+        "no more": "max",
+        "max": "max",
+        "min": "min",
+        "at least": "min",
+        "at most": "max",
+    }
+    if cap_value is not None:
+        if type(cap_value) == int:
+            cap_value = matched[cap_value]
+        if cap_value in cap_mapping:
+            cap_value = cap_mapping[cap_value]
+        elif cap_value != "":
+            infoInstance.add(
+                "differentErrors",
+                f"{condition_text} is supposed to have cap but it actually has: {cap_value}",
+            )
+            cap_value = None
+    return cap_value
+
+
+def extract_gc_additional(
+    conditionText: str,
+    config: bool | int | None,
+    matched: list[str | None],
+    infoInstance: InfoClass,
+):
+    if config is not None:
+        if type(config) == bool:
+            return config
+        res = matched[config]
+        if res is None:
+            infoInstance.add(
+                "differentErrors",
+                f"{infoInstance.id}'s {conditionText} additional was supposed to be non None, but it's None",
+            )
+        return res in ["additional", "remaining", "extra"]
+    conditionText = conditionText.lower().replace("see additional constraint", "")
+    return "additional" in conditionText
+
+
 def extract_group_condition(
     condition_text: str,
-    info_instance: InfoClass,
+    infoInstance: InfoClass,
     matched: list[str | None],
-    conditions: list[int | tuple[int] | dict[str]],
+    conditions: list[tuple[int, int, tuple[int], tuple[int], dict[str]]],
 ):
     result = []
     for (
@@ -238,46 +291,44 @@ def extract_group_condition(
         if count_idx == -1:
             result_unit = "full source"
 
-        cap_value = additional_config.get("cap", None)
-        cap_mapping = {
-            "no more than": "max",
-            "no more": "max",
-            "max": "max",
-            "min": "min",
-            "at least": "min",
-            "at most": "max",
-        }
-        if cap_value is not None:
-            if type(cap_value) == int:
-                cap_value = matched[cap_value]
-            if cap_value in cap_mapping:
-                cap_value = cap_mapping[cap_value]
-            elif cap_value != "":
-                info_instance.add(
-                    "differentErrors",
-                    f"{condition_text} is supposed to have cap but it actually has: {cap_value}",
-                )
-                cap_value = None
         curr_result = {
             "count": result_count,
             "unit": result_unit,
             "levels": extract_gc_lists(
-                condition_text, info_instance, matched, level_indices
+                condition_text, infoInstance, matched, level_indices
             ),
-            "additional": "additional" in condition_text,
+            "additional": extract_gc_additional(
+                condition_text,
+                additional_config.get("additional", None),
+                matched,
+                infoInstance,
+            ),
             "sources": extract_gc_sources(matched, source_indices),
             "subjectCodesCondition": extract_gc_subjectCodesCondition(
                 additional_config.get("subjectCodesCondition", None),
                 matched,
-                info_instance,
+                infoInstance,
             ),
             "takenIn": extract_gc_takenIn(
                 additional_config.get("takenIn", None), matched
             ),
-            "cap": cap_value,
-            "excluding": extract_gc_excluding(condition_text.lower()),
+            "cap": extract_gc_cap(
+                additional_config.get("cap", None),
+                condition_text,
+                matched,
+                infoInstance,
+            ),
+            "excluding": extract_gc_excluding(
+                condition_text.lower(),
+                additional_config.get("excluding", None),
+                matched,
+            ),
         }
         curr_result = {k: v for k, v in curr_result.items() if v is not None}
+        if additional_config.get("extra", False) and (
+            not len(curr_result["levels"]) or not len(curr_result["sources"])
+        ):
+            continue
         result.append(curr_result)
 
     return result
@@ -387,7 +438,7 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
         if any(
             not groupCondition["levels"] or not groupCondition["sources"]
             for groupCondition in payload
-        ):
+        ) or not len(payload):
             infoInstance.add(
                 "differentErrors",
                 f"267: {conditionText.lower()}-{infoInstance.id} levels or sources is empty",
@@ -469,30 +520,31 @@ def extract_nested(startPoint: WebElement, infoInstance: InfoClass):
 
 def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
     # section has to be a top level ul
-    """return:
+    """Function to extract Container Information
     decimalCount: "any" | "two" - "nine"
-    ListInfo: {
-        conditionedOn: 'all' | decimalCount | 'not_any' | 'final' | 'unclassified',
-        conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none',
-        conditionText: str,
-        appliesTo: ListInfo[],
-        groupConditions?: {
-            count: float;
-            unit: 'unit' | 'course' | 'full sourse';
-            levels: [100|200|300|400|500|"any"|"above"|"below"|"higher"];
-            sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
-            additional?: bool;
-            subjectCodesCondition?: {
-                limit: 'all' | decimalCount;
-                status: 'lt'|'gt'|'eq':
-                # EX: {limit: 1, status: lt}: at most 1 different subject code
-            };
-            takenIn?: int[]
-            cap?: "max"|"min"|"exact"
-            excluding?: courseCode[]
-        }[]
-        relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
-    }
+    return:
+        ListInfo: {
+            conditionedOn: 'all' | decimalCount | 'not_any' | 'final' | 'unclassified',
+            conditionStatus: 'complete' | 'currently_enrolled' | 'both' | 'none',
+            conditionText: str,
+            appliesTo: ListInfo[],
+            groupConditions?: {
+                count: float;
+                unit: 'unit' | 'course' | 'full sourse';
+                levels: [100|200|300|400|500|"any"|"above"|"below"|"higher"];
+                sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
+                additional?: bool;
+                subjectCodesCondition?: {
+                    limit: 'all' | decimalCount;
+                    status: 'lt'|'gt'|'eq':
+                    # EX: {limit: 1, status: lt}: at most 1 different subject code
+                };
+                takenIn?: int[]
+                cap?: "max"|"min"|"exact"
+                excluding?: courseCode[]
+            }[]
+            relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
+        }
 
     """
     firstList = safe_find_element(section, By.TAG_NAME, "li")

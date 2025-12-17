@@ -13,7 +13,7 @@ Main functionality:
 """
 
 import re
-from backend.School_info.selenium.course_reqs import groupConditionRegExList
+from backend.School_info.selenium.constants import groupConditionRegExList
 import os.path as path
 
 
@@ -113,7 +113,7 @@ def extract_template_regex_list(sorted_indices: list[int]):
     """Extract regex patterns in specified order and write to file"""
     extracted_patterns = []
     file_path = path.join(
-        path.dirname(__file__), "backend", "School_info", "selenium", "course_reqs.py"
+        path.dirname(__file__), "backend", "School_info", "selenium", "constants.py"
     )
     print(f"file_path: {file_path}")
 

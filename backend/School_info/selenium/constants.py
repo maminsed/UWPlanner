@@ -414,8 +414,8 @@ groupConditionRegExList: list[
     ),
     (
         "0047",
-        rf"^(?:complete|choose) {count} ([a-z]* elective)s?",
-        [(1, -1, (-1,), 2, {})],
+        rf"^(?:complete|choose) {count} ([a-z]* elective)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?(?: (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?",
+        [(1, -1, levelArray(3) + (-1,), listsArray(8) + (2,), {})],
     ),
     # Danger Zone
     (

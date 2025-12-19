@@ -195,6 +195,12 @@ def extract_gc_sources(regexMatches: list[str | None], sourceIndecies: list[int]
             source = (
                 source.replace("list of ", "").replace("courses", "course") + " list"
             )
+        if (
+            len(source) == 1
+            and len(processedSources) >= 1
+            and processedSources[-1].startswith("list")
+        ):
+            source = "list " + source
         processedSources.append(source)
     if hasNegOne and len(processedSources) == 0:
         return ["any"]

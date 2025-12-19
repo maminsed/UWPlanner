@@ -269,10 +269,7 @@ def extract_gc_additional(
             return config
         res = matched[config]
         if res is None:
-            infoInstance.add(
-                "differentErrors",
-                f"{infoInstance.id}'s {conditionText} additional was supposed to be non None, but it's None",
-            )
+            return False
         return res in ["additional", "remaining", "extra"]
     conditionText = conditionText.lower().replace("see additional constraint", "")
     return "additional" in conditionText

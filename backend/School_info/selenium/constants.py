@@ -417,6 +417,11 @@ groupConditionRegExList: list[
         rf"^(?:complete|choose) {count} ([a-z]* elective)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?(?: (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?",
         [(1, -1, levelArray(3) + (-1,), listsArray(8) + (2,), {})],
     ),
+    (
+        "0048",
+        rf"^the( remaining)? {count} (course|unit)s? can be (?:from|in) {lists(True)}",
+        [(2, 3, (-1,), listsArray(4), {"additional": 1})],
+    ),
     # Danger Zone
     (
         "0005DZ",
@@ -436,8 +441,8 @@ groupConditionRegExList: list[
     (
         "0040DZ",
         # IMPORTANT TO BE LAST
-        rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)?(?: course lists?)?( following lists?| above| below)?(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
-        [(1, 2, (-1,), (-1, 4), {})],
+        rf"^(?:complete|choose) {count} (course|unit)s?(?: of)?(?: additional )?(?: courses?)?(?: \({count} unit\))?(?:.? {count} (?:course|unit) from {count})?(?: at| from| of)?(?: the| any)?(?: lists?)?(?: of)?(?: approved courses?)?(?: course lists?)?( following lists?| above| below)?(?: of courses)?(?: or subjects)?(?: lists?)?(?:; the {years} course can be taken from {lists()})?",
+        [(1, 2, (-1,), (-1, 6), {})],
     ),
     (
         "0019DZ",

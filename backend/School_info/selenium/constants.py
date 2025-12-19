@@ -33,7 +33,7 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
     ),
     (r"^eligible (subject code|course)s? for list [a-z0-9]:?", ("any", "complete")),
     (
-        r"^the following(?: lists of courses)? are ineligible as List [a-z0-9](?: [a-z]*)? courses?.?",
+        r"^the following(?: lists? of courses)? are ineligible as list [a-z0-9](?: [a-z]*)? courses?.?",
         ("not_any", "complete"),
     ),
     (
@@ -86,6 +86,7 @@ years = (
 )
 nonCourseWords = [
     "labratory",
+    "laboratory",
     "lab",
     "lecture",
     "language",
@@ -94,8 +95,8 @@ nonCourseWords = [
     "field",
     "non-math",
 ]
-preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the)"
-postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?: or (?:{'s?|'.join(nonCourseWords)}s?))?)?(?!(?:unit|course))"
+preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the|excluding)"
+postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?: or (?:{'s?|'.join(nonCourseWords)}s?))?)?(?!(?:unit|course|excluding))"
 course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
 courses = (
     rf"{preCourse}({course}){postCourse}"
@@ -112,10 +113,10 @@ end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? instituti
 
 def lists(count: bool = False):
     status = "?:" if not count else ""
-    singleList = r"list(?: (?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?"
     return (
-        rf"({status}(?: from)?(?:[a-z]*\s?[a-z]* )?{singleList})"
-        + rf"(?:(?:,|, or| or| and)?(?: from)? ({status}{singleList}))?" * 3
+        rf"({status}(?:from )?(?:[a-z]*\s?[a-z]* )?list(?: (?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?)"
+        + rf"(?:(?:,|, or| or| and)?(?: from)? ({status}(?:list )?(?:(?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?))?"
+        * 3
     )
 
 
@@ -196,7 +197,7 @@ groupConditionRegExList: list[
     ),
     (
         "0044",
-        rf"^(?:complete|choose) {count} (course|unit)(?: \((?:minimum )?\d\.\d\d? unit\))? with an eligible subject code for {lists(True)}(?: or listed individually (below))?.?(?:(?: courses that appear on list {lists(True)})?(?:( or| and|, )? the (exclusions list))? are ineligible.?)?(?: courses that satisfy the university (communication requirement)(?: for the student.s major)? are ineligible)?",
+        rf"^(?:complete|choose) {count} (course|unit)(?: \((?:minimum )?\d\.\d\d? unit\))? with an eligible subject code for {lists(True)}(?: or listed individually (below))?.?(?:(?: courses that appear on {lists(True)})?(?:( or| and|, )? the (exclusions list))? are ineligible.?)?(?: courses that satisfy the university (communication requirement)(?: for the student.?s major)? are ineligible)?",
         [(1, 2, (-1,), listsArray(3) + (7,), {"excluding": listsArray(8) + (12, 13)})],
     ),
     (
@@ -258,7 +259,7 @@ groupConditionRegExList: list[
                 (-1,),
                 listsArray(22),
                 {"extra": True, "additional": True},
-            ),  # TODO:do something here
+            ),
         ],
     ),
     (
@@ -401,8 +402,8 @@ groupConditionRegExList: list[
     ),
     (
         "0008",
-        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}",
-        [(1, 2, (-1,), listsArray(3), {})],
+        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?(?: options in)? {lists(True)}(?:(?: or)?(?: an| any)?(?: additional)? (?:course|unit)s? from {lists(True)})?",
+        [(1, 2, (-1,), listsArray(3) + listsArray(7), {})],
     ),
     (
         "0023",
@@ -410,6 +411,11 @@ groupConditionRegExList: list[
         [
             (1, 2, levelArray(3) + (-1,), coursesArray(9) + (8,), {}),
         ],
+    ),
+    (
+        "0047",
+        rf"^(?:complete|choose) {count} ([a-z]* elective)s?",
+        [(1, -1, (-1,), 2, {})],
     ),
     # Danger Zone
     (

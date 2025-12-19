@@ -230,7 +230,7 @@ def extract_course_reqs(sectionEl: WebElement, infoInstance: InfoClass):
     innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
     for innerSection in innerSections:
         header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
-        if header.lower().startswith("list"):
+        if "list" in header.lower():
             extract_course_lists(innerSection, infoInstance)
             continue
         infoInstance.add("differentCourseReqsSections", header, infoInstance.id)

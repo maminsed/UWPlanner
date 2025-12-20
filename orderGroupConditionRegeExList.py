@@ -12,6 +12,7 @@ Main functionality:
 - Supports parsing of regex constructs: parentheses, square brackets, quantifiers, alternation, etc.
 """
 
+import json
 import re
 from backend.School_info.selenium.constants import groupConditionRegExList
 import os.path as path
@@ -182,17 +183,16 @@ if __name__ == "__main__":
     ]
     sorted_by_length.sort(reverse=True)
     print("Sorted by length: ")
-    print(
-        [
-            {
-                "min_regex_len": min_regex_len,
-                "regex_pattern_len": regex_pattern_len,
-                "arrayIdx": arrayIdx,
-                "Id": id,
-            }
-            for min_regex_len, regex_pattern_len, arrayIdx, id in sorted_by_length
-        ]
-    )
+    with open("text4.json","w") as f:
+        json.dump( [
+                {
+                    "min_regex_len": min_regex_len,
+                    "regex_pattern_len": regex_pattern_len,
+                    "arrayIdx": arrayIdx,
+                    "Id": id,
+                }
+                for min_regex_len, regex_pattern_len, arrayIdx, id in sorted_by_length
+            ],f,indent=2)
     reordered_patterns = extract_template_regex_list(
         [item[2] for item in sorted_by_length]
     )

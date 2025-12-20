@@ -188,7 +188,9 @@ def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
         try:
             infoInstance.id += "-cl"
             listInfo = extractContainerInfo(biggestuls, infoInstance)
-            infoInstance.add("differentCourseLists", infoInstance.id, listInfo)
+            infoInstance.add(
+                "differentCourseLists", f"{infoInstance.id}-{header}", listInfo
+            )
             infoInstance.id = infoInstance.id[:-3]
         except Exception as e:
             print(f"Error: {e}")
@@ -317,10 +319,11 @@ def get_program_reqs():
             ("differentErrors", []),
             ("differentWarnings", []),
             ("differentConditionText", {}),
-            ("differentCourseListHeaders", {}),
+            # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             ("differentGroupedCondition", {}),
             # ("differentCourseReqs", {}),
+            # ("differentCourseLists",{}),
             ("differentSectionTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),
@@ -365,7 +368,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 100
+    offset = 125
     limit = 25
     i = 0
     groups = {}

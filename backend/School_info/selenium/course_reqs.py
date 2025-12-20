@@ -437,28 +437,26 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
         newConditionText = (
             conditionText[len(matchedText) :].replace(":", "").replace("\n", "").strip()
         )
-        relatedLinks = [
-            {"value": r.strip(), "url": "", "linkType": "course"}
-            for r in re.sub(r"[.,!?><\\/]", " ", newConditionText).split(" ")
-            if r.strip() != ""
-        ]
-        res["appliesTo"] = [
-            {
-                "conditionedOn": "final",
-                "conditionStatus": "none",
-                "conditionText": newConditionText,
-                "appliesTo": [],
-                "relatedLinks": relatedLinks,
-            }
-        ]
+        res["appliesTo"] = []
+        if newConditionText != "":
+            relatedLinks = [
+                {"value": r.strip(), "url": "", "linkType": "course"}
+                for r in re.sub(r"[.,!?><\\/]", " ", newConditionText).split(" ")
+                if r.strip() != ""
+            ]
+            res["appliesTo"] = [
+                {
+                    "conditionedOn": "final",
+                    "conditionStatus": "none",
+                    "conditionText": newConditionText,
+                    "appliesTo": [],
+                    "relatedLinks": relatedLinks,
+                }
+            ]
+
         res["conditionedOn"], res["conditionStatus"] = payload
         res["conditionText"] = matchedText
-    elif found == "none":
-        res["conditionedOn"] = "final"
-        res["conditionStatus"] = "none"
-        res["conditionText"] = conditionText
-        res["appliesTo"] = []
-    else:
+    elif found == "grouped":
         res["conditionedOn"] = "final"
         res["conditionStatus"] = "complete"
         res["conditionText"] = conditionText
@@ -472,11 +470,16 @@ def extract_non_ul_container_info(element: WebElement, infoInstance: InfoClass):
                 "differentErrors",
                 f"267: {conditionText.lower()}-{infoInstance.id} levels or sources is empty",
             )
+    elif found == "none":
+        res["conditionedOn"] = "final"
+        res["conditionStatus"] = "none"
+        res["conditionText"] = conditionText
+        res["appliesTo"] = []
 
     links = element.find_elements(By.TAG_NAME, "a")
     for link in links:
         relatedLinks.append(get_link_attr(link))
-    if found == "onStatus":
+    if found == "onStatus" and len(res["appliesTo"]):
         res["appliesTo"][0]["relatedLinks"] = relatedLinks
         res["relatedLinks"] = []
     else:

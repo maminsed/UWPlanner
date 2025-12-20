@@ -94,6 +94,7 @@ nonCourseWords = [
     "seminar",
     "field",
     "non-math",
+    "topic",
 ]
 preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the|excluding)"
 postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?: or (?:{'s?|'.join(nonCourseWords)}s?))?)?(?!(?:unit|course|excluding))"
@@ -114,8 +115,8 @@ end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? instituti
 def lists(count: bool = False):
     status = "?:" if not count else ""
     return (
-        rf"({status}(?:from )?(?:[a-z]*\s?[a-z]* )?list(?: (?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?)"
-        + rf"(?:(?:,|, or| or| and)?(?: from)? ({status}(?:list )?(?:(?![a-z0-9]{2})[0-9a-z]| of(?: approved)? courses)?))?"
+        rf"(?:from )?({status}(?:[a-z]*\s?[a-z]* )?list(?: of(?: approved)? courses)?| (?![a-z0-9]{2})[0-9a-z])"
+        + rf"(?:(?:,|, or| or| and)?(?: from)? ({status}(?:list )?(?:of(?: approved)? courses|(?![a-z0-9]{2})[0-9a-z])?))?"
         * 3
     )
 
@@ -272,13 +273,13 @@ groupConditionRegExList: list[
     ),
     (
         "0041",
-        rf"^(?:complete|choose) {count}(?: (?:non-?)?{course})? (course|unit)s?(?: of courses?)? (?:at|from|of|in)(?: the| any)? (same) subject(?: codes?)? (?:at|from|in)(?: the| any)?( {countWithAll})?(?: of the)?(?: following)?(?: language and culture)?(?: subject code| course)s?: {courses}(?:, {courses})?",
+        rf"^(?:complete|choose) {count}(?: (?:non-?)?{course})? (course|unit)s?(?: of courses?)? (?:at|from|of|in)(?: the| any)? (same) subject(?: codes?)? (?:at|from|in)(?: the| any)?( {countWithAll})?(?: of the)?(?: following)?(?: language and culture)?(?: subject code| course)s?: {courses}(?:, {courses})?(?:, {courses})?",
         [
             (
                 1,
                 2,
                 (-1,),
-                coursesArray(5) + coursesArray(16),
+                coursesArray(5) + coursesArray(16) + coursesArray(27),
                 {"subjectCodesCondition": (4, 3)},
             )
         ],

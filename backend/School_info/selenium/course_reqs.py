@@ -151,20 +151,23 @@ def extract_gc_excluding(
     conditionTextLower: str,
     preset_matches: tuple[int] | None,
     matched: list[str | None],
+    infoInstance: InfoClass,
 ) -> list[str]:
     if preset_matches is not None:
-        excludes = extract_gc_sources(matched, preset_matches)
+        excludes = extract_gc_sources(matched, preset_matches, infoInstance)
         if len(excludes):
             return excludes
     phrase = rf"\((?:excluding|exclusive)(?: of)? {courses}\)"
     matched = re.split(phrase, conditionTextLower)
     if len(matched) > 1:
-        return extract_gc_sources(matched, coursesArray(1))
+        return extract_gc_sources(matched, coursesArray(1), infoInstance)
     else:
         return []
 
 
-def extract_gc_sources(regexMatches: list[str | None], sourceIndecies: list[int]):
+def extract_gc_sources(
+    regexMatches: list[str | None], sourceIndecies: list[int], infoInstance: InfoClass
+):
     processedSources: list[str] = []
     hasNegOne = False
     for sourceIdx in sourceIndecies:
@@ -201,6 +204,15 @@ def extract_gc_sources(regexMatches: list[str | None], sourceIndecies: list[int]
             and processedSources[-1].startswith("list")
         ):
             source = "list " + source
+        if len(source) == 1:
+            infoInstance.add(
+                "differentWarnings", f"{source} at {infoInstance.id} has lenght one"
+            )
+            continue
+        elif len(source) > 15:
+            infoInstance.add(
+                "differentWarnings", f"{source} at {infoInstance.id} is too long"
+            )
         processedSources.append(source)
     if hasNegOne and len(processedSources) == 0:
         return ["any"]
@@ -306,7 +318,7 @@ def extract_group_condition(
                 matched,
                 infoInstance,
             ),
-            "sources": extract_gc_sources(matched, source_indices),
+            "sources": extract_gc_sources(matched, source_indices, infoInstance),
             "subjectCodesCondition": extract_gc_subjectCodesCondition(
                 additional_config.get("subjectCodesCondition", None),
                 matched,
@@ -325,6 +337,7 @@ def extract_group_condition(
                 condition_text.lower(),
                 additional_config.get("excluding", None),
                 matched,
+                infoInstance,
             ),
         }
         curr_result = {k: v for k, v in curr_result.items() if v is not None}

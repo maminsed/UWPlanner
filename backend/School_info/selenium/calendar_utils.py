@@ -1,6 +1,7 @@
 class InfoClass:
     id: str = ""
     notReturnedTags = set()
+    envVars: dict[str] = {}
 
     def __init__(
         self,
@@ -28,7 +29,12 @@ class InfoClass:
             self.notReturnedTags.add(tag)
 
     def get(self, tag: str):
-        return self.infoDictionary[tag]
+        if tag in self.infoDictionary:
+            return self.infoDictionary[tag]
+        return self.envVars[tag]
+
+    def setEnvVar(self, tag: str, value):
+        self.envVars[tag] = value
 
     def returnJson(self, additionalTags: dict, removedTags: set[str] = set()):
         self.infoDictionary.update(additionalTags)

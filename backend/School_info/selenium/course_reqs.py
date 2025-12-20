@@ -191,7 +191,8 @@ def extract_gc_sources(
             .strip()
         )
         if re.match(
-            r"(following (list|courses?|options?)|list of (courses|options))", source
+            r"(following (list|courses?|options?)|list of (courses|options)|this list)",
+            source,
         ):
             source = "below"
         elif source == "following lists":
@@ -263,13 +264,19 @@ def extract_gc_cap(
         "no more than": "max",
         "no more": "max",
         "max": "max",
+        "minimum": "min",
+        "maximum": "max",
+        "at least": "min",
+        "at most": "max",
         "min": "min",
         "at least": "min",
         "at most": "max",
     }
     if cap_value is not None:
         if type(cap_value) == int:
-            cap_value = matched[cap_value]
+            cap_value = (matched[cap_value] or "").strip()
+        if cap_value == "":
+            return None
         if cap_value in cap_mapping:
             cap_value = cap_mapping[cap_value]
         elif cap_value != "":

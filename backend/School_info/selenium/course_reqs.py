@@ -124,11 +124,15 @@ def extract_gc_subjectCodesCondition(
     if rawInput is None:
         return None
     limit, status = rawInput
+    if limit is None and status is None:
+        return None
     limit = (splitedRegex[limit] or "").strip()
     if limit == "one" or limit == "all" or not limit:
         limit = "any"
     statusMap = {
         "at least": "gt",
+        "minimum": "gt",
+        "maximum": "lt",
         "at most": "lt",
         "all from": "eq",
         "only": "eq",
@@ -206,12 +210,14 @@ def extract_gc_sources(
             source = "list " + source
         if len(source) == 1:
             infoInstance.add(
-                "differentWarnings", f"{source} at {infoInstance.id} has lenght one"
+                "differentWarnings",
+                f"'{source}' at {infoInstance.id} has lenght one. ConditionText: '{infoInstance.get('conditionText')}', matchedId: '{infoInstance.get('matchedId')}'",
             )
             continue
         elif len(source) > 15:
             infoInstance.add(
-                "differentWarnings", f"{source} at {infoInstance.id} is too long"
+                "differentWarnings",
+                f"'{source}' at {infoInstance.id} is too long: {len(source)}",
             )
         processedSources.append(source)
     if hasNegOne and len(processedSources) == 0:
@@ -385,9 +391,11 @@ def extract_conditionText(
     if len(found) > 0:
         return "onStatus", found, paylaod
 
+    infoInstance.setEnvVar("conditionText", conditionText)
     for id, regex, conditions in groupConditionRegExList:
         matched = re.split(rf"{regex}{end}", conditionText, flags=re.IGNORECASE)
         if len(matched) > 1:
+            infoInstance.setEnvVar("matchedId", id)
             res = extract_group_condition(
                 conditionText, infoInstance, matched, conditions
             )

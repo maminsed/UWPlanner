@@ -105,18 +105,19 @@ courses = (
     * 10
 )
 level = (
-    r"(?:([0-9]00)-?(?: ?level)?(?:,|, or| or|or)? )?" * 3
+    r"([0-9]00)-?(?: ?level)?(?:,|, or| or|or)? " * 3
     + r"([0-9]00-?|any)(?: ?level)?(?:(?:,|, or| or|or)? (below|above|higher))?"
 )
 sourceBelowAbove = r"(?: ?( or)? (?:at|from|of)(?: the| any)?(?: following)?(?: approved)? (?:(list of(?: approved)? courses?)|(?:list of )?(?:approved )?courses?(?: list(?:s|ed)?)?( below| above)?))?"
 end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? institutions other than the university of waterloo)?(?: ?\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
 
 
+# TODO: fix lists
 def lists(count: bool = False):
     status = "?:" if not count else ""
     return (
         rf"(?:from )?({status}(?:[a-z]*\s?[a-z]* )?list(?: of(?: approved)? courses)?| (?![a-z0-9]{2})[0-9a-z])"
-        + rf"(?:(?:,|, or| or| and)?(?: from)? ({status}(?:list )?(?:of(?: approved)? courses|(?![a-z0-9]{2})[0-9a-z])?))?"
+        + rf"(?:(?:,|, or| or| and| and/or|, and/or)?(?: from)? ({status}(?:list )?(?:of(?: approved)? courses|(?![a-z0-9]{2})[0-9a-z])?))?"
         * 3
     )
 
@@ -393,7 +394,7 @@ groupConditionRegExList: list[
     ),
     (
         "0015",
-        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)? {level}{sourceBelowAbove}",
+        rf"^(?:complete|choose) {count} (course|unit)s? (?:at|from|of)(?: the| any)?( of the)?( following)? {level}{sourceBelowAbove}",
         [(1, 2, levelArray(3), (8, 9, 10), {})],
     ),
     (
@@ -415,19 +416,32 @@ groupConditionRegExList: list[
     ),
     (
         "0047",
-        rf"^(?:complete|choose) {count} ([a-z]* elective)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?(?: (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?",
-        [(1, -1, levelArray(3) + (-1,), listsArray(8) + (2,), {})],
+        rf"^(?:complete|choose) {count} ([a-z]* elective)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?(?: (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?(?:.? with (?:a )?(minimum|maximum|at least|at most) of {count} taken from {lists(True)})?",
+        [
+            (
+                1,
+                -1,
+                levelArray(3) + (-1,),
+                listsArray(8) + (2,),
+                {"subjectCodesCondition": (14, 13)},
+            )
+        ],
     ),
     (
         "0048",
         rf"^the( remaining)? {count} (course|unit)s? can be (?:from|in) {lists(True)}",
         [(2, 3, (-1,), listsArray(4), {"additional": 1})],
     ),
+    (
+        "0049",
+        rf"^(?:complete|choose) (course|unit)s? (?:at|from|of|in)(?: the| any)?(?: of the)?(?: following)? (?:subject code|course)s?.? {courses}(?:,? {courses})?",
+        [(-1, 1, (-1,), coursesArray(3) + coursesArray(14), {})],
+    ),
     # Danger Zone
     (
         "0005DZ",
-        rf"^(?:complete|choose) {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?:(?: in)? additional)? {courses}(?: courses)?",
-        [(1, 2, (-1,), coursesArray(3), {})],
+        rf"^(?:complete|choose) {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?: of the)?(?:(?: in)? additional)?(?: {courses})?(?: courses)?",
+        [(1, 2, (-1,), coursesArray(3) + (-1,), {})],
     ),
     (
         "0028DZ",

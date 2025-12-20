@@ -1,3 +1,83 @@
+from typing import Literal
+
+# Map numbers to words
+number_words = {
+    1: "any",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+}
+
+
+def connectives(
+    status: Literal["full", "or", "and"] = "full",
+    spaceAfter: bool = False,
+    extras: list[str] = [],
+):
+    spaceAfter = " " if spaceAfter else ""
+    extras = extras + [f",{spaceAfter}"]
+    listOfCon = [", and/or", " and/or", ", and", " and", ", or", " or"]
+    startSizeDict = {"full": (0, len(listOfCon)), "or": (4, 2), "and": (2, 2)}
+    start, size = startSizeDict[status]
+    return rf"{f'{spaceAfter}|'.join(listOfCon[start : start + size])}{spaceAfter}|{'|'.join(extras)}"
+
+
+countingYears = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh"]
+
+count = rf"(?:a |the )?(?:equivalent of )?(?:total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+countWithAll = rf"(?:a |the )?(?:equivalent of )?(?:total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
+years = (
+    rf"(\d|any|{'|'.join(countingYears)})"
+    + rf"(?:(?:{connectives('or')}) (\d|any|{'|'.join(countingYears)}))?" * 4
+)
+nonCourseWords = [
+    "labratory",
+    "laboratory",
+    "lab",
+    "lecture",
+    "language",
+    "studio",
+    "seminar",
+    "field",
+    "non-math",
+    "topic",
+]
+preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the|excluding|following)"
+postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?:(?:{connectives('or')}) (?:{'s?|'.join(nonCourseWords)}s?))?)?(?:\(? ?\d.?\d?\d?(?: |-)unit\)?)?(?!(?:unit|course|excluding))"
+course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
+courses = (
+    rf"{preCourse}({course}){postCourse}"
+    + rf"(?:(?:{connectives('full', True, ['/'])}){preCourse}({course}){postCourse})?"
+    * 10
+)
+level = (
+    rf"(?:([0-9]00)-?(?: ?level)?(?:{connectives('or', extras=['or'])})? )?" * 3
+    + rf"([0-9]00-?|any level)(?: ?level)?(?:(?:{connectives('or', extras=['or'])})? (below|above|higher|greater))?"
+)
+sourceBelowAbove = rf"(?:({connectives('or')})? ?(?:at|from|of)(?: the| any)?(?: following)?(?: approved)? (?:(list of(?: approved)? courses?)|(?:list of )?(?:approved )?courses?(?: list(?:s|ed)?)?( below| above)?))?"
+end = r"[,\.\s\-_]{,3}(?: ?\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
+
+
+def lists(count: bool = False):
+    status = "?:" if not count else ""
+    singlist = rf"list(?: of(?: approved)? courses| {r'(?![a-z0-9]{2})'}[0-9a-z])|[a-z]*\s?[a-z]* list"
+    return (
+        rf"(?:from )?(?:either )?({status}{singlist})"
+        + rf"(?:(?:{connectives('full')})(?: from)? ({status}{singlist}|[0-9]))?" * 3
+    )
+
+
+levelArray = lambda x: tuple([i + x for i in range(5)])
+coursesArray = lambda x: tuple([i + x for i in range(11)])
+listsArray = lambda x: tuple([i + x for i in range(4)])
+yearsArray = lambda x: tuple([i + x for i in range(5)])
+
+
 # conditionText: (conditionedOn, conditionStatus)
 conditionDict: dict[str, tuple[str, str]] = {
     "not completed any of the following": ("not_any", "complete"),
@@ -53,6 +133,10 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("regex", "complete"),
     ),
     (
+        rf"^(?:complete|choose) {countWithAll} courses? from any of the following:?",
+        ("regex", "complete"),
+    ),
+    (
         r"^(?:complete|choose)d or concurrently enrolled in at least ([0-9]|all|any) of the following",
         ("regex", "both"),
     ),
@@ -62,70 +146,6 @@ conditionRegExList: list[tuple[str, tuple[str, str]]] = [
         ("regex-less_than_", "complete"),
     ),
 ]
-
-
-# Map numbers to words
-number_words = {
-    1: "any",
-    2: "two",
-    3: "three",
-    4: "four",
-    5: "five",
-    6: "six",
-    7: "seven",
-    8: "eight",
-    9: "nine",
-}
-countingYears = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh"]
-
-count = rf"(?:a |the )?(?:equivalent of )?(?:total of )?(?:up to )?(?:at least )?(?:an additional )?(\d\d?(?:\.\d\d?)?|one|{'|'.join(number_words.values())})(?: additional)?(?: \d\.\d(?:-|\s)?unit)?"
-countWithAll = rf"(?:an additional )?(\d\d?(?:\.\d\d?)?|all|one|{'|'.join(number_words.values())})(?: additional)?"
-years = (
-    rf"(\d|any|{'|'.join(countingYears)})"
-    + rf"(?:(?: or|, or|,) (\d|any|{'|'.join(countingYears)}))?" * 4
-)
-nonCourseWords = [
-    "labratory",
-    "laboratory",
-    "lab",
-    "lecture",
-    "language",
-    "studio",
-    "seminar",
-    "field",
-    "non-math",
-    "topic",
-]
-preCourse = rf"(?:(?:elective|in|additional|{'s?|'.join(nonCourseWords)}s?) )?(?!unit|course|the|excluding)"
-postCourse = rf"(?: (?:elective|additional|{'s?|'.join(nonCourseWords)}s?)(?: or (?:{'s?|'.join(nonCourseWords)}s?))?)?(?!(?:unit|course|excluding))"
-course = r"[a-z]{1,8} ?(?:[0-9]{3}[a-z]?)?(?: ?- ?[a-z]{,8} ?[0-9]{3}[a-z]?)?"
-courses = (
-    rf"{preCourse}({course}){postCourse}"
-    + rf"(?:(?: and | or |, and |, or |, |/| and/or ){preCourse}({course}){postCourse})?"
-    * 10
-)
-level = (
-    r"([0-9]00)-?(?: ?level)?(?:,|, or| or|or)? " * 3
-    + r"([0-9]00-?|any)(?: ?level)?(?:(?:,|, or| or|or)? (below|above|higher))?"
-)
-sourceBelowAbove = r"(?: ?( or)? (?:at|from|of)(?: the| any)?(?: following)?(?: approved)? (?:(list of(?: approved)? courses?)|(?:list of )?(?:approved )?courses?(?: list(?:s|ed)?)?( below| above)?))?"
-end = r"[,\.\s\-_]{,3}(?:taken at (?:one|two|three|four)?(?: or more)? institutions other than the university of waterloo)?(?: ?\(?see additional constraints\)?)?[^a-zA-Z0-9]*$"
-
-
-# TODO: fix lists
-def lists(count: bool = False):
-    status = "?:" if not count else ""
-    return (
-        rf"(?:from )?({status}(?:[a-z]*\s?[a-z]* )?list(?: of(?: approved)? courses)?| (?![a-z0-9]{2})[0-9a-z])"
-        + rf"(?:(?:,|, or| or| and| and/or|, and/or)?(?: from)? ({status}(?:list )?(?:of(?: approved)? courses|(?![a-z0-9]{2})[0-9a-z])?))?"
-        * 3
-    )
-
-
-levelArray = lambda x: tuple([i + x for i in range(5)])
-coursesArray = lambda x: tuple([i + x for i in range(11)])
-listsArray = lambda x: tuple([i + x for i in range(4)])
-yearsArray = lambda x: tuple([i + x for i in range(5)])
 
 # count,unit,level,sources,{subjectCodesCondition:(limit,status),takenIn:tuple[int],cap:int|str}
 """
@@ -418,13 +438,16 @@ groupConditionRegExList: list[
         "0047",
         rf"^(?:complete|choose) {count} ([a-z]* elective)s?(?: (?:at|from|of)(?: the| any)?(?: following)? {level})?(?: (?:at|from|of)(?: the| any)?(?: following)? {lists(True)})?(?:.? with (?:a )?(minimum|maximum|at least|at most) of {count} taken from {lists(True)})?",
         [
+            (1, -1, levelArray(3) + (-1,), listsArray(8) + (2,), {}),
             (
                 1,
                 -1,
                 levelArray(3) + (-1,),
-                listsArray(8) + (2,),
-                {"subjectCodesCondition": (14, 13)},
-            )
+                listsArray(
+                    14,
+                ),
+                {"subjectCodesCondition": (13, 12), "extra": True},
+            ),
         ],
     ),
     (
@@ -435,13 +458,13 @@ groupConditionRegExList: list[
     (
         "0049",
         rf"^(?:complete|choose) (course|unit)s? (?:at|from|of|in)(?: the| any)?(?: of the)?(?: following)? (?:subject code|course)s?.? {courses}(?:,? {courses})?",
-        [(-1, 1, (-1,), coursesArray(3) + coursesArray(14), {})],
+        [(-1, 1, (-1,), coursesArray(2) + coursesArray(13), {})],
     ),
     # Danger Zone
     (
         "0005DZ",
-        rf"^(?:complete|choose) {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?: of the)?(?:(?: in)? additional)?(?: {courses})?(?: courses)?",
-        [(1, 2, (-1,), coursesArray(3) + (-1,), {})],
+        rf"^(?:complete|choose) {count}(?: non-math| elective| labratory| cs)? (course|unit)s?(?: chosen)?(?: at| from| of)?(?: the| any)?(?: of the)?( following (?:course|option)s?)?(?: following)?(?:(?: in)? additional)?(?: {courses})?(?: courses| options)?",
+        [(1, 2, (-1,), coursesArray(4) + (-1, 3), {})],
     ),
     (
         "0028DZ",

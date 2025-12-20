@@ -124,9 +124,11 @@ def extract_gc_subjectCodesCondition(
     if rawInput is None:
         return None
     limit, status = rawInput
-    if limit is None and status is None:
-        return None
     limit = (splitedRegex[limit] or "").strip()
+    if type(status) == int:
+        status = (splitedRegex[status] or "").strip()
+    if limit == "" and status == "":
+        return None
     if limit == "one" or limit == "all" or not limit:
         limit = "any"
     statusMap = {
@@ -140,8 +142,6 @@ def extract_gc_subjectCodesCondition(
         "eq": "eq",
     }
 
-    if type(status) == int:
-        status = splitedRegex[status].strip()
     if not status or status is None or status not in statusMap:
         infoInstance.add(
             "differentErrors", f"{rawInput} at {splitedRegex} has status: '{status}'"
@@ -190,14 +190,16 @@ def extract_gc_sources(
             .replace("and list", "&list")
             .strip()
         )
-        if source == "following list" or "list of course" in source:
+        if re.match(
+            r"(following (list|courses?|options?)|list of (courses|options))", source
+        ):
             source = "below"
         elif source == "following lists":
             source = "course lists"
         elif re.match(
             r"^[a-z]{1,8} [0-9]{3}[a-z]?(?: ?- ?[a-z]{,8} [0-9]{3}[a-z]?)?$", source
         ):
-            source = source.replace(" ", "")
+            source = source.replace(" ", "")  # e.g. cs 120
         elif re.match(r"list of [a-z]* courses?", source):
             source = (
                 source.replace("list of ", "").replace("courses", "course") + " list"
@@ -214,7 +216,7 @@ def extract_gc_sources(
                 f"'{source}' at {infoInstance.id} has lenght one. ConditionText: '{infoInstance.get('conditionText')}', matchedId: '{infoInstance.get('matchedId')}'",
             )
             continue
-        elif len(source) > 15:
+        elif len(source) > 18:
             infoInstance.add(
                 "differentWarnings",
                 f"'{source}' at {infoInstance.id} is too long: {len(source)}",
@@ -225,7 +227,7 @@ def extract_gc_sources(
     return processedSources
 
 
-def extract_gc_lists(condition_text, infoInstance, matched, level_indices):
+def extract_gc_levels(condition_text, infoInstance, matched, level_indices):
     result_levels = []
     has_any_level = False
     for level_idx in level_indices:
@@ -236,8 +238,11 @@ def extract_gc_lists(condition_text, infoInstance, matched, level_indices):
         if level is None:
             continue
         level = level.replace("-", "").strip()
-        if level == "any" or level == "above" or level == "below" or level == "higher":
-            result_levels.append(level)
+        aboveList = ["higher", "greater", "above"]
+        if level == "any level":
+            level = "any"
+        if level == "any" or level == "below" or level in aboveList:
+            result_levels.append(level if level not in aboveList else "above")
         else:
             try:
                 result_levels.append(int(level))
@@ -315,7 +320,7 @@ def extract_group_condition(
         curr_result = {
             "count": result_count,
             "unit": result_unit,
-            "levels": extract_gc_lists(
+            "levels": extract_gc_levels(
                 condition_text, infoInstance, matched, level_indices
             ),
             "additional": extract_gc_additional(
@@ -554,7 +559,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             appliesTo: ListInfo[],
             groupConditions?: {
                 count: float;
-                unit: 'unit' | 'course' | 'full sourse';
+                unit: 'unit' | 'course' | 'full source'; #full source means whatever from above came..? (or from bellow)
                 levels: [100|200|300|400|500|"any"|"above"|"below"|"higher"];
                 sources: [courseCode|"above"|"below"|"courses list"|"\\S+ elective"|"\\S+ elective-list 1-list 2&list 3 ..."|"any"];
                 additional?: bool;

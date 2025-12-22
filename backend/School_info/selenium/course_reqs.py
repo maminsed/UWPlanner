@@ -520,7 +520,6 @@ def extract_nested(startPoint: WebElement, infoInstance: InfoClass):
             )
             currRes["conditionText"] = conditionText
             # extract status and type
-            infoInstance.add("differentSectionTypes", conditionText, infoInstance.id)
             found, _, payload = extract_conditionText(
                 conditionText.lower(), infoInstance, True
             )
@@ -594,7 +593,6 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
             sectionHeader = safe_find_element(
                 firstList, By.CSS_SELECTOR, ":scope > span"
             ).text
-            infoInstance.add("differentSectionTypes", sectionHeader, infoInstance.id)
         except:
             pass
 

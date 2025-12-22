@@ -182,7 +182,7 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
         specialization_text = specialization_element.text
         result["specialization_text"] = specialization_text
 
-        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete) {count}( or more)? of( the)? {count} available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( or more)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
         if not re.match(expected_pattern, specialization_text.lower()):
             infoInstance.add(
                 "differentWarnings",
@@ -391,7 +391,7 @@ def addGroupTodb(
             section_type = header.text
             if section_type not in processedSectionTypes:
                 infoInstance.add(
-                    "differentSectionTypes", section_type, program["program"]
+                    "differentSectionPageTypes", section_type, program["program"]
                 )
 
             if section_type == "Course Requirements":
@@ -422,7 +422,7 @@ def get_program_reqs():
             # ("differentGroupedCondition", {}),
             # ("differentCourseReqs", {}),
             # ("differentCourseLists",{}),
-            ("differentSectionTypes", {}),
+            ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),
         ]

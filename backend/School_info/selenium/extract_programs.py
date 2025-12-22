@@ -2,6 +2,7 @@ import re
 import time
 import traceback
 
+from markdownify import markdownify as md
 from selenium import webdriver
 from selenium.common.exceptions import (
     TimeoutException,
@@ -116,6 +117,22 @@ def find_program_type(programName: str, infoInstance: InfoClass):
     return "none"
 
 
+def extract_markdown(section: WebElement):
+    # First, fix all anchor tags to use their actual href attributes
+    links = section.find_elements(By.TAG_NAME, "a")
+    driver = section.parent
+
+    for link in links:
+        actual_href = link.get_attribute("href")
+        if actual_href:
+            driver.execute_script(
+                "arguments[0].setAttribute('href', arguments[1]);", link, actual_href
+            )
+
+    html = section.get_attribute("innerHTML") or ""
+    return md(html, heading_style="ATX", strip=["style", "script"])
+
+
 def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoClass):
     """Extracts specialization information from program sections.
 
@@ -194,8 +211,7 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
             f"Missing text content in 'Specializations List' section for {infoInstance.id}",
         )
     else:
-        # TODO: update to markdown
-        result["list_text"] = specialization_list_element.text
+        result["list_text"] = extract_markdown(specialization_list_element)
         links = specialization_list_element.find_elements(By.CSS_SELECTOR, links_css)
 
         if len(links) == 0:
@@ -455,7 +471,7 @@ def get_program_reqs():
     i = 0
     groups = {}
     print(
-        f"Hi, were starting with {len(porogramGroups)} cgs - going up to {min(limit, len(porogramGroups) - offset)}"
+        f"Hi, were starting with {len(porogramGroups)} pgs - going up to {min(limit, len(porogramGroups) - offset)}"
     )
     # random.seed(12)
     try:

@@ -1,3 +1,4 @@
+import re
 import time
 import traceback
 
@@ -14,7 +15,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from .calendar_utils import InfoClass
-from .course_reqs import extractContainerInfo, safe_find_element
+from .constants import count
+from .course_reqs import extractContainerInfo, get_link_attr, safe_find_element
 
 delayAmount = 15
 # differentPrograms = []
@@ -101,44 +103,119 @@ def bringIntoView(driver: WebDriver, element: WebElement):
     time.sleep(1)
 
 
-def find_type(programName: str, infoInstance: InfoClass):
+def find_program_type(programName: str, infoInstance: InfoClass):
     programName = programName.lower()
     # weird cases
-    if programName.startswith("mathematical optimization"):
-        return "major"
+    # if programName.startswith("mathematical optimization"):
+    #     return "major"
 
-    res = ""
     for keyword, programType in program_type_map:
         if keyword in programName:
-            if (
-                "joint" in res
-                or "double" in res
-                or "degree" == res
-                or (
-                    "(bachelor of" in programName
-                    and res != ""
-                    and programType == "major"
-                )
-            ):
-                continue
-            elif res != "" and res != programType:
-                infoInstance.add(
-                    "differentErrors", f"55: {programName} has both {keyword} and {res}"
-                )
-            else:
-                res = programType
-                # TODO: after confirimng behvaiour uncomment:
-                # break
-    if not res:
+            return programType
+    infoInstance.add("differentErrors", f"60: {programName} does not have any types")
+    return "none"
+
+
+def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoClass):
+    """Extracts specialization information from program sections.
+
+    Args:
+        sections: Dictionary mapping section names to WebElement objects
+        infoInstance: InfoClass instance for tracking errors and warnings
+
+    Returns:
+        {
+            "specialization_text": str,
+            "list_text": str,
+            "at_least_one_required": boolean,
+            "specialization_options": {"value": str,"url": str,"linkType": str}[]
+        }
+
+    """
+    if len(sections) == 0:
+        return None
+
+    if (
+        len(sections) != 2
+        or "Specializations" not in sections
+        or "Specializations List" not in sections
+    ):
         infoInstance.add(
-            "differentErrors", f"60: {programName} does not have any types"
+            "differentErrors",
+            f"only has the following sections for '{infoInstance.id}' in extract-specializations, {list(sections.keys())}",
         )
-        res = "none"
-    return res
+        return None
 
+    section_text_css = 'div[class*="program-view__pre___"]'
+    links_css = "a"
+    result = {}
 
-# differentCourseReqsSections = {}
-# differentCourseReqs = {}
+    # Extract "Specializations" section text
+    specialization_element = safe_find_element(
+        sections["Specializations"], By.CSS_SELECTOR, section_text_css
+    )
+    result["at_least_one_required"] = False
+    if specialization_element is None:
+        result["specialization_text"] = ""
+        infoInstance.add(
+            "differentErrors",
+            f"Missing text content in 'Specializations' section for {infoInstance.id}",
+        )
+    else:
+        specialization_text = specialization_element.text
+        result["specialization_text"] = specialization_text
+
+        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete) {count}( or more)? of( the)? {count} available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+        if not re.match(expected_pattern, specialization_text.lower()):
+            infoInstance.add(
+                "differentWarnings",
+                f"Specialization text format differs from expected pattern for {infoInstance.id}: "
+                f"'{specialization_text}'",
+            )
+        if specialization_text.lower().startswith("students must"):
+            result["at_least_one_required"] = True
+        elif not specialization_text.lower().startswith("students may"):
+            infoInstance.add(
+                "differentErrors",
+                f"{infoInstance.id}'s 'Specialization Text' does not start with may or must: '"
+                f"{specialization_text}'",
+            )
+
+    # Extract "Specializations List" section
+    specialization_list_element = safe_find_element(
+        sections["Specializations List"], By.CSS_SELECTOR, section_text_css
+    )
+    result["specialization_options"] = []
+    result["list_text"] = ""
+
+    if specialization_list_element is None:
+        infoInstance.add(
+            "differentErrors",
+            f"Missing text content in 'Specializations List' section for {infoInstance.id}",
+        )
+    else:
+        # TODO: update to markdown
+        result["list_text"] = specialization_list_element.text
+        links = specialization_list_element.find_elements(By.CSS_SELECTOR, links_css)
+
+        if len(links) == 0:
+            infoInstance.add(
+                "differentErrors",
+                f"No links found in 'Specializations List' section for {infoInstance.id}",
+            )
+
+        for link in links:
+            link_attributes = get_link_attr(link)
+            result["specialization_options"].append(link_attributes)
+
+            if link_attributes["linkType"] != "programs":
+                infoInstance.add(
+                    "differentErrors",
+                    f"Non-program link found in 'Specializations List' for {infoInstance.id}: "
+                    f"'{link_attributes['url']}' (type: {link_attributes['linkType']})",
+                )
+    infoInstance.add("differentSpecializations", infoInstance.id, result)
+    return result
 
 
 def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
@@ -275,8 +352,9 @@ def addGroupTodb(
     for program in programs:
         programName = program["program"]
         infoInstance.id = f"{groupName}-{programName}"
-        programType = find_type(programName, infoInstance)
+        programType = find_program_type(programName, infoInstance)
         programInfo = {}
+        specialization_dict = {}
         print(f"currently at {programName}")
 
         driver.switch_to.new_window("tab")
@@ -304,6 +382,9 @@ def addGroupTodb(
                 extract_course_reqs(section, infoInstance)
             elif section_type == "Course Lists":
                 extract_course_lists(section, infoInstance)
+            elif section_type.lower().startswith("specialization"):
+                specialization_dict[section_type] = section
+        extract_specializations(specialization_dict, infoInstance)
 
         print("process finished")
         driver.close()
@@ -319,9 +400,10 @@ def get_program_reqs():
             ("differentErrors", []),
             ("differentWarnings", []),
             ("differentConditionText", {}),
+            ("differentSpecializations", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
-            ("differentGroupedCondition", {}),
+            # ("differentGroupedCondition", {}),
             # ("differentCourseReqs", {}),
             # ("differentCourseLists",{}),
             ("differentSectionTypes", {}),
@@ -368,8 +450,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 125
-    limit = 25
+    offset = 0
+    limit = 5
     i = 0
     groups = {}
     print(

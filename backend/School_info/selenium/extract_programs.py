@@ -35,13 +35,13 @@ processedSectionTypes = {
     "Minimum Average(s) Required": "Diploma in Fundamentals of Anti-Racist Communication",  # Requirements
     "Online Degree/Diploma": "Mathematics/Financial Analysis and Risk Management - Professional Risk Management Specialization (Bachelor of Mathematics - Honours)",  # ignore
     "Notes": "Diploma in Fundamentals of Anti-Racist Communication",  # linkedUrls
-    "Offered by Faculty(ies)": "Diploma in Fundamentals of Anti-Racist Communication",  # offeredByFaculties
+    "Offered by Faculty(ies)": "Diploma in Fundamentals of Anti-Racist Communication",  # offeredByFaculties #TODO: 1
     "Specializations": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
     "Specializations List": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
-    "Systems of Study": "Anthropology (Bachelor of Arts - Three-Year General)",  # systemsOfStudy
-    "Student Audience": "Diploma in Fundamentals of Anti-Racist Communication",  # availableTo
-    "This option is available for students in the following degrees": "Quantum Information Option",  # availableTo
-    "This specialization is available for students in the following majors": "Predictive Analytics Specialization",  # availableTo
+    "Systems of Study": "Anthropology (Bachelor of Arts - Three-Year General)",  # systemsOfStudy #TODO: 2
+    "Student Audience": "Diploma in Fundamentals of Anti-Racist Communication",  # availableTo #TODO: 1
+    "This option is available for students in the following degrees": "Quantum Information Option",  # availableTo #TODO: 1
+    "This specialization is available for students in the following majors": "Predictive Analytics Specialization",  # availableTo #TODO:1
 }
 # differentSectionTypes = {}
 
@@ -192,7 +192,7 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
             specialization_text = specialization_element.text
             result["specialization_text"] = specialization_text
 
-            expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( or more)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+            expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( \(?or more\)?)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
             if not re.match(expected_pattern, specialization_text.lower()):
                 infoInstance.add(
                     "differentWarnings",

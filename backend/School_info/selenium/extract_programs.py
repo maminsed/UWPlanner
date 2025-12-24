@@ -35,7 +35,7 @@ processedSectionTypes = {
     "Minimum Average(s) Required": "Diploma in Fundamentals of Anti-Racist Communication",  # Requirements
     "Online Degree/Diploma": "Mathematics/Financial Analysis and Risk Management - Professional Risk Management Specialization (Bachelor of Mathematics - Honours)",  # ignore
     "Notes": "Diploma in Fundamentals of Anti-Racist Communication",  # linkedUrls
-    "Offered by Faculty(ies)": "Diploma in Fundamentals of Anti-Racist Communication",  # offeredByFaculties #TODO: 1
+    "Offered by Faculty(ies)": "Diploma in Fundamentals of Anti-Racist Communication",  # offeredByFaculties #TODO: 3
     "Specializations": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
     "Specializations List": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
     "Systems of Study": "Anthropology (Bachelor of Arts - Three-Year General)",  # systemsOfStudy #TODO: 2
@@ -142,6 +142,69 @@ def extract_markdown(section: WebElement):
     return md(html, heading_style="ATX", strip=["style", "script"])
 
 
+def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoClass):
+    """Returns: {
+        "name": str;
+        "markdown": str;
+        "relatedLinks": {"value": str|'any'|'any_degree',"url": str,"linkType": 'programs'|'course'|'external'}[]
+    }
+    """
+    innerTextCSS = 'div[class*="program-view__pre___"]'
+    result = []
+    for key, sectionEl in sectionEls.items():
+        current_result = {"relatedLinks": []}
+        innerEl = safe_find_element(sectionEl, By.CSS_SELECTOR, innerTextCSS)
+        if not innerEl:
+            infoInstance.add(
+                "differentErrors", f"{infoInstance.id} has no innerEl for {key}"
+            )
+            continue
+        if "specialization" in key.lower():
+            links = sectionEl.find_elements(By.CSS_SELECTOR, "a")
+            if len(links) == 0:
+                infoInstance.add(
+                    "differentErrors",
+                    "there is no links found in extract_availableTo for specialization section",
+                )
+            for link in links:
+                current_result["relatedLinks"].append(get_link_attr(link))
+        elif "option" in key.lower():
+            infoInstance.add(
+                "differentErrors", f"this section is not done yet: {infoInstance.id}"
+            )
+            continue
+        elif "Student Audience" == key:
+            student_audience_regex = r"^this credential is open to students enrolled in(?: any)? degree programs?( or any non- or post-degree academic plan)?[^0-9a-z]*$"
+            matched = re.split(student_audience_regex, innerEl.text.lower())
+            if len(matched) > 1:
+                current_result["relatedLinks"].append(
+                    {
+                        "value": "any" if matched[1] is not None else "any_degree",
+                        "url": "",
+                        "linkType": "external",
+                    }
+                )
+            else:
+                infoInstance.add(
+                    "differentErrors",
+                    f"{infoInstance.id}'s  text: {innerEl.text} does not match the student_audience_regex",
+                )
+        else:
+            infoInstance.add(
+                "differentErrors",
+                f"{key} appeared in extract_availableTowhen it shouldn't have",
+            )
+            continue
+        current_result["name"] = key
+        current_result["markdown"] = extract_markdown(innerEl)
+        result.append(current_result)
+    if len(result) == 0:
+        infoInstance.add("differentWarnings", f"{infoInstance.id} has no availableTo")
+    else:
+        infoInstance.add("differentAvailableTo", infoInstance.id, result)
+    return result
+
+
 def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoClass):
     """Extracts specialization information from program sections.
 
@@ -155,11 +218,11 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
             "specialization_text": str,
             "list_text": str,
             "at_least_one_required": boolean,
-            "specialization_options": {"value": str,"url": str,"linkType": str}[]
+            "specialization_options": {"value": str,"url": str,"linkType": 'programs'|'course'|'external'}[]
         } || {
             "type": "course_req",
             "requirements": RequirementType[]
-        }
+        } || None
 
     """
     if len(sections) == 0:
@@ -331,6 +394,7 @@ def addGroupTodb(
         programType = find_program_type(programName, infoInstance)
         programInfo = {}
         specialization_dict = {}
+        availableTo_dict = {}
         print(f"currently at {programName}")
 
         driver.switch_to.new_window("tab")
@@ -360,7 +424,10 @@ def addGroupTodb(
                 extract_course_lists(section, infoInstance, "cl")
             elif section_type.lower().startswith("specialization"):
                 specialization_dict[section_type] = section
+            elif section_type.startswith("This") or section_type == "Student Audience":
+                availableTo_dict[section_type] = section
         extract_specializations(specialization_dict, infoInstance)
+        extract_availableTo(availableTo_dict, infoInstance)
 
         print("process finished")
         driver.close()
@@ -376,7 +443,8 @@ def get_program_reqs():
             ("differentErrors", []),
             ("differentWarnings", []),
             ("differentConditionText", {}),
-            ("differentSpecializations", {}),
+            # ("differentSpecializations", {}),
+            ("differentAvailableTo", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),

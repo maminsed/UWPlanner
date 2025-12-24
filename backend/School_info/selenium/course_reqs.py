@@ -581,7 +581,7 @@ def extractContainerInfo(section: WebElement, infoInstance: InfoClass):
                 cap?: "max"|"min"|"exact"
                 excluding?: courseCode[]
             }[]
-            relatedLinks: {value: str, url: str, linkType: 'program'|'course'|'external'}[]
+            relatedLinks: {value: str, url: str, linkType: 'programs'|'course'|'external'}[]
         }
 
     """

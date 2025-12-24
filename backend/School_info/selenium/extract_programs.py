@@ -1,6 +1,7 @@
 import re
 import time
 import traceback
+from typing import Literal
 
 from markdownify import markdownify as md
 from selenium import webdriver
@@ -74,6 +75,14 @@ processedSectionTypes = {
     }[]
 
 """
+"""
+RequirementType: {
+    name: str;
+    type: "cl"||"cr";
+    requirement: ListInfo;
+    innerLists: str[];
+}
+"""
 
 program_type_map = [
     ["diploma", "diploma"],
@@ -142,21 +151,21 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
 
     Returns:
         {
+            "type": "programs"
             "specialization_text": str,
             "list_text": str,
             "at_least_one_required": boolean,
             "specialization_options": {"value": str,"url": str,"linkType": str}[]
+        } || {
+            "type": "course_req",
+            "requirements": RequirementType[]
         }
 
     """
     if len(sections) == 0:
         return None
 
-    if (
-        len(sections) != 2
-        or "Specializations" not in sections
-        or "Specializations List" not in sections
-    ):
+    if len(sections) > 2 or len(sections) < 1 or "Specializations" not in sections:
         infoInstance.add(
             "differentErrors",
             f"only has the following sections for '{infoInstance.id}' in extract-specializations, {list(sections.keys())}",
@@ -166,85 +175,92 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
     section_text_css = 'div[class*="program-view__pre___"]'
     links_css = "a"
     result = {}
-
-    # Extract "Specializations" section text
-    specialization_element = safe_find_element(
-        sections["Specializations"], By.CSS_SELECTOR, section_text_css
-    )
-    result["at_least_one_required"] = False
-    if specialization_element is None:
-        result["specialization_text"] = ""
-        infoInstance.add(
-            "differentErrors",
-            f"Missing text content in 'Specializations' section for {infoInstance.id}",
+    if "Specializations List" in sections:
+        result["type"] = "programs"
+        # Extract "Specializations" section text
+        specialization_element = safe_find_element(
+            sections["Specializations"], By.CSS_SELECTOR, section_text_css
         )
-    else:
-        specialization_text = specialization_element.text
-        result["specialization_text"] = specialization_text
-
-        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( or more)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
-        if not re.match(expected_pattern, specialization_text.lower()):
-            infoInstance.add(
-                "differentWarnings",
-                f"Specialization text format differs from expected pattern for {infoInstance.id}: "
-                f"'{specialization_text}'",
-            )
-        if specialization_text.lower().startswith("students must"):
-            result["at_least_one_required"] = True
-        elif not specialization_text.lower().startswith("students may"):
+        result["at_least_one_required"] = False
+        if specialization_element is None:
+            result["specialization_text"] = ""
             infoInstance.add(
                 "differentErrors",
-                f"{infoInstance.id}'s 'Specialization Text' does not start with may or must: '"
-                f"{specialization_text}'",
+                f"Missing text content in 'Specializations' section for {infoInstance.id}",
             )
+        else:
+            specialization_text = specialization_element.text
+            result["specialization_text"] = specialization_text
 
-    # Extract "Specializations List" section
-    specialization_list_element = safe_find_element(
-        sections["Specializations List"], By.CSS_SELECTOR, section_text_css
-    )
-    result["specialization_options"] = []
-    result["list_text"] = ""
-
-    if specialization_list_element is None:
-        infoInstance.add(
-            "differentErrors",
-            f"Missing text content in 'Specializations List' section for {infoInstance.id}",
-        )
-    else:
-        result["list_text"] = extract_markdown(specialization_list_element)
-        links = specialization_list_element.find_elements(By.CSS_SELECTOR, links_css)
-
-        if len(links) == 0:
-            infoInstance.add(
-                "differentErrors",
-                f"No links found in 'Specializations List' section for {infoInstance.id}",
-            )
-
-        for link in links:
-            link_attributes = get_link_attr(link)
-            result["specialization_options"].append(link_attributes)
-
-            if link_attributes["linkType"] != "programs":
+            expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( or more)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+            if not re.match(expected_pattern, specialization_text.lower()):
+                infoInstance.add(
+                    "differentWarnings",
+                    f"Specialization text format differs from expected pattern for {infoInstance.id}: "
+                    f"'{specialization_text}'",
+                )
+            if specialization_text.lower().startswith("students must"):
+                result["at_least_one_required"] = True
+            elif not specialization_text.lower().startswith("students may"):
                 infoInstance.add(
                     "differentErrors",
-                    f"Non-program link found in 'Specializations List' for {infoInstance.id}: "
-                    f"'{link_attributes['url']}' (type: {link_attributes['linkType']})",
+                    f"{infoInstance.id}'s 'Specialization Text' does not start with may or must: '"
+                    f"{specialization_text}'",
                 )
+
+        # Extract "Specializations List" section
+        specialization_list_element = safe_find_element(
+            sections["Specializations List"], By.CSS_SELECTOR, section_text_css
+        )
+        result["specialization_options"] = []
+        result["list_text"] = ""
+
+        if specialization_list_element is None:
+            infoInstance.add(
+                "differentErrors",
+                f"Missing text content in 'Specializations List' section for {infoInstance.id}",
+            )
+        else:
+            result["list_text"] = extract_markdown(specialization_list_element)
+            links = specialization_list_element.find_elements(
+                By.CSS_SELECTOR, links_css
+            )
+
+            if len(links) == 0:
+                infoInstance.add(
+                    "differentErrors",
+                    f"No links found in 'Specializations List' section for {infoInstance.id}",
+                )
+
+            for link in links:
+                link_attributes = get_link_attr(link)
+                result["specialization_options"].append(link_attributes)
+
+                if link_attributes["linkType"] != "programs":
+                    infoInstance.add(
+                        "differentErrors",
+                        f"Non-program link found in 'Specializations List' for {infoInstance.id}: "
+                        f"'{link_attributes['url']}' (type: {link_attributes['linkType']})",
+                    )
+    else:
+        result["type"] = "course_req"
+        result["requirements"] = extract_course_lists(
+            sections["Specializations"], infoInstance, "cr"
+        )
     infoInstance.add("differentSpecializations", infoInstance.id, result)
     return result
 
 
-def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
+def extract_course_lists(
+    sectionEl: WebElement, infoInstance: InfoClass, type: Literal["cl", "cr"] = "cl"
+):
     """For now SectionEl has to be as outer as possible. (within the section obv)
 
-    Returns:
-        ListInfo & {
-            innerLists: str[] #list of inner list headers
-        }[]
-
+    Returns: RequirementType[]
     """
     # innerSectionCSS = ":scope section:not(:scope section section)"
     biggestulCSS = ":scope ul:not(:scope ul ul)"
+    course_lists = []
 
     def find_header(sectionEl: WebElement):
         headerCSS = 'div[class*="style__itemHeaderH2"]'
@@ -260,31 +276,30 @@ def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
             f"{infoInstance.id}'s course list does not have any outerSection",
         )
 
-    for i, outerSection in enumerate(outerSections):
+    for outerSection in outerSections:
+        current_list = {}
         header = find_header(outerSection)
+        current_list["name"] = header
         innerSections = outerSection.find_elements(By.CSS_SELECTOR, "section")
         innerHeaders = [find_header(section) for section in innerSections]
+        current_list["innerLists"] = innerHeaders
+        current_list["type"] = type
+        if "list" in header.lower():
+            current_list["type"] = "cl"
 
-        infoInstance.add(
-            "differentCourseListHeaders",
-            f"{infoInstance.id}-{i}",
-            {"header": header, "innerHeaders": innerHeaders},
-        )
         biggestuls = safe_find_element(outerSection, By.CSS_SELECTOR, biggestulCSS)
         if biggestuls is None:
             infoInstance.add(
                 "differentErrors",
                 f"158: one of {infoInstance.id}'s innerSections has 0 biggest uls",
             )
-            # TODO: extract markdown
             continue
         try:
-            infoInstance.id += "-cl"
+            infoInstance.id += "-" + type
             listInfo = extractContainerInfo(biggestuls, infoInstance)
-            infoInstance.add(
-                "differentCourseLists", f"{infoInstance.id}-{header}", listInfo
-            )
             infoInstance.id = infoInstance.id[:-3]
+            current_list["requirement"] = listInfo
+            course_lists.append(current_list)
         except Exception as e:
             print(f"Error: {e}")
             print(f"Traceback:\n{traceback.format_exc()}")
@@ -295,63 +310,8 @@ def extract_course_lists(sectionEl: WebElement, infoInstance: InfoClass):
             infoInstance.add(
                 "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"
             )
-
-
-def extract_course_reqs(sectionEl: WebElement, infoInstance: InfoClass):
-    """For now SectionEl has to be as outer as possible. (within the section obv)
-
-    Returns:
-        ListInfo & {
-            innerLists: str[] #list of inner list headers
-        }[]
-
-    """
-    rulesWrapperCSS = "div.rules-wrapper"
-    innerSectionsCSS = "section"
-    headerCSS = 'div[class*="style__itemHeaderH2"]'
-    biggestulCSS = ":scope ul:not(:scope ul ul)"
-    courseRequirement = {}
-
-    # TODO: just get the first one
-    rules = sectionEl.find_elements(By.CSS_SELECTOR, rulesWrapperCSS)
-    if len(rules) != 1:
-        infoInstance.add(
-            "differentErrors",
-            f"140: {infoInstance.id}'s Course Requirements has {len(rules)}!=1 rules-wrappers",
-        )
-    if len(rules) < 1:
-        # TODO: extract markdown
-        return
-    innerSections = rules[0].find_elements(By.CSS_SELECTOR, innerSectionsCSS)
-    for innerSection in innerSections:
-        header = innerSection.find_element(By.CSS_SELECTOR, headerCSS).text
-        if "list" in header.lower():
-            extract_course_lists(innerSection, infoInstance)
-            continue
-        infoInstance.add("differentCourseReqsSections", header, infoInstance.id)
-        biggestuls = safe_find_element(innerSection, By.CSS_SELECTOR, biggestulCSS)
-        if biggestuls is None:
-            infoInstance.add(
-                "differentErrors",
-                f"153: one of {infoInstance.id}'s innerSections has 0 biggest uls",
-            )
-            # TODO: extract markdown
-            continue
-        try:
-            infoInstance.id += "-cr"
-            listInfo = extractContainerInfo(biggestuls, infoInstance)
-            infoInstance.id = infoInstance.id[:-3]
-            infoInstance.add("differentCourseReqs", infoInstance.id, listInfo)
-        except Exception as e:
-            print(f"Error: {e}")
-            print(f"Traceback:\n{traceback.format_exc()}")
-            infoInstance.add(
-                "differentErrors",
-                f"161: error occured when extractingContainerInfo for {infoInstance.id}",
-            )
-            infoInstance.add(
-                "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"
-            )
+    infoInstance.add("differentCourseLists", f"{infoInstance.id}-{type}", course_lists)
+    return course_lists
 
 
 def addGroupTodb(
@@ -395,9 +355,9 @@ def addGroupTodb(
                 )
 
             if section_type == "Course Requirements":
-                extract_course_reqs(section, infoInstance)
+                extract_course_lists(section, infoInstance, "cr")
             elif section_type == "Course Lists":
-                extract_course_lists(section, infoInstance)
+                extract_course_lists(section, infoInstance, "cl")
             elif section_type.lower().startswith("specialization"):
                 specialization_dict[section_type] = section
         extract_specializations(specialization_dict, infoInstance)
@@ -421,7 +381,7 @@ def get_program_reqs():
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
             # ("differentCourseReqs", {}),
-            # ("differentCourseLists",{}),
+            ("differentCourseLists", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),

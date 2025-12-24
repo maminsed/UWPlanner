@@ -38,10 +38,10 @@ processedSectionTypes = {
     "Offered by Faculty(ies)": "Diploma in Fundamentals of Anti-Racist Communication",  # offeredByFaculties #TODO: 3
     "Specializations": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
     "Specializations List": "Actuarial Science (Bachelor of Mathematics - Honours)",  # Specializations
-    "Systems of Study": "Anthropology (Bachelor of Arts - Three-Year General)",  # systemsOfStudy #TODO: 2
-    "Student Audience": "Diploma in Fundamentals of Anti-Racist Communication",  # availableTo #TODO: 1
-    "This option is available for students in the following degrees": "Quantum Information Option",  # availableTo #TODO: 1
-    "This specialization is available for students in the following majors": "Predictive Analytics Specialization",  # availableTo #TODO:1
+    "Systems of Study": "Anthropology (Bachelor of Arts - Three-Year General)",  # systemsOfStudy
+    "Student Audience": "Diploma in Fundamentals of Anti-Racist Communication",  # availableTo
+    "This option is available for students in the following degrees": "Quantum Information Option",  # availableTo
+    "This specialization is available for students in the following majors": "Predictive Analytics Specialization",  # availableTo
 }
 # differentSectionTypes = {}
 
@@ -198,9 +198,9 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
         current_result["name"] = key
         current_result["markdown"] = extract_markdown(innerEl)
         result.append(current_result)
-    if len(result) == 0:
+    if len(result) == 0 and len(sectionEls) != 0:
         infoInstance.add("differentWarnings", f"{infoInstance.id} has no availableTo")
-    else:
+    if len(result) != 0:
         infoInstance.add("differentAvailableTo", infoInstance.id, result)
     return result
 
@@ -377,6 +377,32 @@ def extract_course_lists(
     return course_lists
 
 
+def extract_system_of_study(sectionEl: WebElement, infoInstance: InfoClass):
+    """Returns: 'regular'|'co-op'|'both'|'err'"""
+    innerTextCSS = 'div[class*="program-view__pre___"]'
+    innerEl = safe_find_element(sectionEl, By.CSS_SELECTOR, innerTextCSS)
+    if innerEl is None:
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id} has no innerEl in extract_system_of_study",
+        )
+        return "err"
+    systems = innerEl.text.lower().replace("co-operative", "co-op").split("\n")
+    if (
+        any(item != "co-op" and item != "regular" for item in systems)
+        or len(systems) == 0
+    ):
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id} has something other than the two defined systems of study: {systems}",
+        )
+        return "err"
+    if len(systems) == 2:
+        return "both"
+    else:
+        return systems[0]
+
+
 def addGroupTodb(
     groupName: str, programs: list, driver: WebDriver, infoInstance: InfoClass
 ):
@@ -422,6 +448,8 @@ def addGroupTodb(
                 extract_course_lists(section, infoInstance, "cr")
             elif section_type == "Course Lists":
                 extract_course_lists(section, infoInstance, "cl")
+            elif section_type == "Systems of Study":
+                extract_system_of_study(section, infoInstance)
             elif section_type.lower().startswith("specialization"):
                 specialization_dict[section_type] = section
             elif section_type.startswith("This") or section_type == "Student Audience":
@@ -448,8 +476,7 @@ def get_program_reqs():
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
-            # ("differentCourseReqs", {}),
-            ("differentCourseLists", {}),
+            # ("differentCourseLists", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),

@@ -1,6 +1,7 @@
 import re
 import time
 import traceback
+from collections import defaultdict
 from typing import Literal
 
 from markdownify import markdownify as md
@@ -370,7 +371,7 @@ def get_header(sectionEl: WebElement):
 
 def extract_course_lists(
     sectionEl: WebElement, infoInstance: InfoClass, type: Literal["cl", "cr"] = "cl"
-):
+) -> list[dict[str]]:
     """For now SectionEl has to be as outer as possible. (within the section obv)
 
     Returns: RequirementType[]
@@ -513,6 +514,9 @@ def extract_table(tableEl: WebElement, infoInstance: InfoClass):
 
 
 def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
+    """Returns: {"SS":str,"planName":str,"planPath":str[]}[]
+    """
+
     def process_cell(cell: str):
         cell = cell.strip()
         if re.match(r"[0-9][AB]", cell):
@@ -530,6 +534,7 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
 
     hasSS = "S/S" in table["headers"]
     result = []
+    # Making sure there is no unwanted header
     if any(
         header not in ["S", "F", "W", "Plan", "Sequence"]
         and not (hasSS and header == "S/S")
@@ -537,65 +542,84 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
     ):
         infoInstance.add(
             "differentErrors",
-            f"{infoInstance.id} has a header thats not registered: {result['headers']}",
+            f"{infoInstance.id} has a header thats not registered: {table['headers']}",
         )
+    # Processing each row
     for row in table["rows"]:
         planName: str = row[0]
         SS: str = row[1] if hasSS else ""
         planPath = [
-            process_cell(cell) for idx, cell in enumerate(row) if idx > 1 * hasSS
+            process_cell(cell) for idx, cell in enumerate(row) if idx > int(hasSS)
         ]
-        if (
-            len(result)
-            and result[-1]["planName"] == planName
-            and result[-1]["SS"] == SS
-        ):
-            infoInstance.add(
-                "differentWarnings",
-                f"{infoInstance.id} has more than one match for planName: '{planName}' and SS: '{SS}'",
-            )
         result.append({"planName": planName, "SS": SS, "planPath": planPath})
-    infoInstance.add("differentSequences", infoInstance.id, result)
+    # if there are duplicate planNames with the same SS, we should do something about them.
+    counter = defaultdict(list)
+    for idx, item in enumerate(result):
+        key = f"{item['planName']}-{item['SS']}"
+        counter[key].append(idx)
+    for key, indecies in counter.items():
+        if len(indecies) == 1:
+            continue
+        if result[indecies[0]]["SS"] != "":
+            infoInstance.add(
+                "differentErrors",
+                f"{infoInstance.id} has {len(indecies)} matches for key: {key}",
+            )
+            continue
+        for i, idx in enumerate(indecies):
+            result[idx]["SS"] = str(i)
     return result
 
 
 def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
+    """Returns: {
+        "sequences": {"SS":str,"planName":str,"planPath":str[]}[],
+        "legend": dict[str,str][],
+    }
+    """
     tables = sectionEl.find_elements(By.TAG_NAME, "table")
-    result = []
+    result = {"sequences": [], "legend": []}
     for table in tables:
         header = table.find_element(By.XPATH, "preceding-sibling::*[1]").text
         extracted_table = extract_table(table, infoInstance)
         if header.startswith("Study/Work Sequence"):
-            refine_sequences(extracted_table, infoInstance)
+            sequences = refine_sequences(extracted_table, infoInstance)
+            result["sequences"] = sequences
         elif header.startswith("Legend for Study/Work Sequence"):
-            pass
-        result.append({"header": header, "extracted_table": extracted_table})
-    infoInstance.add(
-        "differentSectionMarkDown",
-        infoInstance.id,
-        extract_markdown(sectionEl, infoInstance),
-    )
+            legend = [{items[0]: items[1]} for items in extracted_table["rows"]]
+            result["legend"] = legend
     return result
+
+
+def extract_degreeName(sectionEl: WebElement, infoInstance: InfoClass):
+    return None
 
 
 def addGroupTodb(
     groupName: str, programs: list, driver: WebDriver, infoInstance: InfoClass
 ):
-    """programs: {program: str, url:str}[]"""
+    """Adds the group to db"""
     programHeaderCSS = 'div[class*="program-view__itemTitleAndTranslationButton___"]'
     programSectionCSS = "div.noBreak"
     sectionHeadersCSS = "h3"
-    sectionTextContainerCSS = "div[class*='program-view__pre___']"
 
     main_window = driver.current_window_handle
 
     for program in programs:
+        programInfo = {}
         programName = program["program"]
         infoInstance.id = f"{groupName}-{programName}"
         programType = find_program_type(programName, infoInstance)
-        programInfo = {}
+
         specialization_dict = {}
+        lists_and_reqs = {"courseLists": [], "courseRequirements": []}
         availableTo_dict = {}
+        otherSections = {"order": []}
+
+        programInfo["name"] = programName
+        programInfo["programType"] = programType
+        programInfo["url"] = program["url"]
+        programInfo["groupName"] = groupName
         print(f"currently at {programName}")
 
         driver.switch_to.new_window("tab")
@@ -607,10 +631,13 @@ def addGroupTodb(
         sections = driver.find_elements(By.CSS_SELECTOR, programSectionCSS)
         for section in sections:
             header = safe_find_element(section, By.CSS_SELECTOR, sectionHeadersCSS)
-            if not header:
+            innerSection = safe_find_element(
+                section, By.CLASS_NAME, constantCSSs["sectionInnerText"]
+            )
+            if not header or not innerSection:
                 infoInstance.add(
                     "differentErrors",
-                    f"135: {programName} does not have sectionHeadersCSS at one of sections",
+                    f"135: {programName} does not have sectionHeadersCSS or innerSection at one of sections",
                 )
                 continue
             section_type = header.text
@@ -619,28 +646,61 @@ def addGroupTodb(
                     "differentSectionPageTypes", section_type, program["program"]
                 )
 
+            if section_type == "Degree Requirements" and programType != "degree":
+                # degreeName
+                programInfo["degreeName"] = extract_degreeName(section, infoInstance)
+
             if section_type == "Course Requirements":
-                extract_course_lists(section, infoInstance, "cr")
+                courseLists = extract_course_lists(section, infoInstance, "cr")
+                for item in courseLists:
+                    item.pop("type", None)
+                    lists_and_reqs["courseLists"].append(item)
             elif section_type == "Course Lists":
-                extract_course_lists(section, infoInstance, "cl")
+                courseReqs = extract_course_lists(section, infoInstance, "cl")
+                for item in courseReqs:
+                    addedKey = "courseRequirements"
+                    if item["type"] == "cl":
+                        addedKey = "courseLists"
+                    lists_and_reqs[addedKey].append(
+                        {k: v for k, v in item.items() if k != "type"}
+                    )
             elif section_type == "Systems of Study":
-                extract_system_of_study(section, infoInstance)
+                programInfo["systemOfStudy"] = extract_system_of_study(
+                    section, infoInstance
+                )
             elif section_type == "Offered by Faculty(ies)":
-                extract_offering_faculties(section, infoInstance)
+                programInfo["offeredByFaculties"] = extract_offering_faculties(
+                    section, infoInstance
+                )
             elif (
                 section_type == "Degree Requirements"
                 or section_type == "Co-operative Education Program Requirements"
             ):
                 prevId = infoInstance.id
                 infoInstance.id += "-" + section_type[:2].lower()
-                extract_sequences(section, infoInstance)
+                programInfo["sequences"] = extract_sequences(section, infoInstance)
                 infoInstance.id = prevId
+                otherSections[section_type] = extract_markdown(
+                    innerSection, infoInstance
+                )
+                otherSections["order"].append(section_type)
             elif section_type.lower().startswith("specialization"):
                 specialization_dict[section_type] = section
             elif section_type.startswith("This") or section_type == "Student Audience":
                 availableTo_dict[section_type] = section
-        extract_specializations(specialization_dict, infoInstance)
-        extract_availableTo(availableTo_dict, infoInstance)
+            else:
+                otherSections[section_type] = extract_markdown(
+                    innerSection, infoInstance
+                )
+                otherSections["order"].append(section_type)
+        programInfo["specializations"] = extract_specializations(
+            specialization_dict, infoInstance
+        )
+        programInfo["availableTo"] = extract_availableTo(availableTo_dict, infoInstance)
+        programInfo["courseRequirements"] = lists_and_reqs["courseRequirements"]
+        programInfo["courseLists"] = lists_and_reqs["courseLists"]
+        programInfo["otherSections"] = otherSections
+        infoInstance.add("differentProgramInfo", infoInstance.id, programInfo)
 
         print("process finished")
         driver.close()
@@ -657,18 +717,18 @@ def get_program_reqs():
             ("differentWarnings", []),
             ("differentConditionText", {}),
             # ("differentSpecializations", {}),
-            ("differentSequences", {}),
-            ("differentSectionMarkDown", {}),
-            ("differentAvailableTo", {}),
+            # ("differentAvailableTo", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
             # ("differentCourseLists", {}),
+            ("differentProgramInfo", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),
         ]
     )
+    infoInstance.setEnvVar("saveTodb", False)
 
     UNDERGRAD_LINK = (
         "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs"

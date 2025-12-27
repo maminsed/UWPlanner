@@ -284,27 +284,31 @@ class Semester(db.Model):
     courses: Mapped[str] = mapped_column(db.String(), default="[]")
 
 
-# class Programs(db.Model):
-#     """Database for Programs"""
+class Programs(db.Model):
+    """Database for Programs"""
 
-#     __tablename__ = "programs"
-#     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    __tablename__ = "programs"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
 
-#     groupName: Mapped[str] = mapped_column(db.String())
-#     programType: Mapped[str] = mapped_column(db.String()) #e.g. major, minor, ...
-#     name: Mapped[str] = mapped_column(db.String())
-#     url: Mapped[str] = mapped_column(db.String())
+    name: Mapped[str] = mapped_column(db.String())
+    programType: Mapped[str] = mapped_column(db.String())  # e.g. major, minor, ...
+    groupName: Mapped[str] = mapped_column(db.String())
+    url: Mapped[str] = mapped_column(db.String())
 
-#     degreeName: Mapped[str] = mapped_column(db.String())
-#     systemOfStudy: Mapped[str] = mapped_column(db.String(), default="none") #regular, co-op, both, none
-#     offeredByFaculties: Mapped[str] = mapped_column(db.String(), default="[]")
-#     availableTo: Mapped[str] = mapped_column(db.String(), default="{}")
+    # only majors have this
+    degreeName: Mapped[str] = mapped_column(db.String())
+    systemOfStudy: Mapped[str] = mapped_column(
+        db.String(), default="none"
+    )  # regular, co-op, both, none
 
-#     specializations: Mapped[str] = mapped_column(db.String(), default="{}")
-#     courseRequirements: Mapped[str] = mapped_column(db.String(), default="[]")
-#     courseLists: Mapped[str] = mapped_column(db.String(), default="[]")
+    offeredByFaculties: Mapped[str] = mapped_column(db.String(), default="[]")
+    availableTo: Mapped[str] = mapped_column(db.String(), default="{}")
 
-#     otherSections: Mapped[str] = mapped_column(db.String(), default="{}")
-#     relatedLinks: Mapped[str] = mapped_column(db.String(), default="[]")
-#     # sequences: Mapped["Sequence"] = relationship("Sequence", back_populates="programs", secondary=program_sequence)
-#     # students: Mapped["Users"] = relationship("Users", back_populates="programs", secondary=program_student)
+    specializations: Mapped[str] = mapped_column(db.String(), default="{}")
+    courseRequirements: Mapped[str] = mapped_column(db.String(), default="[]")
+    courseLists: Mapped[str] = mapped_column(db.String(), default="[]")
+
+    otherSections: Mapped[str] = mapped_column(db.String(), default="{}")
+    relatedLinks: Mapped[str] = mapped_column(db.String(), default="[]")
+    # sequences: Mapped["Sequence"] = relationship("Sequence", back_populates="programs", secondary=program_sequence)
+    # students: Mapped["Users"] = relationship("Users", back_populates="programs", secondary=program_student)

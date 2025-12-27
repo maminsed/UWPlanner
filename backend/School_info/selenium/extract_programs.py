@@ -191,18 +191,10 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
     }
     """
     result = []
-    for key, sectionEl in sectionEls.items():
+    for key, innerEl in sectionEls.items():
         current_result = {"relatedLinks": []}
-        innerEl = safe_find_element(
-            sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
-        )
-        if not innerEl:
-            infoInstance.add(
-                "differentErrors", f"{infoInstance.id} has no innerEl for {key}"
-            )
-            continue
         if "specialization" in key.lower():
-            links = sectionEl.find_elements(By.CSS_SELECTOR, "a")
+            links = innerEl.find_elements(By.CSS_SELECTOR, "a")
             if len(links) == 0:
                 infoInstance.add(
                     "differentErrors",
@@ -282,44 +274,29 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
     if "Specializations List" in sections:
         result["type"] = "programs"
         # Extract "Specializations" section text
-        specialization_element = safe_find_element(
-            sections["Specializations"],
-            By.CSS_SELECTOR,
-            constantCSSs["sectionInnerText"],
-        )
+        specialization_element = sections["Specializations"]
         result["at_least_one_required"] = False
-        if specialization_element is None:
-            result["specialization_text"] = ""
+        specialization_text = specialization_element.text
+        result["specialization_text"] = specialization_text
+
+        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( \(?or more\)?)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+        if not re.match(expected_pattern, specialization_text.lower()):
+            infoInstance.add(
+                "differentWarnings",
+                f"Specialization text format differs from expected pattern for {infoInstance.id}: "
+                f"'{specialization_text}'",
+            )
+        if specialization_text.lower().startswith("students must"):
+            result["at_least_one_required"] = True
+        elif not specialization_text.lower().startswith("students may"):
             infoInstance.add(
                 "differentErrors",
-                f"Missing text content in 'Specializations' section for {infoInstance.id}",
+                f"{infoInstance.id}'s 'Specialization Text' does not start with may or must: '"
+                f"{specialization_text}'",
             )
-        else:
-            specialization_text = specialization_element.text
-            result["specialization_text"] = specialization_text
-
-            expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( \(?or more\)?)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
-            if not re.match(expected_pattern, specialization_text.lower()):
-                infoInstance.add(
-                    "differentWarnings",
-                    f"Specialization text format differs from expected pattern for {infoInstance.id}: "
-                    f"'{specialization_text}'",
-                )
-            if specialization_text.lower().startswith("students must"):
-                result["at_least_one_required"] = True
-            elif not specialization_text.lower().startswith("students may"):
-                infoInstance.add(
-                    "differentErrors",
-                    f"{infoInstance.id}'s 'Specialization Text' does not start with may or must: '"
-                    f"{specialization_text}'",
-                )
 
         # Extract "Specializations List" section
-        specialization_list_element = safe_find_element(
-            sections["Specializations List"],
-            By.CSS_SELECTOR,
-            constantCSSs["sectionInnerText"],
-        )
+        specialization_list_element = sections["Specializations List"]
         result["specialization_options"] = []
         result["list_text"] = ""
 
@@ -427,17 +404,8 @@ def extract_course_lists(
     return course_lists
 
 
-def extract_system_of_study(sectionEl: WebElement, infoInstance: InfoClass):
+def extract_system_of_study(innerEl: WebElement, infoInstance: InfoClass):
     """Returns: 'regular'|'co-op'|'both'|'err'"""
-    innerEl = safe_find_element(
-        sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
-    )
-    if innerEl is None:
-        infoInstance.add(
-            "differentErrors",
-            f"{infoInstance.id} has no innerEl in extract_system_of_study",
-        )
-        return "err"
     systems = innerEl.text.lower().replace("co-operative", "co-op").split("\n")
     if (
         any(item != "co-op" and item != "regular" for item in systems)
@@ -454,17 +422,8 @@ def extract_system_of_study(sectionEl: WebElement, infoInstance: InfoClass):
         return systems[0]
 
 
-def extract_offering_faculties(sectionEl: WebElement, infoInstance: InfoClass) -> list:
+def extract_offering_faculties(innerEl: WebElement) -> list:
     """Returns: str[] # faculty names || ['err']"""
-    innerEl = safe_find_element(
-        sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
-    )
-    if innerEl is None:
-        infoInstance.add(
-            "differentErrors",
-            f"{infoInstance.id} has no innerEl in extract_offering_faculties",
-        )
-        return []
     faculties = innerEl.text.lower().replace("faculty of ", "").split("\n")
     return faculties
 
@@ -514,8 +473,7 @@ def extract_table(tableEl: WebElement, infoInstance: InfoClass):
 
 
 def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
-    """Returns: {"SS":str,"planName":str,"planPath":str[]}[]
-    """
+    """Returns: {"SS":str,"planName":str,"planPath":str[]}[]"""
 
     def process_cell(cell: str):
         cell = cell.strip()
@@ -631,13 +589,13 @@ def addGroupTodb(
         sections = driver.find_elements(By.CSS_SELECTOR, programSectionCSS)
         for section in sections:
             header = safe_find_element(section, By.CSS_SELECTOR, sectionHeadersCSS)
-            innerSection = safe_find_element(
+            innerEl = safe_find_element(
                 section, By.CLASS_NAME, constantCSSs["sectionInnerText"]
             )
-            if not header or not innerSection:
+            if not header or not innerEl:
                 infoInstance.add(
                     "differentErrors",
-                    f"135: {programName} does not have sectionHeadersCSS or innerSection at one of sections",
+                    f"135: {programName} does not have sectionHeadersCSS or innerEl at one of sections",
                 )
                 continue
             section_type = header.text
@@ -666,32 +624,26 @@ def addGroupTodb(
                     )
             elif section_type == "Systems of Study":
                 programInfo["systemOfStudy"] = extract_system_of_study(
-                    section, infoInstance
+                    innerEl, infoInstance
                 )
             elif section_type == "Offered by Faculty(ies)":
-                programInfo["offeredByFaculties"] = extract_offering_faculties(
-                    section, infoInstance
-                )
+                programInfo["offeredByFaculties"] = extract_offering_faculties(innerEl)
             elif (
                 section_type == "Degree Requirements"
                 or section_type == "Co-operative Education Program Requirements"
             ):
                 prevId = infoInstance.id
                 infoInstance.id += "-" + section_type[:2].lower()
-                programInfo["sequences"] = extract_sequences(section, infoInstance)
+                programInfo["sequences"] = extract_sequences(innerEl, infoInstance)
                 infoInstance.id = prevId
-                otherSections[section_type] = extract_markdown(
-                    innerSection, infoInstance
-                )
+                otherSections[section_type] = extract_markdown(innerEl, infoInstance)
                 otherSections["order"].append(section_type)
             elif section_type.lower().startswith("specialization"):
-                specialization_dict[section_type] = section
+                specialization_dict[section_type] = innerEl
             elif section_type.startswith("This") or section_type == "Student Audience":
-                availableTo_dict[section_type] = section
+                availableTo_dict[section_type] = innerEl
             else:
-                otherSections[section_type] = extract_markdown(
-                    innerSection, infoInstance
-                )
+                otherSections[section_type] = extract_markdown(innerEl, infoInstance)
                 otherSections["order"].append(section_type)
         programInfo["specializations"] = extract_specializations(
             specialization_dict, infoInstance

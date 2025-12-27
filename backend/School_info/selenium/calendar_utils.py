@@ -38,6 +38,8 @@ class InfoClass:
                 self.infoDictionary[tag] = key
             elif value is None:
                 self.infoDictionary[tag].append(key)
+                if "error" in key:
+                    print(value)
             else:
                 self.infoDictionary[tag][key] = value
         else:

@@ -17,7 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from .calendar_utils import InfoClass
-from .constants import count
+from .constants import constantCSSs, count
 from .course_reqs import extractContainerInfo, get_link_attr, safe_find_element
 
 delayAmount = 15
@@ -149,11 +149,12 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
         "relatedLinks": {"value": str|'any'|'any_degree',"url": str,"linkType": 'programs'|'course'|'external'}[]
     }
     """
-    innerTextCSS = 'div[class*="program-view__pre___"]'
     result = []
     for key, sectionEl in sectionEls.items():
         current_result = {"relatedLinks": []}
-        innerEl = safe_find_element(sectionEl, By.CSS_SELECTOR, innerTextCSS)
+        innerEl = safe_find_element(
+            sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
+        )
         if not innerEl:
             infoInstance.add(
                 "differentErrors", f"{infoInstance.id} has no innerEl for {key}"
@@ -235,14 +236,15 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
         )
         return None
 
-    section_text_css = 'div[class*="program-view__pre___"]'
     links_css = "a"
     result = {}
     if "Specializations List" in sections:
         result["type"] = "programs"
         # Extract "Specializations" section text
         specialization_element = safe_find_element(
-            sections["Specializations"], By.CSS_SELECTOR, section_text_css
+            sections["Specializations"],
+            By.CSS_SELECTOR,
+            constantCSSs["sectionInnerText"],
         )
         result["at_least_one_required"] = False
         if specialization_element is None:
@@ -273,7 +275,9 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
 
         # Extract "Specializations List" section
         specialization_list_element = safe_find_element(
-            sections["Specializations List"], By.CSS_SELECTOR, section_text_css
+            sections["Specializations List"],
+            By.CSS_SELECTOR,
+            constantCSSs["sectionInnerText"],
         )
         result["specialization_options"] = []
         result["list_text"] = ""
@@ -314,6 +318,14 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
     return result
 
 
+# TODO: use more of this
+def get_header(sectionEl: WebElement):
+    header = sectionEl.find_element(
+        By.CSS_SELECTOR, constantCSSs["courseListHeader"]
+    ).text
+    return header
+
+
 def extract_course_lists(
     sectionEl: WebElement, infoInstance: InfoClass, type: Literal["cl", "cr"] = "cl"
 ):
@@ -324,11 +336,6 @@ def extract_course_lists(
     # innerSectionCSS = ":scope section:not(:scope section section)"
     biggestulCSS = ":scope ul:not(:scope ul ul)"
     course_lists = []
-
-    def find_header(sectionEl: WebElement):
-        headerCSS = 'div[class*="style__itemHeaderH2"]'
-        header = sectionEl.find_element(By.CSS_SELECTOR, headerCSS).text
-        return header
 
     outerSections = sectionEl.find_elements(By.CSS_SELECTOR, "section")
     if sectionEl.tag_name == "section":
@@ -341,10 +348,10 @@ def extract_course_lists(
 
     for outerSection in outerSections:
         current_list = {}
-        header = find_header(outerSection)
+        header = get_header(outerSection)
         current_list["name"] = header
         innerSections = outerSection.find_elements(By.CSS_SELECTOR, "section")
-        innerHeaders = [find_header(section) for section in innerSections]
+        innerHeaders = [get_header(section) for section in innerSections]
         current_list["innerLists"] = innerHeaders
         current_list["type"] = type
         if "list" in header.lower():
@@ -379,8 +386,9 @@ def extract_course_lists(
 
 def extract_system_of_study(sectionEl: WebElement, infoInstance: InfoClass):
     """Returns: 'regular'|'co-op'|'both'|'err'"""
-    innerTextCSS = 'div[class*="program-view__pre___"]'
-    innerEl = safe_find_element(sectionEl, By.CSS_SELECTOR, innerTextCSS)
+    innerEl = safe_find_element(
+        sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
+    )
     if innerEl is None:
         infoInstance.add(
             "differentErrors",
@@ -401,6 +409,129 @@ def extract_system_of_study(sectionEl: WebElement, infoInstance: InfoClass):
         return "both"
     else:
         return systems[0]
+
+
+def extract_offering_faculties(sectionEl: WebElement, infoInstance: InfoClass) -> list:
+    """Returns: str[] # faculty names || ['err']"""
+    innerEl = safe_find_element(
+        sectionEl, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
+    )
+    if innerEl is None:
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id} has no innerEl in extract_offering_faculties",
+        )
+        return []
+    faculties = innerEl.text.lower().replace("faculty of ", "").split("\n")
+    return faculties
+
+
+def extract_table(tableEl: WebElement, infoInstance: InfoClass):
+    """Returns:
+    {
+        "headers": str[]
+        "rows": str[][]
+    }
+    """
+    header = safe_find_element(tableEl, By.TAG_NAME, "thead")
+    body = safe_find_element(tableEl, By.TAG_NAME, "tbody")
+    result = {"headers": [], "rows": []}
+    if header is None or body is None:
+        infoInstance.add(
+            "differentErrors", f"{infoInstance.id} has a table but no body or no header"
+        )
+        return result
+    headerTexts = header.find_elements(By.TAG_NAME, "th")
+    for headerText in headerTexts:
+        result["headers"].append(headerText.text)
+    rows = body.find_elements(By.TAG_NAME, "tr")
+    headerCount = len(result["headers"])
+    rowSpan = 1
+    for idx, row in enumerate(rows):
+        rowSpan -= 1
+        currentRow = []
+        cells = row.find_elements(By.TAG_NAME, "td")
+        if len(cells) == headerCount - 1 and rowSpan > 0:
+            currentRow.append(result["rows"][-1][0])
+        elif len(cells) != headerCount:
+            infoInstance.add(
+                "differentErrors",
+                f"there are {len(cells)} at one of the rows but there should be {headerCount} at {infoInstance.id} at row: {idx}. with rowSpan : {rowSpan}",
+            )
+            rowSpan = 1
+        else:
+            rowSpan = int(
+                cells[0].get_attribute("rowspan") or 1
+            )  # cells[0].get_attribute("row-span") or
+
+        for cell in cells:
+            currentRow.append(cell.text)
+        result["rows"].append(currentRow)
+    return result
+
+
+def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
+    def processCell(cell: str):
+        cell = cell.strip()
+        infoInstance.add("differentCellSequence", cell, infoInstance.id)
+        if re.match(r"[0-9][AB]", cell):
+            return "Study"
+        if cell.startswith("WT"):
+            return "Work"
+        if cell == "" or cell == "off":
+            cell = "Off"
+        return cell
+
+    hasSS = "S/S" in table["headers"]
+    result = []
+    if any(
+        header not in ["S", "F", "W", "Plan"] and not (hasSS and header == "S/S")
+        for header in table["headers"]
+    ):
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id} has a header thats not registered: {result['headers']}",
+        )
+    for row in table["rows"]:
+        planName: str = row[0]
+        SS: str = row[1] if hasSS else ""
+        planPath = [
+            processCell(cell) for idx, cell in enumerate(row) if idx > 1 * hasSS
+        ]
+        if (
+            len(result)
+            and result[-1]["planName"] == planName
+            and result[-1]["SS"] == SS
+        ):
+            infoInstance.add(
+                "differentWarnings",
+                f"{infoInstance.id} has more than one match for planName: '{planName}' and SS: '{SS}'",
+            )
+        result.append({"planName": planName, "SS": SS, "planPath": planPath})
+    infoInstance.add("differentSequences", infoInstance.id, result)
+    return result
+
+
+def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
+    tables = sectionEl.find_elements(By.TAG_NAME, "table")
+    result = []
+    foundSeqChart = False
+    for table in tables:
+        header = table.find_element(By.XPATH, "preceding-sibling::*[1]").text
+        extracted_table = extract_table(table, infoInstance)
+        if (
+            header == "Study/Work Sequences Chart"
+            or header == "Study/Work Sequence Chart"
+        ):
+            foundSeqChart = True
+            refine_sequences(extracted_table, infoInstance)
+        result.append({"header": header, "extracted_table": extracted_table})
+    if not foundSeqChart and len(result):
+        infoInstance.add(
+            "differentWarnings",
+            f"{infoInstance.id} has no Seq Chart: {[res['header'] for res in result]}",
+        )
+    return result
 
 
 def addGroupTodb(
@@ -450,6 +581,16 @@ def addGroupTodb(
                 extract_course_lists(section, infoInstance, "cl")
             elif section_type == "Systems of Study":
                 extract_system_of_study(section, infoInstance)
+            elif section_type == "Offered by Faculty(ies)":
+                extract_offering_faculties(section, infoInstance)
+            elif programType == "degree" and (
+                section_type == "Degree Requirements"
+                or section_type == "Co-operative Education Program Requirements"
+            ):
+                prevId = infoInstance.id
+                infoInstance.id += "-" + section_type[:2].lower()
+                extract_sequences(section, infoInstance)
+                infoInstance.id = prevId
             elif section_type.lower().startswith("specialization"):
                 specialization_dict[section_type] = section
             elif section_type.startswith("This") or section_type == "Student Audience":
@@ -472,6 +613,8 @@ def get_program_reqs():
             ("differentWarnings", []),
             ("differentConditionText", {}),
             # ("differentSpecializations", {}),
+            ("differentSequences", {}),
+            ("differentCellSequence", {}),
             ("differentAvailableTo", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
@@ -522,7 +665,7 @@ def get_program_reqs():
     )
 
     offset = 0
-    limit = 5
+    limit = 1
     i = 0
     groups = {}
     print(
@@ -539,12 +682,12 @@ def get_program_reqs():
             expandButton = pg.find_element(By.CSS_SELECTOR, expandButtonCSS)
 
             # Math and Comp only
-            # if (
-            #     "math" not in expandButton.text.lower()
-            #     and "computer" not in expandButton.text.lower()
-            # ):
-            #     limit += 1
-            #     continue
+            if (
+                "degree" not in expandButton.text.lower()
+                # and "computer" not in expandButton.text.lower()
+            ):
+                limit += 1
+                continue
 
             # bringing the button into view
             bringIntoView(driver, expandButton)
@@ -591,6 +734,7 @@ def get_program_reqs():
         print("Done")
     except Exception as e:
         print(e)
+        print(f"Traceback:\n{traceback.format_exc()}")
         print("error occured")
     finally:
         if driver:

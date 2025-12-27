@@ -126,10 +126,25 @@ def find_program_type(programName: str, infoInstance: InfoClass):
     return "none"
 
 
-def extract_markdown(section: WebElement):
+def extract_table_markdown(tableEl: WebElement, infoInstance: InfoClass) -> str:
+    def addRow(cells: list[str]):
+        current_row = "|"
+        for cell in cells:
+            current_row += cell + "|"
+        return current_row
+
+    tableDict = extract_table(tableEl, infoInstance)
+    result_md = addRow(tableDict["headers"]) + "\n"
+    result_md += addRow(["-" for _ in tableDict["headers"]])
+    for row in tableDict["rows"]:
+        result_md += "\n" + addRow(row)
+    return result_md
+
+
+def extract_markdown(section: WebElement, infoInstance: InfoClass):
     # First, fix all anchor tags to use their actual href attributes
     links = section.find_elements(By.TAG_NAME, "a")
-    driver = section.parent
+    driver: WebDriver = section.parent
 
     for link in links:
         actual_href = link.get_attribute("href")
@@ -138,8 +153,33 @@ def extract_markdown(section: WebElement):
                 "arguments[0].setAttribute('href', arguments[1]);", link, actual_href
             )
 
+    # Fix all tables to use the correct markdown version
+    tables = section.find_elements(By.TAG_NAME, "table")
+    table_md_map: dict[str, str] = {}
+    for idx, table in enumerate(tables):
+        placeholder = f"@@TABLEPLACEHOLDERTAG{idx}@@"
+        table_md = extract_table_markdown(table, infoInstance)
+        table_md_map[placeholder] = table_md
+
+        driver.execute_script(
+            """
+            const table = arguments[0];
+            const placeholder = arguments[1];
+            const p = document.createElement('p');
+            p.textContent = placeholder;
+            table.replaceWith(p);
+            """,
+            table,
+            placeholder,
+        )
+
     html = section.get_attribute("innerHTML") or ""
-    return md(html, heading_style="ATX", strip=["style", "script"])
+    result_md = md(html, heading_style="ATX", strip=["style", "script"])
+
+    for placeholder, table_md in table_md_map.items():
+        result_md = result_md.replace(placeholder, table_md)
+
+    return result_md
 
 
 def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoClass):
@@ -197,7 +237,7 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
             )
             continue
         current_result["name"] = key
-        current_result["markdown"] = extract_markdown(innerEl)
+        current_result["markdown"] = extract_markdown(innerEl, infoInstance)
         result.append(current_result)
     if len(result) == 0 and len(sectionEls) != 0:
         infoInstance.add("differentWarnings", f"{infoInstance.id} has no availableTo")
@@ -288,7 +328,9 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
                 f"Missing text content in 'Specializations List' section for {infoInstance.id}",
             )
         else:
-            result["list_text"] = extract_markdown(specialization_list_element)
+            result["list_text"] = extract_markdown(
+                specialization_list_element, infoInstance
+            )
             links = specialization_list_element.find_elements(
                 By.CSS_SELECTOR, links_css
             )
@@ -471,21 +513,26 @@ def extract_table(tableEl: WebElement, infoInstance: InfoClass):
 
 
 def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
-    def processCell(cell: str):
+    def process_cell(cell: str):
         cell = cell.strip()
-        infoInstance.add("differentCellSequence", cell, infoInstance.id)
         if re.match(r"[0-9][AB]", cell):
             return "Study"
         if cell.startswith("WT"):
-            return "Work"
+            return "Coop"
         if cell == "" or cell == "off":
             cell = "Off"
+        else:
+            infoInstance.add(
+                "differentWarnings",
+                f"{infoInstance.id} has a cell that is not registered: {cell}",
+            )
         return cell
 
     hasSS = "S/S" in table["headers"]
     result = []
     if any(
-        header not in ["S", "F", "W", "Plan"] and not (hasSS and header == "S/S")
+        header not in ["S", "F", "W", "Plan", "Sequence"]
+        and not (hasSS and header == "S/S")
         for header in table["headers"]
     ):
         infoInstance.add(
@@ -496,7 +543,7 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         planName: str = row[0]
         SS: str = row[1] if hasSS else ""
         planPath = [
-            processCell(cell) for idx, cell in enumerate(row) if idx > 1 * hasSS
+            process_cell(cell) for idx, cell in enumerate(row) if idx > 1 * hasSS
         ]
         if (
             len(result)
@@ -515,22 +562,19 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
 def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
     tables = sectionEl.find_elements(By.TAG_NAME, "table")
     result = []
-    foundSeqChart = False
     for table in tables:
         header = table.find_element(By.XPATH, "preceding-sibling::*[1]").text
         extracted_table = extract_table(table, infoInstance)
-        if (
-            header == "Study/Work Sequences Chart"
-            or header == "Study/Work Sequence Chart"
-        ):
-            foundSeqChart = True
+        if header.startswith("Study/Work Sequence"):
             refine_sequences(extracted_table, infoInstance)
+        elif header.startswith("Legend for Study/Work Sequence"):
+            pass
         result.append({"header": header, "extracted_table": extracted_table})
-    if not foundSeqChart and len(result):
-        infoInstance.add(
-            "differentWarnings",
-            f"{infoInstance.id} has no Seq Chart: {[res['header'] for res in result]}",
-        )
+    infoInstance.add(
+        "differentSectionMarkDown",
+        infoInstance.id,
+        extract_markdown(sectionEl, infoInstance),
+    )
     return result
 
 
@@ -583,7 +627,7 @@ def addGroupTodb(
                 extract_system_of_study(section, infoInstance)
             elif section_type == "Offered by Faculty(ies)":
                 extract_offering_faculties(section, infoInstance)
-            elif programType == "degree" and (
+            elif (
                 section_type == "Degree Requirements"
                 or section_type == "Co-operative Education Program Requirements"
             ):
@@ -614,7 +658,7 @@ def get_program_reqs():
             ("differentConditionText", {}),
             # ("differentSpecializations", {}),
             ("differentSequences", {}),
-            ("differentCellSequence", {}),
+            ("differentSectionMarkDown", {}),
             ("differentAvailableTo", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),

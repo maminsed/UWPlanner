@@ -69,6 +69,13 @@ program_sequence = Table(
     Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
 )
 
+program_student = Table(
+    "program_student",
+    Base.metadata,
+    Column("program_id", db.Integer, ForeignKey("programs.id"), primary_key=True),
+    Column("student_id", db.Integer, ForeignKey("users.id"), primary_key=True),
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -114,10 +121,12 @@ class Users(db.Model):
         "JwtToken", back_populates="user", cascade="all, delete-orphan, save-update"
     )
     # School related Information
+    programs: Mapped["Program"] = relationship(
+        "Program", back_populates="students", secondary=program_student
+    )
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="students", secondary=major_student
     )
-    # programs: Mapped["Program"] = relationship("Program", back_populates="students", secondary=program_student)
     minors: Mapped[list["Minor"]] = relationship(
         "Minor", back_populates="users", secondary=minor_user
     )
@@ -322,4 +331,6 @@ class Programs(db.Model):
     sequences: Mapped["Sequence"] = relationship(
         "Sequence", back_populates="programs", secondary=program_sequence
     )
-    # students: Mapped["Users"] = relationship("Users", back_populates="programs", secondary=program_student)
+    students: Mapped["Users"] = relationship(
+        "Users", back_populates="programs", secondary=program_student
+    )

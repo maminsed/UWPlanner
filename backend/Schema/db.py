@@ -62,6 +62,13 @@ major_spec = Table(
     Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
 )
 
+program_sequence = Table(
+    "program_sequence",
+    Base.metadata,
+    Column("program_id", db.Integer, ForeignKey("programs.id"), primary_key=True),
+    Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -252,7 +259,9 @@ class Sequence(db.Model):
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="sequences", secondary=major_sequence
     )
-    # programs: Mapped["Programs"] = relationship("Programs", back_populates="sequences", secondary=program_sequence)
+    programs: Mapped["Programs"] = relationship(
+        "Programs", back_populates="sequences", secondary=program_sequence
+    )
 
 
 class Course(db.Model):
@@ -310,5 +319,7 @@ class Programs(db.Model):
 
     otherSections: Mapped[str] = mapped_column(db.String(), default="{}")
     relatedLinks: Mapped[str] = mapped_column(db.String(), default="[]")
-    # sequences: Mapped["Sequence"] = relationship("Sequence", back_populates="programs", secondary=program_sequence)
+    sequences: Mapped["Sequence"] = relationship(
+        "Sequence", back_populates="programs", secondary=program_sequence
+    )
     # students: Mapped["Users"] = relationship("Users", back_populates="programs", secondary=program_student)

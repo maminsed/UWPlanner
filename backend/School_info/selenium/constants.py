@@ -69,8 +69,9 @@ def lists(count: bool = False):
     status = "?:" if not count else ""
     singlist = rf"list(?: of(?: approved)? courses| {r'(?![a-z0-9]{2})'}[0-9a-z])|[a-z]*\s?[a-z]* list"
     return (
-        rf"(?:from )?(?:either )?({status}{singlist})"
-        + rf"(?:(?:{connectives('full')})(?: from)? ({status}{singlist}|[0-9]))?" * 3
+        rf"(?:from )?(?:the )?(?:either )?({status}{singlist})"
+        + rf"(?:(?:{connectives('full')})(?: from)?(?: the)? ({status}{singlist}|[0-9]))?"
+        * 3
     )
 
 
@@ -498,3 +499,9 @@ groupConditionRegExList: list[
         [(1, -1, (-1,), (2,), {})],
     ),
 ]
+
+
+constantCSSs: dict[str, str] = {
+    "courseListHeader": 'div[class*="style__itemHeaderH2"]',
+    "sectionInnerText": 'div[class*="program-view__pre___"]',
+}

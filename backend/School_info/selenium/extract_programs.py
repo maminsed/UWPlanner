@@ -17,8 +17,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
+from backend.Schema import Programs
+
 from .calendar_utils import InfoClass
-from .constants import constantCSSs, count
+from .constants import CONSTANT_URLS, constantCSSs, count
 from .course_reqs import extractContainerInfo, get_link_attr, safe_find_element
 
 delayAmount = 15
@@ -125,6 +127,14 @@ def find_program_type(programName: str, infoInstance: InfoClass):
             return programType
     infoInstance.add("differentErrors", f"60: {programName} does not have any types")
     return "none"
+
+
+def get_clean_link_href(linkEl: WebElement):
+    url = linkEl.get_attribute("href") or ""
+    firstQuestionMark = url.find("?")
+    if firstQuestionMark != -1:
+        url = url[:firstQuestionMark]
+    return url
 
 
 def extract_table_markdown(tableEl: WebElement, infoInstance: InfoClass) -> str:
@@ -462,9 +472,7 @@ def extract_table(tableEl: WebElement, infoInstance: InfoClass):
             )
             rowSpan = 1
         else:
-            rowSpan = int(
-                cells[0].get_attribute("rowspan") or 1
-            )  # cells[0].get_attribute("row-span") or
+            rowSpan = int(cells[0].get_attribute("rowspan") or 1)
 
         for cell in cells:
             currentRow.append(cell.text)
@@ -549,8 +557,30 @@ def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
     return result
 
 
-def extract_degreeName(sectionEl: WebElement, infoInstance: InfoClass):
-    return None
+def extract_degree_info(sectionEl: WebElement, infoInstance: InfoClass):
+    """Returns: {name: str, id: number} || None"""
+    programs_link = CONSTANT_URLS[infoInstance.get("LEVEL_OF_STUDY")]["PROGRAMS"]
+    links = [
+        get_clean_link_href(link) for link in sectionEl.find_elements(By.TAG_NAME, "a")
+    ]
+    filtered_links = [
+        link for link in links if link is not None and programs_link in link
+    ]
+    degrees = []
+    if len(filtered_links):
+        matching_programs = Programs.query.filter(
+            Programs.url.in_(filtered_links)
+        ).all()
+        for program in matching_programs:
+            if program.programType == "degree":
+                degrees.append({"name": program.name, "id": program.id})
+    if len(degrees) != 1:
+        infoInstance.add(
+            "differentErrors",
+            f"{infoInstance.id} has {len(degrees)} != 1 degrees in its degreeInfo with filtered_links = {filtered_links}",
+        )
+        return None
+    return degrees[0]
 
 
 def addGroupTodb(
@@ -604,17 +634,12 @@ def addGroupTodb(
                     "differentSectionPageTypes", section_type, program["program"]
                 )
 
-            if section_type == "Degree Requirements" and programType != "degree":
+            if section_type == "Graduation Requirements" and programType == "major":
                 # degreeName
-                programInfo["degreeName"] = extract_degreeName(section, infoInstance)
+                programInfo["degreeName"] = extract_degree_info(section, infoInstance)
 
             if section_type == "Course Requirements":
-                courseLists = extract_course_lists(section, infoInstance, "cr")
-                for item in courseLists:
-                    item.pop("type", None)
-                    lists_and_reqs["courseLists"].append(item)
-            elif section_type == "Course Lists":
-                courseReqs = extract_course_lists(section, infoInstance, "cl")
+                courseReqs = extract_course_lists(section, infoInstance, "cr")
                 for item in courseReqs:
                     addedKey = "courseRequirements"
                     if item["type"] == "cl":
@@ -622,6 +647,11 @@ def addGroupTodb(
                     lists_and_reqs[addedKey].append(
                         {k: v for k, v in item.items() if k != "type"}
                     )
+            elif section_type == "Course Lists":
+                courseLists = extract_course_lists(section, infoInstance, "cl")
+                for item in courseLists:
+                    item.pop("type", None)
+                    lists_and_reqs["courseLists"].append(item)
             elif section_type == "Systems of Study":
                 programInfo["systemOfStudy"] = extract_system_of_study(
                     innerEl, infoInstance
@@ -634,7 +664,9 @@ def addGroupTodb(
             ):
                 prevId = infoInstance.id
                 infoInstance.id += "-" + section_type[:2].lower()
-                programInfo["sequences"] = extract_sequences(innerEl, infoInstance)
+                extracted_sequences = extract_sequences(innerEl, infoInstance)
+                if extracted_sequences["sequences"]:
+                    programInfo["sequences"] = extracted_sequences
                 infoInstance.id = prevId
                 otherSections[section_type] = extract_markdown(innerEl, infoInstance)
                 otherSections["order"].append(section_type)
@@ -659,6 +691,8 @@ def addGroupTodb(
             specialization_result = None
         elif specialization_result is not None:
             specialization_result.pop("type", None)
+        if specialization_result is not None:
+            programInfo["specializations"] = specialization_result
         programInfo["availableTo"] = extract_availableTo(availableTo_dict, infoInstance)
         programInfo["courseRequirements"] = lists_and_reqs["courseRequirements"]
         programInfo["courseLists"] = lists_and_reqs["courseLists"]
@@ -676,8 +710,8 @@ def get_program_reqs():
     linkContainerCSS = 'div[class*="style__columns___"]'
     infoInstance = InfoClass(
         [
-            ("differentErrors", []),
-            ("differentWarnings", []),
+            ("differentErrors", set()),
+            ("differentWarnings", set()),
             ("differentConditionText", {}),
             # ("differentSpecializations", {}),
             # ("differentAvailableTo", {}),
@@ -692,17 +726,11 @@ def get_program_reqs():
         ]
     )
     infoInstance.setEnvVar("saveTodb", False)
-
-    UNDERGRAD_LINK = (
-        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs"
-    )
-    GRAD_LINK = (
-        "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/programs"
-    )
+    infoInstance.setEnvVar("LEVEL_OF_STUDY", "UNDERGRAD")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
-    driver.get(UNDERGRAD_LINK)
+    driver.get(CONSTANT_URLS[infoInstance.get("LEVEL_OF_STUDY")]["PROGRAMS"])
     driver.maximize_window()
     wait = WebDriverWait(driver, delayAmount)
     time.sleep(1)
@@ -750,8 +778,8 @@ def get_program_reqs():
 
             # Math and Comp only
             if (
-                "degree" not in expandButton.text.lower()
-                # and "computer" not in expandButton.text.lower()
+                "math" not in expandButton.text.lower()
+                and "computer" not in expandButton.text.lower()
             ):
                 limit += 1
                 continue
@@ -775,7 +803,7 @@ def get_program_reqs():
                     EC.visibility_of_element_located((By.TAG_NAME, "a"))
                 )
                 updateGroup["members"].append(
-                    {"program": link.text, "url": link.get_attribute("href") or ""}
+                    {"program": link.text, "url": get_clean_link_href(link)}
                 )
 
             # closing it

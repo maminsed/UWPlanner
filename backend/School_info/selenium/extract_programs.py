@@ -590,12 +590,12 @@ def addGroupTodb(
         for section in sections:
             header = safe_find_element(section, By.CSS_SELECTOR, sectionHeadersCSS)
             innerEl = safe_find_element(
-                section, By.CLASS_NAME, constantCSSs["sectionInnerText"]
+                section, By.CSS_SELECTOR, constantCSSs["sectionInnerText"]
             )
             if not header or not innerEl:
                 infoInstance.add(
                     "differentErrors",
-                    f"135: {programName} does not have sectionHeadersCSS or innerEl at one of sections",
+                    f"135: {programName} does not have sectionHeadersCSS or innerEl at one of sections: {header.text if header else ''}",
                 )
                 continue
             section_type = header.text
@@ -645,9 +645,20 @@ def addGroupTodb(
             else:
                 otherSections[section_type] = extract_markdown(innerEl, infoInstance)
                 otherSections["order"].append(section_type)
-        programInfo["specializations"] = extract_specializations(
+        specialization_result = extract_specializations(
             specialization_dict, infoInstance
         )
+        if (
+            specialization_result is not None
+            and specialization_result["type"] == "course_req"
+        ):
+            for item in specialization_result["requirements"]:
+                lists_and_reqs["courseLists"].append(
+                    {k: v for k, v in item.items() if k != "type"}
+                )
+            specialization_result = None
+        elif specialization_result is not None:
+            specialization_result.pop("type", None)
         programInfo["availableTo"] = extract_availableTo(availableTo_dict, infoInstance)
         programInfo["courseRequirements"] = lists_and_reqs["courseRequirements"]
         programInfo["courseLists"] = lists_and_reqs["courseLists"]

@@ -17,7 +17,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from backend.Schema import Course, db
 
-from .calendar_utils import InfoClass
 from .constants import (
     CONSTANT_URLS,
     conditionDict,
@@ -29,6 +28,7 @@ from .constants import (
     groupConditionRegExList,
     number_words,
 )
+from .extraction_utils import InfoClass
 
 delayAmount = 15
 

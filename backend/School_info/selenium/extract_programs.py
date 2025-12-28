@@ -19,9 +19,9 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 from backend.Schema import Programs
 
-from .calendar_utils import InfoClass
 from .constants import CONSTANT_URLS, constantCSSs, count
 from .course_reqs import extractContainerInfo, get_link_attr, safe_find_element
+from .extraction_utils import InfoClass
 
 delayAmount = 15
 # differentPrograms = []

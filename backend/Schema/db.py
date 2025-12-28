@@ -121,8 +121,8 @@ class Users(db.Model):
         "JwtToken", back_populates="user", cascade="all, delete-orphan, save-update"
     )
     # School related Information
-    programs: Mapped["Program"] = relationship(
-        "Program", back_populates="students", secondary=program_student
+    programs: Mapped["Programs"] = relationship(
+        "Programs", back_populates="students", secondary=program_student
     )
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="students", secondary=major_student
@@ -311,10 +311,11 @@ class Programs(db.Model):
     name: Mapped[str] = mapped_column(db.String())
     programType: Mapped[str] = mapped_column(db.String())  # e.g. major, minor, ...
     groupName: Mapped[str] = mapped_column(db.String())
-    url: Mapped[str] = mapped_column(db.String())
+    url: Mapped[str] = mapped_column(db.String(), unique=True)
 
     # only majors have this
     degreeName: Mapped[str] = mapped_column(db.String(), default="N/A")
+    degreeId: Mapped[Optional[str]] = mapped_column(db.Integer)
     systemOfStudy: Mapped[str] = mapped_column(
         db.String(), default="none"
     )  # regular, co-op, both, none

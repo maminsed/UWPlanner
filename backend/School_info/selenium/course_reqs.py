@@ -19,6 +19,7 @@ from backend.Schema import Course, db
 
 from .calendar_utils import InfoClass
 from .constants import (
+    CONSTANT_URLS,
     conditionDict,
     conditionRegExList,
     countingYears,
@@ -756,16 +757,9 @@ def get_course_reqs():
         }
     )
 
-    UNDERGRAD_LINK = (
-        "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses"
-    )
-    GRAD_LINK = (
-        "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/courses"
-    )
-
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
-    driver.get(UNDERGRAD_LINK)
+    driver.get(CONSTANT_URLS["UNDERGRAD"]["COURSES"])
     driver.maximize_window()
     wait = WebDriverWait(driver, delayAmount)
     time.sleep(1)

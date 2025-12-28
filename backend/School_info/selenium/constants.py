@@ -505,3 +505,14 @@ constantCSSs: dict[str, str] = {
     "courseListHeader": 'div[class*="style__itemHeaderH2"]',
     "sectionInnerText": 'div[class*="program-view__pre___"]',
 }
+
+CONSTANT_URLS: dict[str, dict[str, str]] = {
+    "UNDERGRAD": {
+        "PROGRAMS": "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/programs",
+        "COURSES": "https://uwaterloo.ca/academic-calendar/undergraduate-studies/catalog#/courses",
+    },
+    "GRAD": {
+        "PROGRAMS": "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/programs",
+        "COURSES": "https://uwaterloo.ca/academic-calendar/graduate-studies/catalog#/courses",
+    },
+}

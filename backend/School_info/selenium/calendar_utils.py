@@ -1,11 +1,18 @@
+from typing import Literal
+
+
 class InfoClass:
     id: str = ""
     notReturnedTags = set()
     envVars: dict[str] = {}
+    infoDictionary: dict[str, list | dict | int | set] = {}
+    typesDictionary: dict[str, Literal["set", "list", "dict", "int", "float"]] = {}
 
     def __init__(
         self,
-        returnedClasses: list[tuple[str, list | dict | int]]
+        returnedClasses: list[
+            tuple[str, list | dict | int] | tuple[str, list | dict | int, bool]
+        ]
         | dict[str, list | dict | int],
         priortrizedTags: list[str] = [],
     ) -> None:
@@ -23,6 +30,9 @@ class InfoClass:
             self.infoDictionary = {key: value for key, value in returnedClasses}
             if len(priortrizedTags) == 0:
                 self.priortrizedTags = [key for key, _ in returnedClasses]
+        self.typesDictionary = {
+            key: type(value).__name__ for key, value in self.infoDictionary.items()
+        }
 
     def add(self, tag: str, key: str | int, value: str | dict | None = None) -> None:
         """Add or update a value in the info dictionary for a given tag.
@@ -34,14 +44,22 @@ class InfoClass:
 
         """
         if tag in self.infoDictionary:
-            if type(key) == int:
-                self.infoDictionary[tag] = key
-            elif value is None:
-                self.infoDictionary[tag].append(key)
-                if "error" in key:
-                    print(value)
+            typeOfTag = self.typesDictionary[tag]
+            if value is None:
+                if typeOfTag == "float" or typeOfTag == "int":
+                    self.infoDictionary[tag] = key
+                elif typeOfTag == "list":
+                    self.infoDictionary[tag].append(key)
+                else:  # can't be dictionary
+                    assert typeOfTag != "dict", "cant do dictionary with no value"
+                    self.infoDictionary[tag].add(key)
             else:
+                assert typeOfTag == "list" or typeOfTag == "dict", (
+                    "can't do key,value with something other than list or dict"
+                )
                 self.infoDictionary[tag][key] = value
+            if "error" in tag.lower() or "warning" in tag.lower():
+                print(f"{tag}:{key}:{value}")
         else:
             self.notReturnedTags.add(tag)
 
@@ -82,9 +100,12 @@ class InfoClass:
         """
         self.infoDictionary.update(additionalTags)
         for i, key in enumerate(self.priortrizedTags):
+            updated_key = f"{i}_{key}"
             if key in removedTags:
                 self.infoDictionary.pop(key)
+            elif self.typesDictionary[key] == "set":
+                self.infoDictionary[updated_key] = list(self.infoDictionary.pop(key))
             else:
-                self.infoDictionary[f"{i}_{key}"] = self.infoDictionary.pop(key)
+                self.infoDictionary[updated_key] = self.infoDictionary.pop(key)
         print(f"notReturnedTags: {self.notReturnedTags}")
         return self.infoDictionary

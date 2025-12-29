@@ -59,7 +59,7 @@ class InfoClass:
                 )
                 self.infoDictionary[tag][key] = value
             if "error" in tag.lower() or "warning" in tag.lower():
-                print(f"{tag}:{key}:{value}")
+                print(f"\033[93m{tag}:{key}:{value}\033[0m")
         else:
             self.notReturnedTags.add(tag)
 

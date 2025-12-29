@@ -197,12 +197,15 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
     """Returns: {
         "name": str;
         "markdown": str;
-        "relatedLinks": {"value": str|'any'|'any_degree',"url": str,"linkType": 'programs'|'course'|'external'}[]
+        "realtedProgramUrls": {
+            "text":str,
+            "matchingUrls": (str|"any"|"any_degree")[],
+        }[]
     }
     """
     result = []
     for key, innerEl in sectionEls.items():
-        current_result = {"relatedLinks": []}
+        current_result = {"realtedProgramUrls": []}
         if "specialization" in key.lower():
             links = innerEl.find_elements(By.CSS_SELECTOR, "a")
             if len(links) == 0:
@@ -210,11 +213,15 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                     "differentErrors",
                     "there is no links found in extract_availableTo for specialization section",
                 )
+                continue
             for link in links:
-                current_result["relatedLinks"].append(get_link_attr(link))
+                link_attr = get_link_attr(link)
+                if link_attr["linkType"] == "programs":
+                    current_result["realtedProgramUrls"].append(
+                        {"text": link_attr["value"], "matchingUrls": [link_attr["url"]]}
+                    )
         elif "option" in key.lower():
             bachelors = innerEl.text.split("\n")
-            print(f"\033[93m220: bachelors: {bachelors}\033[0m")
             if not len(bachelors):
                 infoInstance.add(
                     "differentErrors",
@@ -230,74 +237,91 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                             {
                                 "raw": bachelor[:startIdx].lower().strip(),
                                 "paran": bachelor[startIdx + 1 : endIdx].lower(),
+                                "orig": bachelor,
                             }
                         )
                     else:
-                        updated_bachelors.append({"raw": bachelor.lower(), "paran": ""})
+                        updated_bachelors.append(
+                            {"raw": bachelor.lower(), "paran": "", "orig": bachelor}
+                        )
                 # First we check if the pattern is found
-                regex_pattern_list = []
+                regex_pattern_list = {}
                 for b in updated_bachelors:
                     current_patten = b["raw"]
                     if b["paran"]:
                         current_patten += rf".*\(.*{b['paran']}.*\)"
-                    regex_pattern_list.append(current_patten)
-                regex_patten = "^.*(" + "|".join(regex_pattern_list) + ").*$"
-                print(f"\033[93m220: regex_patten: {regex_patten}\033[0m")
+                    regex_pattern_list[b["orig"]] = current_patten
+                regex_patten = (
+                    "^.*(" + "|".join(list(regex_pattern_list.values())) + ").*$"
+                )
                 matching_programs = Programs.query.filter(
                     Programs.name.regexp_match(regex_patten, "i")
                 ).all()
                 # then we check that every bachelor has at least one match
-                counter = set()
+                counter = defaultdict(list)
                 for matching_program in matching_programs:
-                    for idx, rp in enumerate(regex_pattern_list):
+                    for idx, rp in regex_pattern_list.items():
                         if re.match(rf"^.*{rp}.*$", matching_program.name):
-                            counter.add(idx)
+                            counter[idx].append(matching_program)
                             break
                 updated_bachelors = [
-                    ub for idx, ub in enumerate(updated_bachelors) if idx not in counter
+                    ub for ub in updated_bachelors if ub["orig"] not in counter
                 ]
 
                 # If there is a bachelor that did not match, we will check again
                 if updated_bachelors:
-                    regex_pattern_list = []
+                    regex_pattern_list = {}
                     for b in updated_bachelors:
                         current_patten = ""
                         if b["paran"]:
                             current_patten += rf"(?=.*{b['paran']})"
                         current_patten += rf"(?=.*{b['raw']})"
-                        regex_pattern_list.append(current_patten)
-                    regex_patten = "^(" + "|".join(regex_pattern_list) + ").*$"
-                    print(f"\033[93m220: regex_patten2: {regex_patten}\033[0m")
+                        regex_pattern_list[b["orig"]] = current_patten
+                    regex_patten = (
+                        "^(" + "|".join(list(regex_pattern_list.values())) + ").*$"
+                    )
                     new_matching_programs = Programs.query.filter(
                         Programs.name.regexp_match(regex_patten, "i")
                     ).all()
-                    counter = set()
                     for matching_program in new_matching_programs:
-                        for idx, rp in enumerate(regex_pattern_list):
+                        for idx, rp in regex_pattern_list.items():
                             if re.match(rf"^{rp}.*$", matching_program.name):
-                                counter.add(idx)
+                                counter[idx].append(matching_program)
                                 break
                     no_match_found = [
-                        ub
-                        for idx, ub in enumerate(updated_bachelors)
-                        if idx not in counter
+                        ub["orig"]
+                        for ub in updated_bachelors
+                        if ub["orig"] not in counter
                     ]
                     if len(no_match_found):
                         infoInstance.add(
                             "differentErrors",
                             f"there was no matching programs for some of the availableTo bachelors in {infoInstance.id}: no_match_found: {no_match_found}",
                         )
-                    matching_programs.extend(new_matching_programs)
-                # TODO: continue
+                # Then we filter each group to only have degrees if it has degrees.
+                for orig, mps in counter.items():
+                    degrees = []
+                    for mp in mps:
+                        if mp.programType == "degree":
+                            degrees.append(mp)
+                    if len(degrees):
+                        current_result["realtedProgramUrls"].append(
+                            {"text": orig, "matchingUrls": [d.url for d in degrees]}
+                        )
+                    else:
+                        current_result["realtedProgramUrls"].append(
+                            {"text": orig, "matchingUrls": [d.url for d in mps]}
+                        )
         elif "Student Audience" == key:
             student_audience_regex = r"^this credential is open to students enrolled in(?: any)? degree programs?( or any non- or post-degree academic plan)?[^0-9a-z]*$"
             matched = re.split(student_audience_regex, innerEl.text.lower())
             if len(matched) > 1:
-                current_result["relatedLinks"].append(
+                current_result["realtedProgramUrls"].append(
                     {
-                        "value": "any" if matched[1] is not None else "any_degree",
-                        "url": "",
-                        "linkType": "external",
+                        "text": innerEl.text,
+                        "matchingUrls": "any"
+                        if matched[1] is not None
+                        else "any_degree",
                     }
                 )
             else:
@@ -308,8 +332,10 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
         else:
             infoInstance.add(
                 "differentErrors",
-                f"{key} appeared in extract_availableTowhen it shouldn't have",
+                f"{key} appeared in extract_availableTo when it shouldn't have",
             )
+            continue
+        if not len(current_result["realtedProgramUrls"]):
             continue
         current_result["name"] = key
         current_result["markdown"] = extract_markdown(innerEl, infoInstance)

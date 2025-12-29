@@ -213,10 +213,82 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
             for link in links:
                 current_result["relatedLinks"].append(get_link_attr(link))
         elif "option" in key.lower():
-            infoInstance.add(
-                "differentErrors", f"this section is not done yet: {infoInstance.id}"
-            )
-            continue
+            bachelors = innerEl.text.split("\n")
+            print(f"\033[93m220: bachelors: {bachelors}\033[0m")
+            if not len(bachelors):
+                infoInstance.add(
+                    "differentErrors",
+                    f"{infoInstance.id} has options section but no option in it",
+                )
+            else:
+                updated_bachelors = []
+                for bachelor in bachelors:
+                    startIdx = bachelor.find("(")
+                    endIdx = bachelor.find(")")
+                    if startIdx != -1:
+                        updated_bachelors.append(
+                            {
+                                "raw": bachelor[:startIdx].lower().strip(),
+                                "paran": bachelor[startIdx + 1 : endIdx].lower(),
+                            }
+                        )
+                    else:
+                        updated_bachelors.append({"raw": bachelor.lower(), "paran": ""})
+                # First we check if the pattern is found
+                regex_pattern_list = []
+                for b in updated_bachelors:
+                    current_patten = b["raw"]
+                    if b["paran"]:
+                        current_patten += rf".*\(.*{b['paran']}.*\)"
+                    regex_pattern_list.append(current_patten)
+                regex_patten = "^.*(" + "|".join(regex_pattern_list) + ").*$"
+                print(f"\033[93m220: regex_patten: {regex_patten}\033[0m")
+                matching_programs = Programs.query.filter(
+                    Programs.name.regexp_match(regex_patten, "i")
+                ).all()
+                # then we check that every bachelor has at least one match
+                counter = set()
+                for matching_program in matching_programs:
+                    for idx, rp in enumerate(regex_pattern_list):
+                        if re.match(rf"^.*{rp}.*$", matching_program.name):
+                            counter.add(idx)
+                            break
+                updated_bachelors = [
+                    ub for idx, ub in enumerate(updated_bachelors) if idx not in counter
+                ]
+
+                # If there is a bachelor that did not match, we will check again
+                if updated_bachelors:
+                    regex_pattern_list = []
+                    for b in updated_bachelors:
+                        current_patten = ""
+                        if b["paran"]:
+                            current_patten += rf"(?=.*{b['paran']})"
+                        current_patten += rf"(?=.*{b['raw']})"
+                        regex_pattern_list.append(current_patten)
+                    regex_patten = "^(" + "|".join(regex_pattern_list) + ").*$"
+                    print(f"\033[93m220: regex_patten2: {regex_patten}\033[0m")
+                    new_matching_programs = Programs.query.filter(
+                        Programs.name.regexp_match(regex_patten, "i")
+                    ).all()
+                    counter = set()
+                    for matching_program in new_matching_programs:
+                        for idx, rp in enumerate(regex_pattern_list):
+                            if re.match(rf"^{rp}.*$", matching_program.name):
+                                counter.add(idx)
+                                break
+                    no_match_found = [
+                        ub
+                        for idx, ub in enumerate(updated_bachelors)
+                        if idx not in counter
+                    ]
+                    if len(no_match_found):
+                        infoInstance.add(
+                            "differentErrors",
+                            f"there was no matching programs for some of the availableTo bachelors in {infoInstance.id}: no_match_found: {no_match_found}",
+                        )
+                    matching_programs.extend(new_matching_programs)
+                # TODO: continue
         elif "Student Audience" == key:
             student_audience_regex = r"^this credential is open to students enrolled in(?: any)? degree programs?( or any non- or post-degree academic plan)?[^0-9a-z]*$"
             matched = re.split(student_audience_regex, innerEl.text.lower())
@@ -761,7 +833,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0
+    offset = 122
     limit = 1
     i = 0
     groups = {}
@@ -780,8 +852,8 @@ def get_program_reqs():
 
             # Math and Comp only
             if (
-                "math" not in expandButton.text.lower()
-                and "computer" not in expandButton.text.lower()
+                "options" not in expandButton.text.lower()
+                # and "computer" not in expandButton.text.lower()
             ):
                 limit += 1
                 continue

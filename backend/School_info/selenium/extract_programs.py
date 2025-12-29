@@ -634,7 +634,9 @@ def addGroupTodb(
                     "differentSectionPageTypes", section_type, program["program"]
                 )
 
-            if section_type == "Graduation Requirements" and programType == "major":
+            if section_type == "Graduation Requirements" and (
+                "major" in programType or programType == "double degree"
+            ):
                 # degreeName
                 programInfo["degreeName"] = extract_degree_info(section, infoInstance)
 

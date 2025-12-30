@@ -580,7 +580,7 @@ def extract_table(tableEl: WebElement, infoInstance: InfoClass):
 
 
 def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
-    """Returns: {"SS":str,"planName":str,"planPath":str[]}[]"""
+    """Returns: {"SS":str,"appliesTo":str,"planPath":str[]}[]"""
 
     def process_cell(cell: str):
         cell = cell.strip()
@@ -598,7 +598,7 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         return cell
 
     hasSS = "S/S" in table["headers"] or "Sequence" in table["headers"]
-    noPlanName = hasSS and "Plan" not in table["headers"]
+    noappliesTo = hasSS and "Plan" not in table["headers"]
     result = []
     # Making sure there is no unwanted header
     if any(
@@ -612,25 +612,25 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         )
     # Processing each row
     for row in table["rows"]:
-        planName: str = row[0]
+        appliesTo: str = row[0]
         SS: str = row[1] if hasSS else ""
-        if noPlanName:
-            planName = ""
+        if noappliesTo:
+            appliesTo = ""
             SS = row[0]
         planPath = [
             process_cell(cell) for idx, cell in enumerate(row) if idx > int(hasSS)
         ]
-        result.append({"planName": planName, "SS": SS, "planPath": planPath})
-    # if there are duplicate planNames with the same SS, we should do something about them.
+        result.append({"appliesTo": appliesTo, "SS": SS, "planPath": planPath})
+    # if there are duplicate appliesTos with the same SS, we should do something about them.
     counter = defaultdict(list)
     for idx, item in enumerate(result):
-        key = f"{item['planName']}-{item['SS']}"
+        key = f"{item['appliesTo']}-{item['SS']}"
         counter[key].append(idx)
     for key, indecies in counter.items():
         SS = result[indecies[0]]["SS"]
         if len(indecies) == 1:
             if not SS:
-                SS = result[indecies[0]]["planName"]
+                SS = result[indecies[0]]["appliesTo"]
             elif len(SS) <= 4:
                 SS = "Sequence " + SS
             result[indecies[0]]["SS"] = SS
@@ -651,7 +651,7 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
 
 def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
     """Returns: {
-        "sequences": {"SS":str,"planName":str,"planPath":str[]}[],
+        "sequences": {"SS":str,"appliesTo":str,"planPath":str[]}[],
         "legend": dict[str,str][],
     }
     """
@@ -739,7 +739,7 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
             legend = json.dumps(programInfo["sequences"]["legend"])
             for seq in programInfo["sequences"]["sequences"]:
                 seq_name: str = seq["SS"]
-                appliesTo = seq["planName"]
+                appliesTo = seq["appliesTo"]
                 plan_path = json.dumps(seq["planPath"])
                 existing_sequence: Sequence = Sequence.query.filter_by(
                     name=seq_name, appliesTo=appliesTo, plan=plan_path

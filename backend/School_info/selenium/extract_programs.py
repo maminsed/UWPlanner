@@ -1,3 +1,4 @@
+import json
 import re
 import time
 import traceback
@@ -17,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from backend.Schema import Programs
+from backend.Schema import Programs, Sequence, db
 
 from .constants import CONSTANT_URLS, constantCSSs, count
 from .course_reqs import extractContainerInfo, get_link_attr, safe_find_element
@@ -596,7 +597,8 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
             )
         return cell
 
-    hasSS = "S/S" in table["headers"]
+    hasSS = "S/S" in table["headers"] or "Sequence" in table["headers"]
+    noPlanName = hasSS and "Plan" not in table["headers"]
     result = []
     # Making sure there is no unwanted header
     if any(
@@ -612,6 +614,9 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
     for row in table["rows"]:
         planName: str = row[0]
         SS: str = row[1] if hasSS else ""
+        if noPlanName:
+            planName = ""
+            SS = row[0]
         planPath = [
             process_cell(cell) for idx, cell in enumerate(row) if idx > int(hasSS)
         ]
@@ -622,16 +627,25 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         key = f"{item['planName']}-{item['SS']}"
         counter[key].append(idx)
     for key, indecies in counter.items():
+        SS = result[indecies[0]]["SS"]
         if len(indecies) == 1:
+            if not SS:
+                SS = result[indecies[0]]["planName"]
+            elif len(SS) <= 4:
+                SS = "Sequence " + SS
+            result[indecies[0]]["SS"] = SS
             continue
-        if result[indecies[0]]["SS"] != "":
+        if SS != "":
             infoInstance.add(
                 "differentErrors",
                 f"{infoInstance.id} has {len(indecies)} matches for key: {key}",
             )
             continue
         for i, idx in enumerate(indecies):
-            result[idx]["SS"] = str(i)
+            SS = str(i + 1)
+            if len(SS) <= 4:
+                SS = "Sequence " + SS
+            result[idx]["SS"] = SS
     return result
 
 
@@ -642,7 +656,7 @@ def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
     }
     """
     tables = sectionEl.find_elements(By.TAG_NAME, "table")
-    result = {"sequences": [], "legend": []}
+    result = {"sequences": [], "legend": {}}
     for table in tables:
         header = table.find_element(By.XPATH, "preceding-sibling::*[1]").text
         extracted_table = extract_table(table, infoInstance)
@@ -650,8 +664,8 @@ def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
             sequences = refine_sequences(extracted_table, infoInstance)
             result["sequences"] = sequences
         elif header.startswith("Legend for Study/Work Sequence"):
-            legend = [{items[0]: items[1]} for items in extracted_table["rows"]]
-            result["legend"] = legend
+            result["legend"] = {items[0]: items[1] for items in extracted_table["rows"]}
+    infoInstance.add("differentSequences", infoInstance.id, result)
     return result
 
 
@@ -679,6 +693,99 @@ def extract_degree_info(sectionEl: WebElement, infoInstance: InfoClass):
         )
         return None
     return degrees[0]
+
+
+def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
+    saveTodb: bool = infoInstance.get("saveTodb", False)
+    print(f"save to db: {saveTodb}")
+    # first we see if the program exists in the database:
+    try:
+        print("\tsaving started")
+        db_program: Programs = Programs.query.filter_by(
+            name=programInfo["name"], groupName=programInfo["groupName"]
+        ).first()
+        if db_program is None:
+            db_program = Programs(
+                name=programInfo["name"],
+                programType=programInfo["programType"],
+                url=programInfo["url"],
+                groupName=programInfo["groupName"],
+            )
+        else:
+            db_program.url = programInfo["url"]
+            db_program.programType = programInfo["programType"]
+
+        headers: list[tuple[str, bool]] = [
+            ("degreeName", False),
+            ("degreeId", False),
+            ("systemOfStudy", False),
+            ("offeredByFaculties", True),
+            ("specializations", True),
+            ("availableTo", True),
+            ("courseRequirements", True),
+            ("courseLists", True),
+            ("otherSections", True),
+        ]
+        for header, is_json in headers:
+            if programInfo.get(header):
+                value = programInfo[header]
+                if is_json:
+                    value = json.dumps(value)
+                setattr(db_program, header, value)
+        # TODO: sequences
+        if "sequences" in programInfo and saveTodb:
+            db.session.add(db_program)
+            db.session.flush()
+            legend = json.dumps(programInfo["sequences"]["legend"])
+            for seq in programInfo["sequences"]["sequences"]:
+                seq_name: str = seq["SS"]
+                appliesTo = seq["planName"]
+                plan_path = json.dumps(seq["planPath"])
+                existing_sequence: Sequence = Sequence.query.filter_by(
+                    name=seq_name, appliesTo=appliesTo, plan=plan_path
+                ).first()
+                if existing_sequence is not None:
+                    print(
+                        f"sequence: name: {seq_name}, appliesTo: {appliesTo}, planPath: {plan_path[:20]} already exists"
+                    )
+                    changed = False
+                    if db_program not in existing_sequence.programs:
+                        existing_sequence.programs.append(db_program)
+                        changed = True
+                    if existing_sequence.legend != legend:
+                        existing_sequence.legend = legend
+                        changed = True
+                    if changed:
+                        db.session.add(existing_sequence)
+                        db.session.add(db_program)
+                        db.session.flush()
+                else:
+                    new_seq = Sequence(
+                        name=seq_name,
+                        legend=legend,
+                        appliesTo=appliesTo,
+                        plan=plan_path,
+                    )
+                    new_seq.programs.append(db_program)
+                    db.session.add(new_seq)
+                    db.session.add(db_program)
+                    db.session.flush()
+        if saveTodb:
+            db.session.add(db_program)
+            db.session.commit()
+            print("\tsaved")
+        else:
+            print("\tdid not save")
+    except Exception as e:
+        print("error occured while saving to db:")
+        print(f"Error: {e}")
+        print(f"Traceback:\n{traceback.format_exc()}")
+        infoInstance.add(
+            "differentErrors", f"error occured while saving to db for {infoInstance.id}"
+        )
+        infoInstance.add(
+            "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"
+        )
 
 
 def addGroupTodb(
@@ -736,8 +843,10 @@ def addGroupTodb(
                 "major" in programType or programType == "double degree"
             ):
                 # degreeName
-                programInfo["degreeName"] = extract_degree_info(section, infoInstance)
-
+                degree_info = extract_degree_info(section, infoInstance)
+                if degree_info is not None:
+                    programInfo["degreeName"] = degree_info["name"]
+                    programInfo["degreeId"] = degree_info["id"]
             if section_type == "Course Requirements":
                 courseReqs = extract_course_lists(section, infoInstance, "cr")
                 for item in courseReqs:
@@ -797,6 +906,7 @@ def addGroupTodb(
         programInfo["courseRequirements"] = lists_and_reqs["courseRequirements"]
         programInfo["courseLists"] = lists_and_reqs["courseLists"]
         programInfo["otherSections"] = otherSections
+        save_program_to_db(programInfo, infoInstance)
         infoInstance.add("differentProgramInfo", infoInstance.id, programInfo)
 
         print("process finished")
@@ -813,13 +923,14 @@ def get_program_reqs():
             ("differentErrors", set()),
             ("differentWarnings", set()),
             ("differentConditionText", {}),
+            ("differentSequences", {}),
             # ("differentSpecializations", {}),
             # ("differentAvailableTo", {}),
             # ("differentCourseListHeaders", {}),
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
             # ("differentCourseLists", {}),
-            ("differentProgramInfo", {}),
+            # ("differentProgramInfo", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),
@@ -859,7 +970,7 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 122
+    offset = 0
     limit = 1
     i = 0
     groups = {}
@@ -878,8 +989,8 @@ def get_program_reqs():
 
             # Math and Comp only
             if (
-                "options" not in expandButton.text.lower()
-                # and "computer" not in expandButton.text.lower()
+                "degree" in expandButton.text.lower()
+                or "option" in expandButton.text.lower()
             ):
                 limit += 1
                 continue

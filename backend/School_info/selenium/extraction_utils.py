@@ -63,7 +63,7 @@ class InfoClass:
         else:
             self.notReturnedTags.add(tag)
 
-    def get(self, tag: str) -> list | dict | int | str:
+    def get(self, tag: str, default=None) -> list | dict | int | str | bool:
         """Retrieve a value by tag from info dictionary or environment variables.
 
         Args:
@@ -75,7 +75,7 @@ class InfoClass:
         """
         if tag in self.infoDictionary:
             return self.infoDictionary[tag]
-        return self.envVars[tag]
+        return self.envVars.get(tag, default)
 
     def setEnvVar(self, tag: str, value) -> None:
         """Set an environment variable.

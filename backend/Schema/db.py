@@ -121,7 +121,7 @@ class Users(db.Model):
         "JwtToken", back_populates="user", cascade="all, delete-orphan, save-update"
     )
     # School related Information
-    programs: Mapped["Programs"] = relationship(
+    programs: Mapped[list["Programs"]] = relationship(
         "Programs", back_populates="students", secondary=program_student
     )
     majors: Mapped[list["Major"]] = relationship(
@@ -268,7 +268,7 @@ class Sequence(db.Model):
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="sequences", secondary=major_sequence
     )
-    programs: Mapped["Programs"] = relationship(
+    programs: Mapped[list["Programs"]] = relationship(
         "Programs", back_populates="sequences", secondary=program_sequence
     )
 
@@ -329,9 +329,9 @@ class Programs(db.Model):
 
     otherSections: Mapped[str] = mapped_column(db.String(), default="{}")
     relatedLinks: Mapped[str] = mapped_column(db.String(), default="[]")
-    sequences: Mapped["Sequence"] = relationship(
+    sequences: Mapped[list["Sequence"]] = relationship(
         "Sequence", back_populates="programs", secondary=program_sequence
     )
-    students: Mapped["Users"] = relationship(
+    students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="programs", secondary=program_student
     )

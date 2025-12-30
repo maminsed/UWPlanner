@@ -315,7 +315,7 @@ class Programs(db.Model):
 
     # only majors have this
     degreeName: Mapped[str] = mapped_column(db.String(), default="N/A")
-    degreeId: Mapped[Optional[str]] = mapped_column(db.Integer)
+    degreeId: Mapped[Optional[int]] = mapped_column(db.Integer)
     systemOfStudy: Mapped[str] = mapped_column(
         db.String(), default="none"
     )  # regular, co-op, both, none

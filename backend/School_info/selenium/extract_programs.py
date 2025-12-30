@@ -626,26 +626,24 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
     for idx, item in enumerate(result):
         key = f"{item['appliesTo']}-{item['SS']}"
         counter[key].append(idx)
-    for key, indecies in counter.items():
-        SS = result[indecies[0]]["SS"]
-        if len(indecies) == 1:
+    MAX_SEQUENCE_LENGTH = 3  # e.g. 4, 4S, 4X, (+ one extra for room to wiggle)
+    for key, indices in counter.items():
+        SS = result[indices[0]]["SS"]
+        if len(indices) == 1:
             if not SS:
-                SS = result[indecies[0]]["appliesTo"]
-            elif len(SS) <= 4:
+                SS = result[indices[0]]["appliesTo"]
+            elif len(SS) <= MAX_SEQUENCE_LENGTH:
                 SS = "Sequence " + SS
-            result[indecies[0]]["SS"] = SS
+            result[indices[0]]["SS"] = SS
             continue
         if SS != "":
             infoInstance.add(
                 "differentErrors",
-                f"{infoInstance.id} has {len(indecies)} matches for key: {key}",
+                f"{infoInstance.id} has {len(indices)} matches for key: {key}",
             )
             continue
-        for i, idx in enumerate(indecies):
-            SS = str(i + 1)
-            if len(SS) <= 4:
-                SS = "Sequence " + SS
-            result[idx]["SS"] = SS
+        for i, idx in enumerate(indices):
+            result[idx]["SS"] = "Sequence " + str(i + 1)
     return result
 
 
@@ -777,11 +775,13 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
         else:
             print("\tdid not save")
     except Exception as e:
-        print("error occured while saving to db:")
+        db.session.rollback()
+        print("error occurred while saving to db:")
         print(f"Error: {e}")
         print(f"Traceback:\n{traceback.format_exc()}")
         infoInstance.add(
-            "differentErrors", f"error occured while saving to db for {infoInstance.id}"
+            "differentErrors",
+            f"error occurred while saving to db for {infoInstance.id}",
         )
         infoInstance.add(
             "traces", infoInstance.id, f"Traceback:\n{traceback.format_exc()}"

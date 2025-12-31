@@ -314,7 +314,7 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                             {"text": orig, "matchingUrls": [d.url for d in mps]}
                         )
         elif "Student Audience" == key:
-            student_audience_regex = r"^this credential is open to students enrolled in(?: any)? degree programs?( or any non- or post-degree academic plan)?[^0-9a-z]*$"
+            student_audience_regex = r"^this credential is open to students enrolled in(?: any)?(?: degree programs?)?((?: or)? any non- or post-degree academic plan)?[^0-9a-z]*$"
             matched = re.split(student_audience_regex, innerEl.text.lower())
             if len(matched) > 1:
                 current_result["realtedProgramUrls"].append(
@@ -387,8 +387,11 @@ def extract_specializations(sections: dict[str, WebElement], infoInstance: InfoC
         result["at_least_one_required"] = False
         specialization_text = specialization_element.text
         result["specialization_text"] = specialization_text
+        specialization_text = specialization_text.replace(
+            " (including Joint Honours)", ""
+        )
 
-        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( {count}( \(?or more\)?)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?[^0-9a-z]*$"
+        expected_pattern = rf"^students (may|must) (choose to focus their elective choices by completing|complete)( a specialization| ( {count}( \(?or more\)?)? of)?( the)?( {count})? available specializations?( and may elect to complete a second)?)?"
         if not re.match(expected_pattern, specialization_text.lower()):
             infoInstance.add(
                 "differentWarnings",
@@ -598,7 +601,7 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         return cell
 
     hasSS = "S/S" in table["headers"] or "Sequence" in table["headers"]
-    noappliesTo = hasSS and "Plan" not in table["headers"]
+    hasAppliesTo = "Plan" in table["headers"]
     result = []
     # Making sure there is no unwanted header
     if any(
@@ -612,11 +615,22 @@ def refine_sequences(table: dict[str, list], infoInstance: InfoClass):
         )
     # Processing each row
     for row in table["rows"]:
-        appliesTo: str = row[0]
-        SS: str = row[1] if hasSS else ""
-        if noappliesTo:
-            appliesTo = ""
+        appliesTo = ""
+        SS = ""
+        if hasAppliesTo and hasSS:
+            appliesTo = row[0]
+            SS = row[1]
+        elif hasSS:
             SS = row[0]
+        elif hasAppliesTo:
+            appliesTo = row[0]
+        elif infoInstance.get("programType") != "degree":
+            appliesTo = infoInstance.get("programName")
+        else:
+            infoInstance.add(
+                "differentErrors",
+                f"{infoInstance.id} has neither SS nor appliesTo for sequences",
+            )
         planPath = [
             process_cell(cell) for idx, cell in enumerate(row) if idx > int(hasSS)
         ]
@@ -663,7 +677,8 @@ def extract_sequences(sectionEl: WebElement, infoInstance: InfoClass):
             result["sequences"] = sequences
         elif header.startswith("Legend for Study/Work Sequence"):
             result["legend"] = {items[0]: items[1] for items in extracted_table["rows"]}
-    infoInstance.add("differentSequences", infoInstance.id, result)
+    if result["sequences"]:
+        infoInstance.add("differentSequences", infoInstance.id, result)
     return result
 
 
@@ -788,7 +803,7 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
         )
 
 
-def addGroupTodb(
+def extract_group_for_db(
     groupName: str, programs: list, driver: WebDriver, infoInstance: InfoClass
 ):
     """Adds the group to db"""
@@ -803,6 +818,8 @@ def addGroupTodb(
         programName = program["program"]
         infoInstance.id = f"{groupName}-{programName}"
         programType = find_program_type(programName, infoInstance)
+        infoInstance.setEnvVar("programName", programName)
+        infoInstance.setEnvVar("programType", programType)
 
         specialization_dict = {}
         lists_and_reqs = {"courseLists": [], "courseRequirements": []}
@@ -889,17 +906,15 @@ def addGroupTodb(
         specialization_result = extract_specializations(
             specialization_dict, infoInstance
         )
-        if (
-            specialization_result is not None
-            and specialization_result["type"] == "course_req"
-        ):
-            for item in specialization_result["requirements"]:
-                lists_and_reqs["courseLists"].append(
-                    {k: v for k, v in item.items() if k != "type"}
-                )
-            specialization_result = None
-        elif specialization_result is not None:
-            specialization_result.pop("type", None)
+        if specialization_result is not None:
+            if specialization_result["type"] == "course_req":
+                for item in specialization_result["requirements"]:
+                    lists_and_reqs["courseLists"].append(
+                        {k: v for k, v in item.items() if k != "type"}
+                    )
+                specialization_result = None
+            else:
+                specialization_result.pop("type", None)
         if specialization_result is not None:
             programInfo["specializations"] = specialization_result
         programInfo["availableTo"] = extract_availableTo(availableTo_dict, infoInstance)
@@ -936,7 +951,7 @@ def get_program_reqs():
             ("traces", {}),
         ]
     )
-    infoInstance.setEnvVar("saveTodb", False)
+    infoInstance.setEnvVar("saveTodb", True)
     infoInstance.setEnvVar("LEVEL_OF_STUDY", "UNDERGRAD")
 
     service = Service(ChromeDriverManager().install())
@@ -970,8 +985,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0
-    limit = 1
+    offset = 129
+    limit = 40
     i = 0
     groups = {}
     print(
@@ -1022,7 +1037,7 @@ def get_program_reqs():
                 EC.element_to_be_clickable((By.CSS_SELECTOR, expandButtonCSS))
             )
             expandButton.click()
-            addGroupTodb(
+            extract_group_for_db(
                 updateGroup["group_name"],
                 updateGroup["members"],
                 driver,

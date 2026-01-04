@@ -552,11 +552,19 @@ def extract_system_of_study(innerEl: WebElement, infoInstance: InfoClass):
         return systems[0]
 
 
-# TODO: update this: for software engineering: faculties of engineering and mathematics
 def extract_offering_faculties(innerEl: WebElement) -> list:
     """Returns: str[] # faculty names || ['err']"""
-    faculties = innerEl.text.lower().replace("faculty of ", "").split("\n")
-    return faculties
+    text: str = innerEl.text.lower()
+    if "faculties" in text:
+        faculties = (
+            text.replace("faculties of ", "")
+            .replace(", and", "and")
+            .replace(",", " and")
+            .split("and")
+        )
+    else:
+        faculties = text.replace("faculty of ", "").split("\n")
+    return [f.strip() for f in faculties]
 
 
 def extract_table(tableEl: WebElement, infoInstance: InfoClass):
@@ -1005,8 +1013,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 122
-    limit = 1
+    offset = 0  # 122
+    limit = 6
     i = 0
     groups = {}
     print(
@@ -1025,7 +1033,16 @@ def get_program_reqs():
             # Math and Comp only
             if (
                 # "degree" in expandButton.text.lower()
-                "option" not in expandButton.text.lower()
+                # or "option" in expandButton.text.lower()
+                expandButton.text
+                not in [
+                    "Computing and Financial Management",
+                    "Mathematical Economics",
+                    "Medical Physiology",
+                    "Neuroscience",
+                    "Software Engineering",
+                    "Sustainability and Financial Management",
+                ]
             ):
                 limit += 1
                 continue

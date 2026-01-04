@@ -204,6 +204,7 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
         }[]
     }
     """
+    programType_regex_pattern = r"(degree|major)"
     result = []
     for key, innerEl in sectionEls.items():
         current_result = {"realtedProgramUrls": []}
@@ -230,20 +231,28 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                 )
             else:
                 updated_bachelors = []
+                hasAParan = False
                 for bachelor in bachelors:
                     startIdx = bachelor.find("(")
                     endIdx = bachelor.find(")")
                     if startIdx != -1:
                         updated_bachelors.append(
                             {
-                                "raw": bachelor[:startIdx].lower().strip(),
-                                "paran": bachelor[startIdx + 1 : endIdx].lower(),
+                                "raw": re.escape(bachelor[:startIdx].lower().strip()),
+                                "paran": re.escape(
+                                    bachelor[startIdx + 1 : endIdx].lower()
+                                ),
                                 "orig": bachelor,
                             }
                         )
+                        hasAParan = True
                     else:
                         updated_bachelors.append(
-                            {"raw": bachelor.lower(), "paran": "", "orig": bachelor}
+                            {
+                                "raw": re.escape(bachelor.lower()),
+                                "paran": "",
+                                "orig": bachelor,
+                            }
                         )
                 # First we check if the pattern is found
                 regex_pattern_list = {}
@@ -256,13 +265,14 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                     "^.*(" + "|".join(list(regex_pattern_list.values())) + ").*$"
                 )
                 matching_programs = Programs.query.filter(
-                    Programs.name.regexp_match(regex_patten, "i")
+                    Programs.name.op("~*")(regex_patten),
+                    Programs.programType.op("~*")(programType_regex_pattern),
                 ).all()
                 # then we check that every bachelor has at least one match
                 counter = defaultdict(list)
                 for matching_program in matching_programs:
                     for idx, rp in regex_pattern_list.items():
-                        if re.match(rf"^.*{rp}.*$", matching_program.name):
+                        if re.match(rf"^.*{rp}.*$", matching_program.name.lower()):
                             counter[idx].append(matching_program)
                             break
                 updated_bachelors = [
@@ -270,7 +280,7 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                 ]
 
                 # If there is a bachelor that did not match, we will check again
-                if updated_bachelors:
+                if updated_bachelors and hasAParan:
                     regex_pattern_list = {}
                     for b in updated_bachelors:
                         current_patten = ""
@@ -282,13 +292,21 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                         "^(" + "|".join(list(regex_pattern_list.values())) + ").*$"
                     )
                     new_matching_programs = Programs.query.filter(
-                        Programs.name.regexp_match(regex_patten, "i")
+                        Programs.name.op("~*")(regex_patten),
+                        Programs.programType.op("~*")(programType_regex_pattern),
                     ).all()
                     for matching_program in new_matching_programs:
+                        matchFound = False
                         for idx, rp in regex_pattern_list.items():
-                            if re.match(rf"^{rp}.*$", matching_program.name):
+                            if re.match(rf"^{rp}.*$", matching_program.name.lower()):
                                 counter[idx].append(matching_program)
+                                matchFound = True
                                 break
+                        if not matchFound:
+                            infoInstance.add(
+                                "differentErrors",
+                                f"{matching_program.name} did not match any of the regex_patterns",
+                            )
                     no_match_found = [
                         ub["orig"]
                         for ub in updated_bachelors
@@ -297,7 +315,7 @@ def extract_availableTo(sectionEls: dict[str, WebElement], infoInstance: InfoCla
                     if len(no_match_found):
                         infoInstance.add(
                             "differentErrors",
-                            f"there was no matching programs for some of the availableTo bachelors in {infoInstance.id}: no_match_found: {no_match_found}",
+                            f"there was no matching programs for some of the availableTo bachelors in {infoInstance.id}: no_match_found: {no_match_found}. len(new_matching_programs): {len(new_matching_programs)}",
                         )
                 # Then we filter each group to only have degrees if it has degrees.
                 for orig, mps in counter.items():
@@ -534,6 +552,7 @@ def extract_system_of_study(innerEl: WebElement, infoInstance: InfoClass):
         return systems[0]
 
 
+# TODO: update this: for software engineering: faculties of engineering and mathematics
 def extract_offering_faculties(innerEl: WebElement) -> list:
     """Returns: str[] # faculty names || ['err']"""
     faculties = innerEl.text.lower().replace("faculty of ", "").split("\n")
@@ -708,6 +727,7 @@ def extract_degree_info(sectionEl: WebElement, infoInstance: InfoClass):
     return degrees[0]
 
 
+# TODO: update so that it keeps track of how many it updates/creates/does not change
 def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
     saveTodb: bool = infoInstance.get("saveTodb", False)
     print(f"save to db: {saveTodb}")
@@ -945,7 +965,7 @@ def get_program_reqs():
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
             # ("differentCourseLists", {}),
-            # ("differentProgramInfo", {}),
+            ("differentProgramInfo", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
             ("traces", {}),
@@ -985,8 +1005,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 129
-    limit = 40
+    offset = 122
+    limit = 1
     i = 0
     groups = {}
     print(
@@ -1004,8 +1024,8 @@ def get_program_reqs():
 
             # Math and Comp only
             if (
-                "degree" in expandButton.text.lower()
-                or "option" in expandButton.text.lower()
+                # "degree" in expandButton.text.lower()
+                "option" not in expandButton.text.lower()
             ):
                 limit += 1
                 continue

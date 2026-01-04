@@ -739,6 +739,7 @@ def extract_degree_info(sectionEl: WebElement, infoInstance: InfoClass):
 def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
     saveTodb: bool = infoInstance.get("saveTodb", False)
     print(f"save to db: {saveTodb}")
+    status = "unchanged"
     # first we see if the program exists in the database:
     try:
         print("\tsaving started")
@@ -752,6 +753,7 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
                 url=programInfo["url"],
                 groupName=programInfo["groupName"],
             )
+            status = "created"
         else:
             db_program.url = programInfo["url"]
             db_program.programType = programInfo["programType"]
@@ -772,8 +774,9 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
                 value = programInfo[header]
                 if is_json:
                     value = json.dumps(value)
+                if status == "unchanged" and getattr(db_program, header) != value:
+                    status = "updated"
                 setattr(db_program, header, value)
-        # TODO: sequences
         if "sequences" in programInfo and saveTodb:
             db.session.add(db_program)
             db.session.flush()
@@ -797,10 +800,14 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
                         existing_sequence.legend = legend
                         changed = True
                     if changed:
+                        if status == "unchanged":
+                            status = "updated"
                         db.session.add(existing_sequence)
                         db.session.add(db_program)
                         db.session.flush()
                 else:
+                    if status == "unchanged":
+                        status = "updated"
                     new_seq = Sequence(
                         name=seq_name,
                         legend=legend,
@@ -817,6 +824,8 @@ def save_program_to_db(programInfo: dict, infoInstance: InfoClass):
             print("\tsaved")
         else:
             print("\tdid not save")
+        prevCount = infoInstance.get("programSaveStatus")[status]
+        infoInstance.add("programSaveStatus", status, prevCount + 1)
     except Exception as e:
         db.session.rollback()
         print("error occurred while saving to db:")
@@ -973,9 +982,10 @@ def get_program_reqs():
             ("carefullGroupedCondition", {}),
             # ("differentGroupedCondition", {}),
             # ("differentCourseLists", {}),
-            ("differentProgramInfo", {}),
+            # ("differentProgramInfo", {}),
             ("differentSectionPageTypes", {}),
             ("differentCourseReqsSections", {}),
+            ("programSaveStatus", {"unchanged": 0, "created": 0, "updated": 0}),
             ("traces", {}),
         ]
     )

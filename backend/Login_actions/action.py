@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from typing import Callable, Optional
 
@@ -5,7 +6,18 @@ from flask import Blueprint, g, jsonify, make_response, request
 
 from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
-from backend.Schema import Link, Major, Minor, Sequence, Specialization, Users, db
+from backend.Schema import (
+    Course,
+    Link,
+    Major,
+    Minor,
+    Semester,
+    Sequence,
+    Specialization,
+    Users,
+    db,
+)
+from backend.utils.path import term_distance, translate_path, translate_to_id
 
 from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
@@ -159,13 +171,13 @@ def get_sequence():
         default = Sequence.query.filter_by(name="Default").first()
         res[default.id] = ["Default", default.plan, default.id]
 
-        # id: name, plan
+        # id: name, plan, id
         if user.coop:
             for m in user.majors:
                 for seq in m.sequences:
                     if seq.id not in res:
-                        res[seq.id] = (seq.name, seq.plan, seq.id)
-        return jsonify({"data": [["_", [res[f] for f in res.keys()]]]})
+                        res[seq.id] = (seq.name, "-".join(json.loads(seq.plan)), seq.id)
+        return jsonify({"data": [["_", list(res.values())]]})
     except Exception as e:
         print(e)
         return jsonify(
@@ -199,7 +211,6 @@ def update_all() -> tuple[str, int]:
         "specializations",
     }
     data = request.get_json()
-    print(data)
     user = Users.query.filter_by(username=g.username).first()
     if not user:
         return jsonify({"message": "user does not exist"}), 400
@@ -281,40 +292,120 @@ def get_all() -> tuple[str, int]:
     ), 200
 
 
+@update_info.route("/get_course_reqs", methods=["POST"])
+def get_course_reqs() -> tuple[str, int]:
+    data = request.get_json()
+    course_codes: list[int] = data.get("course_codes") or []
+    print(course_codes)
+    db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
+    res = {}
+    for course in db_courses:
+        url = course.url or ""
+        try:
+            courseInfo = json.loads(course.courseInfo) if course.courseInfo else {}
+        except:
+            print("error in loading courseInfo")
+            courseInfo = {}
+        res[course.code] = {"url": url, "courseInfo": courseInfo}
+    return jsonify({"courses": res}), 200
+
+
 @update_info.route("/get_user_seq", methods=["GET"])
 def get_user_seq() -> tuple[str, int]:
+    include_courses: bool = request.args.get("include_courses") or False
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
-    sem_dic = ["Summer", "Fall", "Winter"]
+    if include_courses == "true":
+        term_ids = translate_to_id(user.path, user.started_term)
+        semesters = user.semesters
+        for index, term in enumerate(term_ids):
+            exists = [s for s in semesters if s.term_id == term]
+            path[index] = (
+                path[index],
+                json.loads(exists[0].courses) if len(exists) != 0 else [],
+            )
+    sem_dic = {5: "Summer", 9: "Fall", 1: "Winter"}
     return jsonify(
         {
             "current_sem": user.current_term,
+            "started_term_id": user.started_term,
             "sequence": user.sequence.name,
-            "started_year": user.started_year,
-            "started_sem": sem_dic[user.started_month],
-            "grad_year": user.started_year + (len(path) + user.started_month) // 3,
+            "started_year": user.started_term // 10 + 1900,
+            "started_sem": sem_dic[user.started_term % 10],
             "coop": user.coop,
             "path": path,
         }
     ), 200
 
 
-def translate_path(path: str):
-    res = path.split("-")
-    yearCount = 1
-    semCount = 0
-    wtCount = 1
-    for i in range(len(res)):
-        if res[i] == "Study":
-            res[i] = f"{yearCount}{'B' if semCount else 'A'}"
-            yearCount += semCount
-            semCount = (semCount + 1) % 2
-        elif res[i] == "Coop":
-            res[i] = f"WT{wtCount}"
-            wtCount += 1
-    if res[-1] == "":
-        res.pop()
-    return res
+@update_info.route("/update_terms", methods=["POST"])
+def update_terms():
+    """Endpoint to swap courses between two terms/semesters."""
+    # Get the term IDs from the request
+    data = request.get_json()
+    termId1: int = data.get("termId1")
+    termId2: int = data.get("termId2")
+
+    # Fetch the user from the database
+    user = Users.query.filter_by(username=g.username).first()
+
+    # Validate that all required data is present
+    if not termId1 or not termId2 or not user or not user.path:
+        return jsonify({"message": "some of the arguments were not supplied"}), 403
+
+    # Find existing semester records for both terms
+    term1 = None
+    term2 = None
+    for term in user.semesters:
+        if term.term_id == termId1:
+            term1 = term
+        elif term.term_id == termId2:
+            term2 = term
+
+    # Parse the user's path and calculate term indices
+    path = json.loads(user.path)
+    started_term = user.started_term
+    index1 = term_distance(started_term, termId1)
+    index2 = term_distance(started_term, termId2)
+
+    # Create semester records if they don't exist
+    if not term1:
+        term1 = Semester(term_id=termId1, user=user)
+        db.session.add(term1)
+        db.session.commit()
+    if not term2:
+        term2 = Semester(term_id=termId2, user=user)
+        db.session.add(term2)
+        db.session.commit()
+
+    try:
+        # Clear sections for both terms
+        term1.sections = json.dumps([])
+        term2.sections = json.dumps([])
+
+        # Swap courses between the two terms
+        term1Courses = term1.courses
+        term1.courses = term2.courses
+        term2.courses = term1Courses
+
+        # Swap term names in the path
+        term1Name = path[index1]
+        path[index1] = path[index2]
+        path[index2] = term1Name
+        user.path = json.dumps(path)
+
+        # Commit all changes to the database
+        db.session.add(term1)
+        db.session.flush()
+        db.session.add(term2)
+        db.session.flush()
+        db.session.add(user)
+        db.session.commit()
+
+        return "", 204
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "error in bk"}), 500
 
 
 """

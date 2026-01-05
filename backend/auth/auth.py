@@ -8,7 +8,7 @@ from codename import codename
 from flask import Blueprint, Response, jsonify, make_response, request
 from jwt.exceptions import ExpiredSignatureError
 
-from ..Schema import JwtToken, LoginMethod, Users, db, Sequence
+from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
 from .jwt import clean_up_jwt, encode
 from .send_mail import send_verification_mail
 
@@ -17,7 +17,7 @@ ph = PasswordHasher()
 
 
 @auth_bp.route("/signup", methods=["POST"])
-def add_user() -> Response | tuple[str, int]:
+def add_user() -> Response:
     """Register a new user.
 
     Expects:
@@ -55,9 +55,9 @@ def add_user() -> Response | tuple[str, int]:
             pass_hash=hashpass,
             login_method=LoginMethod.email,
         )
-        #adding default seq
-        default_seq = Sequence.query.filter_by(Sequence.name == 'default').first()
-        if (default_seq): 
+        # adding default seq
+        default_seq = Sequence.query.filter_by(name="default").first()
+        if default_seq:
             user.sequence = default_seq
             user.path = default_seq.plan
 

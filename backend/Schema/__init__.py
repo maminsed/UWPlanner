@@ -1,12 +1,14 @@
 """The database module for connecting with NeonDB."""
 
 from .db import (
+    Course,
     JwtToken,
     Link,
     LoginMethod,
     Major,
     Minor,
-    Course,
+    Programs,
+    Semester,
     Sequence,
     Specialization,
     Users,
@@ -20,8 +22,10 @@ __all__ = [
     "LoginMethod",
     "migrate",
     "JwtToken",
+    "Semester",
     "Major",
     "Minor",
+    "Programs",
     "Course",
     "Link",
     "Sequence",

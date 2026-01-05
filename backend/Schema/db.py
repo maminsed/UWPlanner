@@ -62,6 +62,20 @@ major_spec = Table(
     Column("major_id", db.Integer, ForeignKey("major.id"), primary_key=True),
 )
 
+program_sequence = Table(
+    "program_sequence",
+    Base.metadata,
+    Column("program_id", db.Integer, ForeignKey("programs.id"), primary_key=True),
+    Column("sequence_id", db.Integer, ForeignKey("sequences.id"), primary_key=True),
+)
+
+program_student = Table(
+    "program_student",
+    Base.metadata,
+    Column("program_id", db.Integer, ForeignKey("programs.id"), primary_key=True),
+    Column("student_id", db.Integer, ForeignKey("users.id"), primary_key=True),
+)
+
 
 class LoginMethod(Pyenum):
     """Enums for login Methods."""
@@ -107,10 +121,12 @@ class Users(db.Model):
         "JwtToken", back_populates="user", cascade="all, delete-orphan, save-update"
     )
     # School related Information
+    programs: Mapped[list["Programs"]] = relationship(
+        "Programs", back_populates="students", secondary=program_student
+    )
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="students", secondary=major_student
     )
-
     minors: Mapped[list["Minor"]] = relationship(
         "Minor", back_populates="users", secondary=minor_user
     )
@@ -128,16 +144,24 @@ class Users(db.Model):
     current_term: Mapped[int] = mapped_column(
         db.Integer, default=0, server_default=text("0")
     )
-    started_year: Mapped[int] = mapped_column(
-        db.Integer, default=datetime.now().year, server_default=text("2024")
-    )
-    started_month: Mapped[int] = mapped_column(db.Integer, default=1)
+
+    started_term: Mapped[int] = mapped_column(db.Integer(), server_default=text("1255"))
     coop: Mapped[bool] = mapped_column(db.Boolean(), default=True)
     bio: Mapped[str] = mapped_column(db.String(), default="", nullable=False)
+    # seprated with -
     path: Mapped[str] = mapped_column(db.String(), default="", server_default="")
     links: Mapped[list["Link"]] = relationship(
         "Link", back_populates="user", cascade="all, delete-orphan, save-update"
     )
+
+    # Course paths: Follow UWFLOW ids!!
+    # A set of ids for the current sems courses seprated with -
+    # section_ids: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+    semesters: Mapped[list["Semester"]] = relationship(
+        "Semester", back_populates="user", cascade="all, delete-orphan, save-update"
+    )
+    # A set of Names for future semester courses, coruses seprated with - semesters seprated with //
+    course_ids: Mapped[str] = mapped_column(db.String, default="", server_default="")
 
 
 class Link(db.Model):
@@ -231,31 +255,83 @@ class Sequence(db.Model):
     __tablename__ = "sequences"
     id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
     name: Mapped[str] = mapped_column(db.String(), nullable=False)
+    legend: Mapped[str] = mapped_column(
+        db.String(), default="{}", server_default=text("'{}'")
+    )
+    appliesTo: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+
+    plan: Mapped[str] = mapped_column(db.String(), nullable=False, default="[]")
+
     students: Mapped[list["Users"]] = relationship(
         "Users", back_populates="sequence", foreign_keys="[Users.sequence_id]"
     )
-    plan: Mapped[str] = mapped_column(db.String(), nullable=False)
     majors: Mapped[list["Major"]] = relationship(
         "Major", back_populates="sequences", secondary=major_sequence
     )
+    programs: Mapped[list["Programs"]] = relationship(
+        "Programs", back_populates="sequences", secondary=program_sequence
+    )
+
 
 class Course(db.Model):
     """Database for Courses."""
 
     __tablename__ = "courses"
-    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
-    courseId: Mapped[str] = mapped_column(db.String(), nullable=False)
-    offeredIn: Mapped[str] = mapped_column(db.String(), default="1255")
+    course_id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    offeredIn: Mapped[str] = mapped_column(db.String(), default="")
 
-    associatedAcademicGroupCode: Mapped[str] = mapped_column(db.String())
-    associatedAcademicOrgCode: Mapped[str] = mapped_column(db.String())
-    
-    subjectCode: Mapped[str] = mapped_column(db.String()) #e.g. MATH
-    catalogNumber: Mapped[str] = mapped_column(db.String()) # e.g. 235
-    title: Mapped[str] = mapped_column(db.String(), default="") #e.g. Linear Algebra 2
-    descriptionAbbreviated: Mapped[str] = mapped_column(db.String(), default="")
+    code: Mapped[str] = mapped_column(db.String())  # e.g. MATH
+    name: Mapped[str] = mapped_column(db.String(), default="")  # e.g. Linear Algebra 2
     description: Mapped[str] = mapped_column(db.String(), default="")
-    gradingBasis: Mapped[str] = mapped_column(db.String(), default="NUM")
-    courseComponentCode: Mapped[str] = mapped_column(db.String()) #e.g. LEC TUT ...
-    enrollConsentCode: Mapped[str] = mapped_column(db.String(), default="N") # e.g. if Instructor consent is required to enrol
-    dropConsentCode: Mapped[str] = mapped_column(db.String(), default="N")
+    url: Mapped[str] = mapped_column(db.String(), nullable=True)
+    groupName: Mapped[str] = mapped_column(db.String(), server_default="")
+    groupCode: Mapped[str] = mapped_column(db.String(), server_default="")
+
+    courseInfo: Mapped[str] = mapped_column(db.String(), default="", server_default="")
+
+
+class Semester(db.Model):
+    """Database for Sections."""
+
+    __tablename__ = "semester"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+    term_id: Mapped[int] = mapped_column(db.Integer)
+    user_id: Mapped[int] = mapped_column(db.Integer, ForeignKey("users.id"))
+    user: Mapped["Users"] = relationship("Users", back_populates="semesters")
+    sections: Mapped[str] = mapped_column(db.String(), default="[]")
+    courses: Mapped[str] = mapped_column(db.String(), default="[]")
+
+
+class Programs(db.Model):
+    """Database for Programs"""
+
+    __tablename__ = "programs"
+    id: Mapped[int] = mapped_column(db.Integer, primary_key=True)
+
+    name: Mapped[str] = mapped_column(db.String())
+    programType: Mapped[str] = mapped_column(db.String())  # e.g. major, minor, ...
+    groupName: Mapped[str] = mapped_column(db.String())
+    url: Mapped[str] = mapped_column(db.String(), unique=True)
+
+    # only majors have this
+    degreeName: Mapped[str] = mapped_column(db.String(), default="N/A")
+    degreeId: Mapped[Optional[int]] = mapped_column(db.Integer)
+    systemOfStudy: Mapped[str] = mapped_column(
+        db.String(), default="none"
+    )  # regular, co-op, both, none
+
+    offeredByFaculties: Mapped[str] = mapped_column(db.String(), default="[]")
+    availableTo: Mapped[str] = mapped_column(db.String(), default="{}")
+
+    specializations: Mapped[str] = mapped_column(db.String(), default="{}")
+    courseRequirements: Mapped[str] = mapped_column(db.String(), default="[]")
+    courseLists: Mapped[str] = mapped_column(db.String(), default="[]")
+
+    otherSections: Mapped[str] = mapped_column(db.String(), default="{}")
+    relatedLinks: Mapped[str] = mapped_column(db.String(), default="[]")
+    sequences: Mapped[list["Sequence"]] = relationship(
+        "Sequence", back_populates="programs", secondary=program_sequence
+    )
+    students: Mapped[list["Users"]] = relationship(
+        "Users", back_populates="programs", secondary=program_student
+    )

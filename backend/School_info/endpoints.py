@@ -17,6 +17,23 @@ from .selenium.sequence_scraper import scrape_math, scrape_sequences
 school_info_bp = Blueprint("school_info", __name__)
 
 
+# The updated version with undergraduate calendar
+@school_info_bp.route("/update_prereqs", methods=["GET"])
+def update_prereqs_ep() -> tuple[str, int]:
+    """Endpoint to update prereqs information for majors."""
+    message = get_course_reqs()
+    return jsonify({"message": message}), 200
+
+
+# The updated version with undergraduate calendar
+@school_info_bp.route("/get_programs", methods=["GET"])
+def get_programs() -> tuple[str, int]:
+    """Endpoint to get all the programs."""
+    message = get_program_reqs()
+    return jsonify({"message": message}), 200
+
+
+# The rest can go away
 @school_info_bp.route("/extract_major", methods=["GET"])
 def extract_majors_ep() -> tuple[str, int]:
     """Endpoint to extract Majors."""
@@ -31,20 +48,6 @@ def update_major_info_ep() -> tuple[str, int]:
     """Endpoint to update coop information for majors."""
     update_major_info()
     return "", 204
-
-
-@school_info_bp.route("/update_prereqs", methods=["GET"])
-def update_prereqs_ep() -> tuple[str, int]:
-    """Endpoint to update prereqs information for majors."""
-    message = get_course_reqs()
-    return jsonify({"message": message}), 200
-
-
-@school_info_bp.route("/get_programs", methods=["GET"])
-def get_programs() -> tuple[str, int]:
-    """Endpoint to get all the programs."""
-    message = get_program_reqs()
-    return jsonify({"message": message}), 200
 
 
 @school_info_bp.route("/extract_minors", methods=["GET"])

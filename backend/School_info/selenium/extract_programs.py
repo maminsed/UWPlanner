@@ -1023,8 +1023,8 @@ def get_program_reqs():
         EC.visibility_of_any_elements_located((By.CSS_SELECTOR, classGroupCSS))
     )
 
-    offset = 0  # 122
-    limit = 6
+    offset = 120
+    limit = 5
     i = 0
     groups = {}
     print(
@@ -1042,17 +1042,8 @@ def get_program_reqs():
 
             # Math and Comp only
             if (
-                # "degree" in expandButton.text.lower()
-                # or "option" in expandButton.text.lower()
-                expandButton.text
-                not in [
-                    "Computing and Financial Management",
-                    "Mathematical Economics",
-                    "Medical Physiology",
-                    "Neuroscience",
-                    "Software Engineering",
-                    "Sustainability and Financial Management",
-                ]
+                "degree" in expandButton.text.lower()
+                or "option" not in expandButton.text.lower()
             ):
                 limit += 1
                 continue

@@ -1,19 +1,44 @@
 'use client';
+import clsx from 'clsx';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
-import DropDown from '@/components/DropDown';
+import DropDown2 from '@/components/utils/DropDown2';
 import { useApi } from '@/lib/useApi';
 
-const ordering = ['majors', 'minors', 'specializations', 'coop', 'sequence'];
-const heading = [
-  "What's your Major(s)?",
-  "What's your Minor(s)?",
-  "What's your Specialization(s)?",
-  'Are you in Co-op?',
-  "What's your Sequence?",
+type programOptionType = {
+  groupName: string;
+  id: number;
+  name: string;
+};
+
+const defaultSelectedProgram = { groupName: '', id: -1, name: '' };
+
+interface RestStatusType {
+  coop: boolean | undefined;
+  sequenceId: number | undefined;
+}
+
+type SequenceOptionsType = {
+  legend: Record<string, string>;
+  seqGroups: {
+    programName: string;
+    sequences: {
+      id: number;
+      name: string;
+      appliesTo: string;
+      plan: string[];
+    }[];
+  }[];
+}[];
+
+const URLS = ['programs?only_majors', 'programs', 'update_all'];
+const HEADINGS = [
+  { main: 'Select your major(s)', sub: '' },
+  { main: 'Select the rest of your program(s)', sub: 'Any minor/specialization/option/...' },
+  { main: 'Fill out the additional information', sub: '' },
 ];
 
 export default function Info() {
@@ -21,42 +46,32 @@ export default function Info() {
   const [dropIds, setDropIds] = useState<[number, [string, string, number] | undefined][]>([
     [0, undefined],
   ]);
-  const [message, setMessage] = useState<undefined | string>(undefined);
-  const [options, setOptions] = useState<[string, [string, string, number][]][]>([]);
-  const [order, setOrder] = useState<number>(0);
-  const backend = useApi();
-  const router = useRouter();
+  // useEffect(() => {
+  //   async function gettingData() {
+  //     try {
+  //       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
+  //         method: 'GET',
+  //       });
 
-  const curr = ordering[order];
-  const blank_allowed = order === 1 || order === 2;
-  const onlyOne = order >= 3;
+  //       const response = await (res as Response).json().catch(() => {});
+  //       if (!res.ok) {
+  //         console.error('Error in Resposne');
+  //         console.info(response);
+  //         return;
+  //       }
+  //       setOptions(response.data);
+  //     } catch (err) {
+  //       console.error('Error: ');
+  //       console.info(err);
+  //     }
+  //   }
 
-  useEffect(() => {
-    async function gettingData() {
-      try {
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
-          method: 'GET',
-        });
-
-        const response = await (res as Response).json().catch(() => {});
-        if (!res.ok) {
-          console.error('Error in Resposne');
-          console.info(response);
-          return;
-        }
-        setOptions(response.data);
-      } catch (err) {
-        console.error('Error: ');
-        console.info(err);
-      }
-    }
-
-    gettingData();
-  }, [curr]);
+  //   gettingData();
+  // }, [order]);
 
   async function handleNext() {
     setMessage('loading...');
-    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${curr}`, {
+    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
       method: 'POST',
       body: JSON.stringify({
         selected: dropIds.map((i) => i[1]),
@@ -68,7 +83,7 @@ export default function Info() {
 
     const response = await (res as Response).json().catch(() => {});
     if (res.ok) {
-      if (order === ordering.length - 1) {
+      if (order === URLS.length - 1) {
         router.push('/semester');
         return;
       }
@@ -87,14 +102,11 @@ export default function Info() {
   }
 
   function handleAdd() {
-    setNextId(nextId + 1);
-    setDropIds((ids) => [...ids, [nextId, undefined]]);
-    if (nextId === 2) setMessage('You should try the job market');
+    setSelectedPrograms((pis) => [...pis, defaultSelectedProgram]);
   }
 
-  function handleRemove(id: number) {
-    if (nextId >= 2 && dropIds.length <= 2) setMessage('Good job');
-    setDropIds((ids) => ids.filter((x) => x[0] != id));
+  function handleRemove(idx: number) {
+    setSelectedPrograms((pis) => pis.filter((_, i) => idx !== i));
   }
 
   function handleUpdate(id: number, value: [string, string, number] | undefined) {
@@ -107,6 +119,23 @@ export default function Info() {
       }),
     );
   }
+  const [order, setOrder] = useState<number>(0);
+  const [selectedPrograms, setSelectedPrograms] = useState<programOptionType[]>([
+    defaultSelectedProgram,
+  ]);
+  const [programOptions, setProgramOptions] = useState<programOptionType[]>([]);
+  const [sequenceOptions, setSequenceOptions] = useState<SequenceOptionsType>([]);
+  const [restStatus, setRestStatus] = useState<RestStatusType>({
+    coop: undefined,
+    sequenceId: undefined,
+  });
+
+  const stage = ['major', 'program', 'all'][order];
+  const urlEnding = URLS[order];
+
+  const backend = useApi();
+  const router = useRouter();
+  const [message, setMessage] = useState<undefined | string>(undefined);
 
   return (
     <main>
@@ -114,44 +143,191 @@ export default function Info() {
         Just a few more questions to know you better
       </h2>
 
-      <div className="mx-auto w-fit max-w-[96%] mt-20 px-2 sm:px-6 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
-        <h5 className="text-2xl font-medium text-center mt-2">{heading[order]}</h5>
-        {blank_allowed ? <p className="text-center">You can leave it blank if you want</p> : ''}
-        {order === ordering.length - 1 ? (
-          <p className="text-center">Select a Sequence and Hover over to see the terms</p>
+      <div className="mx-auto w-fit max-w-[96%] mt-20 px-8 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
+        <h5 className="text-xl font-medium text-center mt-2">{HEADINGS[order].main}</h5>
+        <h5 className="text-sm font-light text-center text-dark-green/80">{HEADINGS[order].sub}</h5>
+        {stage !== 'all' ? (
+          <>
+            <div className="mb-8"></div>
+            {/* Programs */}
+            {selectedPrograms.map((sp, idx) => {
+              const splitSP = sp.name.toLowerCase().replace(/\s+/g, ' ').split(' ');
+              const filteredPrograms = programOptions.filter((program) => {
+                if (sp.id !== -1) return program.id === sp.id;
+                const splitP = program.name.toLowerCase().split(' ');
+                let spI = 0;
+                let pI = 0;
+                while (pI < splitP.length && spI < splitSP.length) {
+                  const spWord = splitSP[spI];
+                  const pWord = splitP[pI];
+                  if (pWord.includes(spWord)) {
+                    ++spI;
+                  }
+                  ++pI;
+                }
+                return spI === splitSP.length;
+              });
+              return (
+                <div key={idx} className="flex mt-2 items-center gap-2 justify-center">
+                  <DropDown2<programOptionType>
+                    currentValue={sp}
+                    placeholder="start typing..."
+                    options={filteredPrograms}
+                    updateInputFunction={(value) => {
+                      setSelectedPrograms(
+                        selectedPrograms.map((sp_hat, idx_hat) =>
+                          idx_hat === idx ? { ...defaultSelectedProgram, name: value } : sp_hat,
+                        ),
+                      );
+                    }}
+                    updateSelectFunction={(value) => {
+                      setSelectedPrograms(
+                        selectedPrograms.map((sp_hat, idx_hat) =>
+                          idx_hat === idx ? value : sp_hat,
+                        ),
+                      );
+                    }}
+                    valueFunction={(pt) => pt.name}
+                    grouped={true}
+                    getGroup={(pt) => pt.groupName}
+                  />
+                  {(selectedPrograms.length !== 1 || stage == 'programs') && (
+                    <LuCircleMinus className="cursor-pointer" onClick={() => handleRemove(idx)} />
+                  )}
+                </div>
+              );
+            })}
+            <button className="mt-4 cursor-pointer" onClick={handleAdd}>
+              <LuCirclePlus />
+            </button>
+          </>
         ) : (
-          ''
-        )}
-        <div className="mb-8"></div>
-        {dropIds.map((item) => (
-          <div key={item[0]} className="flex items-center gap-2 justify-center">
-            <DropDown
-              classes={{ mainDiv: 'mt-1' }}
-              selectedValue={item[1]}
-              options={options}
-              setSelectedValue={(value) => handleUpdate(item[0], value)}
-            />
-            {(dropIds.length !== 1 || blank_allowed) && !onlyOne && (
-              <LuCircleMinus className="cursor-pointer" onClick={() => handleRemove(item[0])} />
-            )}
+          <div className="mb-4">
+            <h4 className="text-lg font-medium mt-2">Coop:</h4>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={restStatus.coop === true}
+                  name="coop"
+                  onChange={() => setRestStatus((prev) => ({ ...prev, coop: true }))}
+                />
+                Yes
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  checked={restStatus.coop === false}
+                  name="coop"
+                  onChange={() => setRestStatus((prev) => ({ ...prev, coop: false }))}
+                />
+                No
+              </label>
+            </div>
+            <h4 className="text-lg font-medium mt-2">Sequence:</h4>
+            <div>
+              {sequenceOptions.map((seqGroup, idx) => (
+                <div key={idx}>
+                  {/* Legend */}
+                  {Object.keys(seqGroup.legend).length ? (
+                    <div>
+                      <h5 className="my-1 font-medium text-base">Legend:</h5>
+                      <table className="table-auto border-collapse border border-gray-400 mb-4">
+                        <thead>
+                          <tr>
+                            <th className="border border-gray-400 px-4 py-2">Key</th>
+                            <th className="border border-gray-400 px-4 py-2">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.keys(seqGroup.legend).map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="border border-gray-400 px-4 py-2">{item}</td>
+                              <td className="border border-gray-400 px-4 py-2">
+                                {seqGroup.legend[item]}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
+                  {seqGroup.seqGroups.map((seqs) => {
+                    let longest = 0;
+                    let hasAppliesTo = false;
+                    let hasName = false;
+                    seqs.sequences.forEach((seq) => {
+                      longest = Math.max(longest, seq.plan.length);
+                      hasAppliesTo = hasAppliesTo || seq.appliesTo !== '';
+                      hasName = hasName || seq.name !== '';
+                    });
+                    const header = [...Array(longest)].map(
+                      (_, i) => `${i % 3 == 2 ? 'S' : i % 3 == 1 ? 'W' : 'F'}`,
+                    );
+                    return (
+                      <div key={seqs.programName}>
+                        <h6 className="mb-1 mt-5 font-medium text-base">{seqs.programName}</h6>
+                        <table className="table-auto border-collapse border border-gray-400">
+                          <thead>
+                            <tr>
+                              {hasName && (
+                                <th className="border border-gray-400 px-4 py-2">Plan</th>
+                              )}
+                              {hasAppliesTo && (
+                                <th className="border border-gray-400 px-4 py-2">S/S</th>
+                              )}
+                              {header.map((i, idx) => (
+                                <th key={idx} className="border border-gray-400 px-4 py-2">
+                                  {i}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {seqs.sequences.map((item, idx) => (
+                              <tr
+                                key={idx}
+                                className={clsx(
+                                  restStatus.sequenceId == item.id && 'bg-yellow-400',
+                                )}
+                                onClick={() =>
+                                  setRestStatus({ ...restStatus, sequenceId: item.id })
+                                }
+                              >
+                                <td className="border border-gray-400 px-4 py-2">
+                                  {item.appliesTo}
+                                </td>
+                                <td className="border border-gray-400 px-4 py-2">{item.name}</td>
+                                {[...Array(longest)].map((_, idx) => (
+                                  <td className="border border-gray-400 px-4 py-2" key={idx}>
+                                    {item.plan[idx] || ''}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-        {onlyOne ? (
-          <div className="mt-4"></div>
-        ) : (
-          <button className="mt-4 cursor-pointer" onClick={handleAdd}>
-            <LuCirclePlus />
-          </button>
         )}
         <button
           className="mt-1 text-center w-full bg-dark-green text-light-green rounded-sm py-1 cursor-pointer hover:bg-dark-green/95 active:bg-[#204044] duration-300 ease-in"
           onClick={handleNext}
+          disabled={message == 'loading...'}
         >
           Next
         </button>
         {message && <p className="text-red-500 mt-1">{message}</p>}
       </div>
 
+      {/* Background */}
       <div className="h-[50vh] md:h-fit w-dvw fixed left-0 bottom-0 overflow-x-hidden z-[-1]">
         <Image
           src="/background.svg"

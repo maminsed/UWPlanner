@@ -2,7 +2,7 @@
 import clsx from 'clsx';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
 import DropDown2 from '@/components/utils/DropDown2';
@@ -34,7 +34,11 @@ type SequenceOptionsType = {
   }[];
 }[];
 
-const URLS = ['programs?only_majors', 'programs', 'update_all'];
+const URLS = [
+  { GET: 'programs?only_majors=true', POST: 'programs' },
+  { GET: 'programs', POST: 'programs' },
+  { GET: 'sequences', POST: 'update_all' },
+];
 const HEADINGS = [
   { main: 'Select your major(s)', sub: '' },
   { main: 'Select the rest of your program(s)', sub: 'Any minor/specialization/option/...' },
@@ -42,83 +46,6 @@ const HEADINGS = [
 ];
 
 export default function Info() {
-  const [nextId, setNextId] = useState<number>(1);
-  const [dropIds, setDropIds] = useState<[number, [string, string, number] | undefined][]>([
-    [0, undefined],
-  ]);
-  // useEffect(() => {
-  //   async function gettingData() {
-  //     try {
-  //       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
-  //         method: 'GET',
-  //       });
-
-  //       const response = await (res as Response).json().catch(() => {});
-  //       if (!res.ok) {
-  //         console.error('Error in Resposne');
-  //         console.info(response);
-  //         return;
-  //       }
-  //       setOptions(response.data);
-  //     } catch (err) {
-  //       console.error('Error: ');
-  //       console.info(err);
-  //     }
-  //   }
-
-  //   gettingData();
-  // }, [order]);
-
-  async function handleNext() {
-    setMessage('loading...');
-    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        selected: dropIds.map((i) => i[1]),
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const response = await (res as Response).json().catch(() => {});
-    if (res.ok) {
-      if (order === URLS.length - 1) {
-        router.push('/semester');
-        return;
-      }
-      setOrder(order + 1);
-      if (order + 1 === 1 || order + 1 === 2) {
-        setNextId(0);
-        setDropIds([]);
-      } else {
-        setNextId(1);
-        setDropIds([[0, undefined]]);
-      }
-      setMessage(undefined);
-    } else {
-      setMessage(response.message || 'error occured');
-    }
-  }
-
-  function handleAdd() {
-    setSelectedPrograms((pis) => [...pis, defaultSelectedProgram]);
-  }
-
-  function handleRemove(idx: number) {
-    setSelectedPrograms((pis) => pis.filter((_, i) => idx !== i));
-  }
-
-  function handleUpdate(id: number, value: [string, string, number] | undefined) {
-    setDropIds((ids) =>
-      ids.map((item) => {
-        if (item[0] === id) {
-          return [id, value];
-        }
-        return item;
-      }),
-    );
-  }
   const [order, setOrder] = useState<number>(0);
   const [selectedPrograms, setSelectedPrograms] = useState<programOptionType[]>([
     defaultSelectedProgram,
@@ -136,6 +63,92 @@ export default function Info() {
   const backend = useApi();
   const router = useRouter();
   const [message, setMessage] = useState<undefined | string>(undefined);
+
+  useEffect(() => {
+    async function gettingData() {
+      try {
+        const res = await backend(
+          `${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding['GET']}`,
+          {
+            method: 'GET',
+          },
+        );
+
+        const response = await (res as Response).json().catch(() => {});
+        if (!res.ok) {
+          console.error('Error in Resposne');
+          console.info(response);
+          return;
+        }
+        if (stage !== 'all') {
+          const PO: programOptionType[] = [];
+          response['availablePrograms'].forEach(
+            (ap: { groupName: string; programs: { id: number; name: string }[] }) => {
+              ap.programs.forEach((program) => {
+                PO.push({ ...program, groupName: ap.groupName });
+              });
+            },
+          );
+          const enroledIds: programOptionType[] = response['enroledIds'];
+          if (!enroledIds.length) enroledIds.push(defaultSelectedProgram);
+          setProgramOptions(PO);
+          setSelectedPrograms(enroledIds);
+        } else {
+          setSequenceOptions(response);
+        }
+      } catch (err) {
+        console.error('Error: ');
+        console.info(err);
+      }
+    }
+
+    gettingData();
+  }, [order]);
+
+  async function handleNext() {
+    setMessage('loading...');
+    const programIds = selectedPrograms.map((programOption) => programOption.id);
+    if (stage === 'all' && programIds.find((val) => val == -1)) {
+      setMessage('Please select all the program fields or remove them');
+      return;
+    } else if (
+      stage !== 'all' &&
+      (restStatus.coop === undefined || restStatus.sequenceId === undefined)
+    ) {
+      setMessage('Please select coop and at least one sequence');
+      return;
+    }
+    const res = await backend(
+      `${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding['POST']}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(stage === 'all' ? restStatus : programIds),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    const response = await (res as Response).json().catch(() => {});
+    if (res.ok) {
+      if (order === URLS.length - 1) {
+        router.push('/semester');
+        return;
+      }
+      setOrder(order + 1);
+      setMessage(undefined);
+    } else {
+      setMessage(response.message || 'error occured');
+    }
+  }
+
+  function handleAdd() {
+    setSelectedPrograms((pis) => [...pis, defaultSelectedProgram]);
+  }
+
+  function handleRemove(idx: number) {
+    setSelectedPrograms((pis) => pis.filter((_, i) => idx !== i));
+  }
 
   return (
     <main>

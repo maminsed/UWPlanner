@@ -2,6 +2,8 @@
 import clsx from 'clsx';
 import { Fragment, useRef, useState } from 'react';
 
+import HoverEffect from '../HoverEffect';
+
 interface GroupedDropDownProps<T> {
   updateInputFunction: (value: string) => void;
   updateSelectFunction: (value: T) => void;
@@ -15,8 +17,8 @@ interface GroupedDropDownProps<T> {
   grouped?: boolean;
   getGroup?: (value: T) => string;
   // TODO:
-  // hover?:boolean;
-  // getHover: (value:T) => string;
+  hover?: boolean;
+  getHover?: (value: T) => string;
 }
 
 export default function GroupedDropDown<T>({
@@ -29,6 +31,8 @@ export default function GroupedDropDown<T>({
   className,
   grouped = false,
   getGroup = () => '',
+  hover = false,
+  getHover = () => '',
 }: GroupedDropDownProps<T>) {
   const [close, setClose] = useState<boolean>(true);
   const ref = useRef<HTMLDivElement>(null);
@@ -111,7 +115,13 @@ export default function GroupedDropDown<T>({
                     }
                   }}
                 >
-                  {valueFunction(o)}
+                  {hover ? (
+                    <HoverEffect hover={getHover(o)} outerClass="w-full" pClass="w-full">
+                      {valueFunction(o)}
+                    </HoverEffect>
+                  ) : (
+                    valueFunction(o)
+                  )}
                 </div>
               </Fragment>
             );

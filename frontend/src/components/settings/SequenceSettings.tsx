@@ -19,7 +19,8 @@ function groupK<T>(path: T[], k: number = 3): T[][] {
 }
 
 export function SequenceSettings() {
-  // TODO: Bitch you have a fake save changes here :skull - hoe this entire page is fake
+  // TODO: There is a fake save button on this page. You should implement it.
+  // Also get rid of currentSem. It's useless and it's easier to dynamically calculate it.
   const backend = useApi();
   const [currentSem, setCurrentSem] = useState<number>(0);
   const [seq, setSeq] = useState<string>('');

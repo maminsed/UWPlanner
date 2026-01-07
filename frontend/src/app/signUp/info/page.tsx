@@ -35,11 +35,7 @@ type SequenceOptionsType = {
   }[];
 }[];
 
-const URLS = [
-  { GET: 'programs?only_majors=true', POST: 'programs' },
-  { GET: 'programs', POST: 'programs' },
-  { GET: 'sequences', POST: 'sequences' },
-];
+const URLS = ['programs?only_majors=true', 'programs', 'sequences'];
 const HEADINGS = [
   { main: 'Select your major(s)', sub: '' },
   { main: 'Select the rest of your program(s)', sub: 'Any minor/specialization/option/...' },
@@ -68,12 +64,9 @@ export default function Info() {
   useEffect(() => {
     async function gettingData() {
       try {
-        const res = await backend(
-          `${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding['GET']}`,
-          {
-            method: 'GET',
-          },
-        );
+        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
+          method: 'GET',
+        });
 
         const response = await (res as Response).json().catch(() => {});
         if (!res.ok) {
@@ -119,16 +112,13 @@ export default function Info() {
       setMessage('Please select coop and at least one sequence');
       return;
     }
-    const res = await backend(
-      `${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding['POST']}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(stage === 'all' ? restStatus : { programIds: programIds }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
+      method: 'POST',
+      body: JSON.stringify(stage === 'all' ? restStatus : { programIds: programIds }),
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+    });
 
     const response = await (res as Response).json().catch(() => {});
     if (res.ok) {
@@ -287,13 +277,11 @@ export default function Info() {
                     return (
                       <div key={seqs.programName} className="overflow-x-auto">
                         <h6 className="mb-1 mt-5 font-medium text-base">{seqs.programName}</h6>
-                        <table className="table-fixed w-full border-collapse border border-gray-400 text-[10px] sm:text-xs max-w-full">
+                        <table className="table-auto w-full border-collapse border border-gray-400 text-[10px] sm:text-xs max-w-full">
                           <thead>
                             <tr>
                               {hasAppliesTo && (
-                                <th className="border border-gray-400 px-0.5 py-1 truncate">
-                                  Plan
-                                </th>
+                                <th className="border border-gray-400 px-2 py-1 truncate">Plan</th>
                               )}
                               {hasName && (
                                 <th className="border border-gray-400 text-center py-1 truncate">
@@ -301,10 +289,7 @@ export default function Info() {
                                 </th>
                               )}
                               {header.map((i, idx) => (
-                                <th
-                                  key={idx}
-                                  className="border border-gray-400 px-0.5 py-1 truncate"
-                                >
+                                <th key={idx} className="border border-gray-400 px-2 py-1 truncate">
                                   {i}
                                 </th>
                               ))}
@@ -322,20 +307,20 @@ export default function Info() {
                                 }
                               >
                                 {hasAppliesTo && (
-                                  <td className="border border-gray-400 px-0.5 py-1 text-center truncate">
+                                  <td className="border border-gray-400 px-2 py-1 text-center truncate max-w-25">
                                     <HoverEffect hover={item.appliesTo} outerClass="cursor-pointer">
                                       {item.appliesTo}
                                     </HoverEffect>
                                   </td>
                                 )}
                                 {hasName && (
-                                  <td className="border border-gray-400 px-0.5 py-1 text-center truncate">
+                                  <td className="border border-gray-400 px-2 py-1 text-center truncate">
                                     <HoverEffect hover={item.name}>{item.name}</HoverEffect>
                                   </td>
                                 )}
                                 {[...Array(longest)].map((_, idx) => (
                                   <td
-                                    className="border border-gray-400 px-0.5 py-1 text-center"
+                                    className="border border-gray-400 px-2 py-1 text-center"
                                     key={idx}
                                   >
                                     {item.plan[idx] || ''}

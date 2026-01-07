@@ -1,25 +1,19 @@
 import json
 from collections import defaultdict
-from typing import Callable, Optional
+from typing import Optional
 
 from flask import Blueprint, g, jsonify, make_response, request
 
-from backend.Auth import add_tokens, send_verification_mail
 from backend.Auth import verify as verify_jwt
 from backend.Schema import (
     Course,
-    Link,
-    Major,
-    Minor,
+    Programs,
     Semester,
     Sequence,
-    Specialization,
     Users,
     db,
 )
 from backend.utils.path import term_distance, translate_path, translate_to_id
-
-from ..School_info import enrol_to_majors, enrol_to_minors, enrol_to_seq, enrol_to_specs
 
 update_info = Blueprint("UpdateInfo", __name__)
 
@@ -29,9 +23,236 @@ def verify() -> Optional[make_response]:
     return verify_jwt()
 
 
+"""
+Endpoints
+GET Endpoints: 
+    (school information)
+    - majors -> ProgramReturn
+    - programs -> ProgramReturn
+    - sequences -> SequenceReturn
+    (student information)
+    - get_all -> {
+        programIds: number[];
+        coop: boolean;
+        sequence: str[];
+    }
+    - get_user_seq -> {
+        current_sem: number,
+        started_term_id: number,
+        sequence: str,
+        started_year: number,
+        started_sem: str,
+        coop: boolean,
+        path: str[],
+    }
+    (course information)
+    - get_course_reqs (POST)
+
+UPDATE (POST) Endpoints:
+    - programs: {"programIds": number[]}
+    - sequences: {
+        coop: boolean;
+        sequence: number | str[];
+    }
+    - update_personal_user_info : {
+        username: str,
+        bio: str,
+        email: str,
+    }
+    - update_terms: endpoint to swap terms
+
+Return types:
+ProgramReturn: {
+    enroledIds: {
+        id: number;
+        name: str;  
+        groupName: str;  
+    }[]
+    availablePrograms: {
+        groupName: str;
+        programs: {
+            id: number;
+            name: str;    
+        }[]
+    }[]
+}
+
+SequenceReturn : {
+    "legend": dict[str,str],
+    "seqGroups": {
+        "programName": str,
+        "sequences": {
+            "id": number,
+            "name": str,
+            "appliesTo": str,
+            "plan": str[]
+        }[] 
+    }[]
+}[]
+"""
+
+onlyMajorProgramTypes = [
+    "certificate",
+    "diploma",
+    "doctorate",
+    "double degree",
+    "joint major",
+    "major",
+]
+
+
+@update_info.route("/programs", methods=["GET"])
+def get_programs():
+    only_majors: bool = request.args.get("only_majors") or False
+    user_programs: list[Programs] = (
+        Users.query.filter_by(username=g.username).first().programs
+    )
+    if not only_majors:
+        programs = Programs.query.filter(
+            Programs.programType.in_(
+                onlyMajorProgramTypes + ["minor", "specialization", "option"]
+            )
+        ).all()
+        enroled_ids = [
+            {"id": p.id, "name": p.name, "groupName": p.groupName}
+            for p in user_programs
+        ]
+    else:
+        programs = Programs.query.filter(
+            Programs.programType.in_(onlyMajorProgramTypes)
+        ).all()
+        enroled_ids = [
+            {"id": p.id, "name": p.name, "groupName": p.groupName}
+            for p in user_programs
+            if p.programType in onlyMajorProgramTypes
+        ]
+    counter: dict[str, list] = {}
+    for p in programs:
+        if p.groupName not in counter:
+            counter[p.groupName] = []
+        counter[p.groupName].append({"id": p.id, "name": p.name})
+    available_programs = [{"groupName": k, "programs": v} for k, v in counter.items()]
+    return jsonify(
+        {"availablePrograms": available_programs, "enroledIds": enroled_ids}
+    ), 200
+
+
+@update_info.route("/programs", methods=["POST"])
+def update_programs():
+    only_majors: bool = request.args.get("only_majors") or False
+    data = request.get_json()
+    program_ids = data.get("programIds")
+    user = Users.query.filter_by(username=g.username).first()
+    if not user or not program_ids:
+        return jsonify({"message": "at least have on program_id"}), 400
+    msg, status_code = update_programs_in_db(user, program_ids, only_majors)
+    return msg, status_code
+
+
+def update_programs_in_db(user: Users, program_ids: list[int], only_majors: bool):
+    programs = Programs.query.filter(Programs.id.in_(program_ids)).all()
+    if len(programs) != len(program_ids):
+        return jsonify({"message": "one of the programs does not exist in db"}), 404
+    if only_majors:
+        programs += [
+            p for p in user.programs if p.programType not in onlyMajorProgramTypes
+        ]
+    user.programs = programs
+    db.session.add(user)
+    db.session.commit()
+    return "", 204
+
+
+@update_info.route("/sequences", methods=["GET"])
+def get_sequence():
+    username: str = g.username
+
+    try:
+        user: Users = Users.query.filter_by(username=username).first()
+        majors = [
+            p
+            for p in user.programs
+            if "major" in p.programType or "double degree" == p.programType
+        ]
+        degree_ids = {m.degreeId for m in majors}
+        if not majors:
+            return jsonify({"You need to have a major or degree first"}), 403
+        degrees: list[Programs] = Programs.query.filter(
+            Programs.id.in_(degree_ids)
+        ).all()
+        degrees = majors + degrees
+        res = defaultdict(lambda: defaultdict(list))
+
+        for p in degrees:
+            for seq in p.sequences:
+                res[seq.legend][p.name].append(
+                    {
+                        "id": seq.id,
+                        "name": seq.name,
+                        "appliesTo": seq.appliesTo,
+                        "plan": translate_path(seq.plan),
+                    }
+                )
+        default = Sequence.query.filter_by(name="Default").first()
+        res[default.legend]["default"].append(
+            {
+                "id": default.id,
+                "name": default.name,
+                "appliesTo": default.appliesTo,
+                "plan": translate_path(default.plan),
+            }
+        )
+        return jsonify(
+            [
+                {
+                    "legend": json.loads(legend),
+                    "seqGroups": [
+                        {"programName": programName, "sequences": sequences}
+                        for programName, sequences in seqGroups.items()
+                    ],
+                }
+                for legend, seqGroups in res.items()
+            ]
+        ), 200
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "there was an error in backend"}), 500
+
+
+@update_info.route("/sequences", methods=["POST"])
+def update_sequences() -> tuple[str, int]:
+    required_keys = "coop", "sequence"
+    data: dict[str,] = request.get_json()
+    user: Users = Users.query.filter_by(username=g.username).first()
+    if not user:
+        return jsonify({"message": "user does not exist"}), 400
+    for k in required_keys:
+        if k not in data or data[k] is None:
+            return jsonify({"message": "fill out all the information first"}), 400
+    # updating coop
+    user.coop = data.get("coop")
+    # updating sequence
+    sequence = data.get("sequence")
+    if type(sequence) == int:
+        seq_obj: Sequence = Sequence.query.filter_by(id=sequence).first()
+        if not seq_obj:
+            return jsonify({"message": "sequence does not exist"}), 400
+        user.sequence = seq_obj
+        user.path = seq_obj.plan
+        db.session.add(user)
+        db.session.commit()
+    else:
+        user.path = json.dumps(sequence)
+        db.session.add(user)
+        db.session.commit()
+
+    return jsonify({"message": "change successfull"}), 200
+
+
+"""
 @update_info.route("/majors", methods=["GET"])
 def get_majors() -> tuple[str, int]:
-    """Endpoint to get all the majors grouped by their faculty."""
+    " ""Endpoint to get all the majors grouped by their faculty." ""
     try:
         majors = Major.query.all()
         res = defaultdict(list)
@@ -45,7 +266,7 @@ def get_majors() -> tuple[str, int]:
 def add_field(
     func: Callable[[set[int], str], tuple[str, int]], threshold: int
 ) -> tuple[str, int]:
-    """Function to add fields for a sepcific one of majors, minors, specializations"""
+    "" "Function to add fields for a sepcific one of majors, minors, specializations" ""
     username = g.username
     values = getattr(g, "selected", [])
     if not username:
@@ -73,7 +294,7 @@ def add_field(
 
 @update_info.route("/majors", methods=["POST"])
 def add_majors() -> tuple[str, int]:
-    """Endpoint that takes in the user and adds the users choices to it."""
+    " ""Endpoint that takes in the user and adds the users choices to it." ""
     data = request.get_json()
     majors = data.get("selected")
     g.selected = majors
@@ -158,9 +379,11 @@ def add_coop() -> tuple[str, int]:
         return jsonify({"message": "error in backend", "error": str(e)}), 500
 
 
+
 @update_info.route("/sequence", methods=["GET"])
 def get_sequence():
     username = g.username
+
     if not username:
         return jsonify({"please sign in first"})
     try:
@@ -184,7 +407,6 @@ def get_sequence():
             {"message": "sign in and come back to this again", "error": str(e)}
         ), 400
 
-
 @update_info.route("/sequence", methods=["POST"])
 def add_sequence() -> tuple[str, int]:
     username = g.username
@@ -197,7 +419,6 @@ def add_sequence() -> tuple[str, int]:
     if status == 500:
         return jsonify({"message": "error in backend", "error": message}), 500
     return jsonify({"message": message}), status
-
 
 @update_info.route("/update_all", methods=["POST"])
 def update_all() -> tuple[str, int]:
@@ -269,6 +490,7 @@ def update_all() -> tuple[str, int]:
         return add_tokens("change successfull", 200, user)
 
     return jsonify({"message": "change successfull"}), 200
+"""
 
 
 @update_info.route("/get_user_info", methods=["GET"])

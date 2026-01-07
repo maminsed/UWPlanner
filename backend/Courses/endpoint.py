@@ -54,7 +54,7 @@ def get_user_sections():
         return jsonify({"message": "term_id not specified"}), 400
 
     # Retrieve the user from the database
-    user = Users.query.filter_by(username=g.username).first()
+    user: Users = Users.query.filter_by(username=g.username).first()
     if not user:
         return jsonify({"message": "user not found"}), 500
 

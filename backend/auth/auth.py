@@ -16,6 +16,7 @@ auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
 
 
+# TODO: make the delete function
 @auth_bp.route("/signup", methods=["POST"])
 def add_user() -> Response:
     """Register a new user.

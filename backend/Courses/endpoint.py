@@ -79,7 +79,7 @@ def get_user_sections():
 @courses_bp.route("/delete_single", methods=["POST"])
 def delete_course():
     # Parse the incoming JSON request
-    data = request.get_json()
+    data: dict[str,] = request.get_json()
     courses = data.get("courses")
     current_term = data.get("current_term")
 
@@ -102,7 +102,7 @@ def delete_course():
         courseDict[course["termId"]].append(course["courseId"])
     try:
         # Retrieve the user from the database
-        user = Users.query.filter_by(username=g.username).first()
+        user: Users = Users.query.filter_by(username=g.username).first()
         for term_id in courseDict:
             course_ids = courseDict[term_id]
             # Retrieve the user's semesters for the specified term
@@ -303,7 +303,6 @@ def add_batch():
         for row in rows[1:]:
             try:
                 class_number = get_int(row.find("td").text)  # getting the number
-
                 # calling backend
                 resp = s.post(
                     GQL_URL,
@@ -316,11 +315,10 @@ def add_batch():
                 payload = resp.json()
                 if "errors" in payload:
                     raise RuntimeError(payload["errors"])
-
                 data = payload["data"]["course_section"]
                 if len(data) == 0:
                     raise RuntimeError("invalid class_number")
-                course_id = payload["data"]["couse_section"][0]["course_id"]
+                course_id = data[0]["course_id"]
                 _, code = enrol_user_in_section(
                     user, [class_number], term_id, course_id
                 )

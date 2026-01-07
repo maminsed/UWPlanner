@@ -199,6 +199,7 @@ export default function BatchAddCourses({
                     e.preventDefault();
                   }}
                   contentEditable={true}
+                  suppressContentEditableWarning={true}
                 >
                   <div className="opacity-70">{text.length ? text : 'Paste here!'}</div>
                 </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
+import HoverEffect from '@/components/HoverEffect';
 import DropDown2 from '@/components/utils/DropDown2';
 import { useApi } from '@/lib/useApi';
 
@@ -244,12 +245,12 @@ export default function Info() {
             <h4 className="text-lg font-medium mt-2">Sequence:</h4>
             <div>
               {sequenceOptions.map((seqGroup, idx) => (
-                <div key={idx}>
+                <div key={idx} className="my-5">
                   {/* Legend */}
                   {Object.keys(seqGroup.legend).length ? (
-                    <div>
+                    <div className="overflow-x-auto">
                       <h5 className="my-1 font-medium text-base">Legend:</h5>
-                      <table className="table-auto border-collapse border border-gray-400 mb-4">
+                      <table className="table-auto border-collapse border border-gray-400 mb-4 text-sm max-w-full">
                         <thead>
                           <tr>
                             <th className="border border-gray-400 px-4 py-2">Key</th>
@@ -284,19 +285,26 @@ export default function Info() {
                       (_, i) => `${i % 3 == 2 ? 'S' : i % 3 == 1 ? 'W' : 'F'}`,
                     );
                     return (
-                      <div key={seqs.programName}>
+                      <div key={seqs.programName} className="overflow-x-auto">
                         <h6 className="mb-1 mt-5 font-medium text-base">{seqs.programName}</h6>
-                        <table className="table-auto border-collapse border border-gray-400">
+                        <table className="table-fixed w-full border-collapse border border-gray-400 text-[10px] sm:text-xs max-w-full">
                           <thead>
                             <tr>
-                              {hasName && (
-                                <th className="border border-gray-400 px-4 py-2">Plan</th>
-                              )}
                               {hasAppliesTo && (
-                                <th className="border border-gray-400 px-4 py-2">S/S</th>
+                                <th className="border border-gray-400 px-0.5 py-1 truncate">
+                                  Plan
+                                </th>
+                              )}
+                              {hasName && (
+                                <th className="border border-gray-400 text-center py-1 truncate">
+                                  {hasAppliesTo ? 'S/S' : 'Sequence'}
+                                </th>
                               )}
                               {header.map((i, idx) => (
-                                <th key={idx} className="border border-gray-400 px-4 py-2">
+                                <th
+                                  key={idx}
+                                  className="border border-gray-400 px-0.5 py-1 truncate"
+                                >
                                   {i}
                                 </th>
                               ))}
@@ -307,18 +315,29 @@ export default function Info() {
                               <tr
                                 key={idx}
                                 className={clsx(
-                                  restStatus.sequenceId == item.id && 'bg-yellow-400',
+                                  restStatus.sequenceId == item.id && 'bg-emerald-300',
                                 )}
                                 onClick={() =>
                                   setRestStatus({ ...restStatus, sequenceId: item.id })
                                 }
                               >
-                                <td className="border border-gray-400 px-4 py-2">
-                                  {item.appliesTo}
-                                </td>
-                                <td className="border border-gray-400 px-4 py-2">{item.name}</td>
+                                {hasAppliesTo && (
+                                  <td className="border border-gray-400 px-0.5 py-1 text-center truncate">
+                                    <HoverEffect hover={item.appliesTo} outerClass="cursor-pointer">
+                                      {item.appliesTo}
+                                    </HoverEffect>
+                                  </td>
+                                )}
+                                {hasName && (
+                                  <td className="border border-gray-400 px-0.5 py-1 text-center truncate">
+                                    <HoverEffect hover={item.name}>{item.name}</HoverEffect>
+                                  </td>
+                                )}
                                 {[...Array(longest)].map((_, idx) => (
-                                  <td className="border border-gray-400 px-4 py-2" key={idx}>
+                                  <td
+                                    className="border border-gray-400 px-0.5 py-1 text-center"
+                                    key={idx}
+                                  >
                                     {item.plan[idx] || ''}
                                   </td>
                                 ))}

@@ -27,10 +27,10 @@ export default function HoverEffect({
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setTooltipPos({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + rect.width / 2 + window.scrollX,
+        top: rect.bottom + 4,
+        left: rect.left + rect.width / 2,
       });
-      setTriggerWidth(rect.width * 0.9);
+      setTriggerWidth(Math.max(rect.width * 0.9, 100));
     }
     setIsHovered(true);
   };
@@ -49,10 +49,10 @@ export default function HoverEffect({
     >
       <div className={clsx('truncate', pClass)}>{children}</div>
       {isHovered &&
-        hover &&
+        // hover &&
         createPortal(
           <div
-            className="fixed bg-slate-900/80 text-green-100 text-xs px-2 py-1 rounded-md whitespace-wrap text-center -translate-x-1/2 pointer-events-none"
+            className="fixed bg-slate-900/80 text-green-100 text-xs px-2 py-1 rounded-md whitespace-wrap text-center -translate-x-1/2 pointer-events-none z-[9999]"
             style={{
               top: tooltipPos.top,
               left: tooltipPos.left,

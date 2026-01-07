@@ -114,7 +114,11 @@ export default function Info() {
     }
     const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding}`, {
       method: 'POST',
-      body: JSON.stringify(stage === 'all' ? restStatus : { programIds: programIds }),
+      body: JSON.stringify(
+        stage === 'all'
+          ? { ...restStatus, sequence: restStatus.sequenceId }
+          : { programIds: programIds },
+      ),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -275,7 +279,7 @@ export default function Info() {
                       (_, i) => `${i % 3 == 2 ? 'S' : i % 3 == 1 ? 'W' : 'F'}`,
                     );
                     return (
-                      <div key={seqs.programName} className="overflow-x-auto">
+                      <div key={seqs.programName} className="overflow-x-auto scroller">
                         <h6 className="mb-1 mt-5 font-medium text-base">{seqs.programName}</h6>
                         <table className="table-auto w-full border-collapse border border-gray-400 text-[10px] sm:text-xs max-w-full">
                           <thead>

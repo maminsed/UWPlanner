@@ -37,7 +37,7 @@ type SequenceOptionsType = {
 const URLS = [
   { GET: 'programs?only_majors=true', POST: 'programs' },
   { GET: 'programs', POST: 'programs' },
-  { GET: 'sequences', POST: 'update_all' },
+  { GET: 'sequences', POST: 'sequences' },
 ];
 const HEADINGS = [
   { main: 'Select your major(s)', sub: '' },
@@ -108,11 +108,11 @@ export default function Info() {
   async function handleNext() {
     setMessage('loading...');
     const programIds = selectedPrograms.map((programOption) => programOption.id);
-    if (stage === 'all' && programIds.find((val) => val == -1)) {
+    if (stage !== 'all' && programIds.find((val) => val == -1)) {
       setMessage('Please select all the program fields or remove them');
       return;
     } else if (
-      stage !== 'all' &&
+      stage === 'all' &&
       (restStatus.coop === undefined || restStatus.sequenceId === undefined)
     ) {
       setMessage('Please select coop and at least one sequence');
@@ -122,7 +122,7 @@ export default function Info() {
       `${process.env.NEXT_PUBLIC_API_URL}/update_info/${urlEnding['POST']}`,
       {
         method: 'POST',
-        body: JSON.stringify(stage === 'all' ? restStatus : programIds),
+        body: JSON.stringify(stage === 'all' ? restStatus : { programIds: programIds }),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -158,7 +158,9 @@ export default function Info() {
 
       <div className="mx-auto w-fit max-w-[96%] mt-20 px-8 py-5 rounded-lg bg-[#DAEBE3] shadow-[0px_0px_57.4px_0px_rgba(0,0,0,0.4)]">
         <h5 className="text-xl font-medium text-center mt-2">{HEADINGS[order].main}</h5>
-        <h5 className="text-sm font-light text-center text-dark-green/80">{HEADINGS[order].sub}</h5>
+        <h5 className="text-base font-light text-center text-dark-green/80">
+          {HEADINGS[order].sub}
+        </h5>
         {stage !== 'all' ? (
           <>
             <div className="mb-8"></div>
@@ -203,6 +205,8 @@ export default function Info() {
                     valueFunction={(pt) => pt.name}
                     grouped={true}
                     getGroup={(pt) => pt.groupName}
+                    hover={true}
+                    getHover={(pt) => pt.name}
                   />
                   {(selectedPrograms.length !== 1 || stage == 'programs') && (
                     <LuCircleMinus className="cursor-pointer" onClick={() => handleRemove(idx)} />

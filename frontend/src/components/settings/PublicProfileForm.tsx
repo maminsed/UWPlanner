@@ -1,16 +1,26 @@
 'use client';
 
+import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { FiPlusCircle, FiXCircle } from 'react-icons/fi';
 import { LuCamera, LuUser } from 'react-icons/lu';
 
-import DropDown from '../DropDown';
+import { defaultSelectedProgram } from '../utils/constants';
+import DropDown2 from '../utils/DropDown2';
+import { capitilize } from '../utils/textUtils';
 
 import type { InputHTMLAttributes } from 'react';
 
 import { useAuth } from '@/app/AuthProvider';
 import { useApi } from '@/lib/useApi';
+
+type programOptionType = {
+  groupName: string;
+  id: number;
+  name: string;
+  programType: string;
+};
 
 const Input = (props: InputHTMLAttributes<HTMLInputElement>) => (
   <input
@@ -40,88 +50,87 @@ const Button = ({ children, className, ...props }: ButtonProps) => (
 
 type OptionType = [string, [string, string, number][]][];
 
+const statusOrdering = {
+  error: 1,
+  changes_pending: 2,
+  loading: 3,
+  idle: 4,
+};
+
 export function PublicProfileForm() {
-  //TODO: update what you want to do with Profile Picture
+  //TODO: Confirm email change behvaiour
+  //      update what you want to do with Profile Picture
+
   //user data
-  const { profilePicture, setProfilePicture } = useAuth();
   const [username, setUsername] = useState<string>('');
   const [prevEmail, setPrevEmail] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [bio, setBio] = useState<string>('');
-  const [links, setLinks] = useState<string[]>(['']);
+  const { profilePicture, setProfilePicture } = useAuth();
 
-  const [majors, setMajors] = useState<([string, string, number] | undefined)[]>([]);
-  const [minors, setMinors] = useState<([string, string, number] | undefined)[]>([]);
-  const [specs, setSpecs] = useState<([string, string, number] | undefined)[]>([]);
+  const [selectedPrograms, setSelectedPrograms] = useState<programOptionType[]>([
+    defaultSelectedProgram,
+  ]);
+  const [programOptions, setProgramOptions] = useState<programOptionType[]>([]);
 
   const backend = useApi();
   const router = useRouter();
-  const [loadingState, setLoadingState] = useState<string>('No Changes');
-  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
-  const [majorOptions, setMajorOptions] = useState<OptionType>([]);
-  const [minorOptions, setMinorOptions] = useState<OptionType>([]);
-  const [specOptions, setSpecOptions] = useState<OptionType>([]);
+  const [state, setState] = useState<'loading' | 'idle' | 'changes_pending' | 'error'>('loading');
+  const [message, setMessage] = useState<string | undefined>(undefined);
   const { username: oldUserName, setUsername: setOldUserName, setAccess, setExp } = useAuth();
 
-  const addField =
-    <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, fields: T[], added: T) =>
-    () => {
-      setLoadingState('Save Changes');
-      setter([...fields, added]);
-    };
-
-  const removeField =
-    <T,>(setter: React.Dispatch<React.SetStateAction<T[]>>, fields: T[], index: number) =>
-    () => {
-      setLoadingState('Save Changes');
-      setter(fields.filter((_, i) => i !== index));
-    };
-
-  async function initializeOptions() {
-    const lists = ['majors', 'minors', 'specializations'];
-    for (let i = 0; i < 3; ++i) {
-      try {
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/${lists[i]}`, {
-          method: 'GET',
-        });
-
-        const response = await res.json().catch(() => {});
-        if (!res.ok) {
-          console.error('Error in Resposne');
-          console.info(response);
-          return;
-        }
-        if (i == 0) setMajorOptions(response.data);
-        else if (i == 1) setMinorOptions(response.data);
-        else setSpecOptions(response.data);
-      } catch (err) {
-        console.error('Error: ');
-        console.info(err);
-      }
-    }
-  }
-
-  async function initialSetup() {
+  async function fetchingUserInfo(): Promise<[typeof state, string]> {
     try {
-      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_info`);
-
+      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/user_info`);
       if (!res.ok) {
-        console.error('Error Occured - reload the page');
+        return ['error', 'Error Occured - reload the page'];
       } else {
         const response = await (res as Response).json();
         setUsername(response.username);
         setEmail(response.email);
         setPrevEmail(response.email);
         setBio(response.bio);
-        setMajors(response.majors);
-        setMinors(response.minors);
-        setSpecs(response.specializations);
-        setLinks(response.links);
-        initializeOptions();
+        return ['idle', ''];
       }
     } catch (err) {
-      console.error(err);
+      return ['error', 'Error occured while fetching userInfo'];
     }
+  }
+
+  async function fetchingUserPrograms(): Promise<[typeof state, string]> {
+    try {
+      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/programs`, {
+        method: 'GET',
+      });
+
+      const response = await (res as Response).json().catch(() => {});
+      if (!res.ok) return ['error', 'Error Occured - reload the page'];
+      const PO: programOptionType[] = [];
+      response['availablePrograms'].forEach(
+        (ap: {
+          groupName: string;
+          programs: { id: number; name: string; programType: string }[];
+        }) => {
+          ap.programs.forEach((program) => {
+            PO.push({ ...program, groupName: ap.groupName });
+          });
+        },
+      );
+      const enroledIds: programOptionType[] = response['enroledIds'];
+      if (!enroledIds.length) enroledIds.push(defaultSelectedProgram);
+      setProgramOptions(PO);
+      setSelectedPrograms(enroledIds);
+      return ['idle', ''];
+    } catch (err) {
+      return ['error', 'Error Occured - reload the page'];
+    }
+  }
+
+  async function initialSetup() {
+    const responses = await Promise.all([fetchingUserInfo(), fetchingUserPrograms()]);
+    responses.sort((a, b) => statusOrdering[a[0]] - statusOrdering[b[0]]);
+    setState(responses[0][0]);
+    setMessage(responses[0][1]);
   }
 
   useEffect(() => {
@@ -130,44 +139,35 @@ export function PublicProfileForm() {
 
   useEffect(() => {
     function handleBeforeUnload(e: BeforeUnloadEvent) {
-      if (loadingState == 'Save Changes') {
+      if (state === 'changes_pending' || state === 'loading') {
         e.preventDefault();
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [loadingState]);
+  }, [state]);
 
-  async function handleSubmit() {
-    setErrorMessage(undefined);
+  async function handleUserInfoSubmit(): Promise<[typeof state, string]> {
     try {
-      if (loadingState == 'Save Changes') {
-        setLoadingState('Loading...');
-        const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/update_all`, {
-          method: 'POST',
-          body: JSON.stringify({
-            username: username,
-            email: email,
-            bio: bio,
-            profilePicture: profilePicture,
-            links: links,
-            majors: majors,
-            minors: minors,
-            specializations: specs,
-          }),
-          headers: {
-            'Content-Type': 'application/json',
+      if (state == 'changes_pending') {
+        const res = await backend(
+          `${process.env.NEXT_PUBLIC_API_URL}/update_info/update_user_info`,
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              username: username,
+              email: email,
+              bio: bio,
+            }),
+            headers: {
+              'Content-Type': 'application/json',
+            },
           },
-        });
+        );
         const response = await res.json().catch(() => {});
         if (!res.ok) {
-          if (response.message) {
-            setErrorMessage(response.message);
-          } else {
-            alert('error occured, please check your information and try again');
-          }
+          return ['error', response.message || 'error occured. please check your information'];
         } else {
-          setLoadingState('Changes Saved');
           // Checking if the username changed:
           if (oldUserName != username) {
             setAccess(response.Access_Token.token);
@@ -177,13 +177,57 @@ export function PublicProfileForm() {
           if (prevEmail != email) {
             router.push('/verify');
           }
+          return ['idle', ''];
         }
       }
+      return ['idle', ''];
     } catch (err) {
-      console.error(err);
+      return ['error', 'error occured'];
     }
   }
 
+  async function handleProgramsSubmit(): Promise<[typeof state, string]> {
+    if (
+      selectedPrograms.find(
+        (program) =>
+          program.programType === defaultSelectedProgram.programType ||
+          program.id == defaultSelectedProgram.id ||
+          program.groupName == defaultSelectedProgram.groupName,
+      )
+    ) {
+      return ['error', "Please don't leave any program empty or unselecetd"];
+    }
+    try {
+      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/programs`, {
+        method: 'POST',
+        body: JSON.stringify({
+          programIds: selectedPrograms.map(({ id }) => id),
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const response = await res.json().catch(() => {});
+      if (!res.ok) {
+        return ['error', response.message || 'error occured'];
+      }
+      return ['idle', ''];
+    } catch (err) {
+      return ['error', 'error occured'];
+    }
+  }
+
+  async function handleSubmit() {
+    setState('error');
+    setMessage(undefined);
+    const responses = await Promise.all([handleUserInfoSubmit(), handleProgramsSubmit()]);
+    responses.sort((a, b) => statusOrdering[a[0]] - statusOrdering[b[0]]);
+    setState(responses[0][0]);
+    setMessage(responses[0][1]);
+    if (responses[0][0] !== 'error') await initialSetup();
+  }
+
+  //TODO: do something about this.
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -197,7 +241,7 @@ export function PublicProfileForm() {
       reader.onloadend = () => {
         setProfilePicture(reader.result as string);
       };
-      setLoadingState('Save Changes');
+      setState('changes_pending');
       reader.readAsDataURL(file);
     }
   };
@@ -206,8 +250,21 @@ export function PublicProfileForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     setVal: (newval: string) => void,
   ) {
-    setLoadingState('Save Changes');
+    if (state === 'error') setMessage('');
+    setState('changes_pending');
     setVal(e.target.value);
+  }
+
+  function handleProgramRemove(idx: number) {
+    if (state === 'error') setMessage('');
+    setState('changes_pending');
+    setSelectedPrograms((pis) => pis.filter((_, i) => idx !== i));
+  }
+
+  function handlePorgramAdd(programType: string = defaultSelectedProgram.programType) {
+    if (state === 'error') setMessage('');
+    setState('changes_pending');
+    setSelectedPrograms((pis) => [...pis, { ...defaultSelectedProgram, programType }]);
   }
 
   return (
@@ -295,47 +352,6 @@ export function PublicProfileForm() {
         </div>
       </div>
 
-      {/* links Section */}
-      <div className="grid grid-cols-1 gap-2 py-8">
-        <div className="sm:col-span-1">
-          <h3 className="text-lg font-medium">links</h3>
-          {/* <p className="mt-1 text-sm text-gray-500">
-                        Add your link media links.
-                    </p> */}
-        </div>
-        <div className="md:col-span-2 space-y-3 mt-2">
-          {links.map((link, index) => (
-            <div key={index} className="flex items-center gap-2 max-w-80">
-              <Input
-                type="url"
-                placeholder="https://example.com"
-                value={link}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const newlinks = [...links];
-                  newlinks[index] = e.target.value;
-                  setLoadingState('Save Changes');
-                  setLinks(newlinks);
-                }}
-              />
-              {links.length > 1 && (
-                <button
-                  onClick={removeField(setLinks, links, index)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <FiXCircle size={20} />
-                </button>
-              )}
-            </div>
-          ))}
-          <Button
-            onClick={addField<string>(setLinks, links, '')}
-            className="text-dark-green hover:text-blue-500 duration-150 flex py-3 items-center gap-2"
-          >
-            <FiPlusCircle size={20} /> Add Link
-          </Button>
-        </div>
-      </div>
-
       {/* Academics Section */}
       <div className="grid grid-cols-1 gap-6 py-4">
         <div className="md:col-span-1">
@@ -349,122 +365,107 @@ export function PublicProfileForm() {
         <div className="md:col-span-2">
           <div className="grid grid-cols-1 gap-6 max-w-80">
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Major</label>
-              {majors.map((major, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <DropDown
-                    options={majorOptions}
-                    classes={{
-                      mainDiv: 'flex-1 min-w-0',
-                      searchBar: 'w-full border-1 py-2 pl-2 border-gray-300',
-                      optionBox: 'w-full border-1 border-dark-green',
-                    }}
-                    selectedValue={major}
-                    setSelectedValue={(e) => {
-                      setLoadingState('Save Changes');
-                      const newMajors = [...majors];
-                      newMajors[index] = e;
-                      setMajors(newMajors);
-                    }}
-                  />
-                  {majors.length > 1 && (
-                    <button
-                      onClick={removeField(setMajors, majors, index)}
-                      className="text-red-500 hover:text-red-700"
+              {(() => {
+                const programTypeMap = new Map<string, (programOptionType & { idx: number })[]>();
+                let majorCounter = 0;
+                selectedPrograms.forEach((program, idx) => {
+                  if (!programTypeMap.has(program.programType)) {
+                    programTypeMap.set(program.programType, []);
+                  }
+                  if (
+                    program.programType.includes('major') ||
+                    program.programType.includes('degree')
+                  )
+                    ++majorCounter;
+                  programTypeMap.get(program.programType)!.push({ ...program, idx });
+                });
+                return Array.from(programTypeMap.entries()).map(([programType, programs]) => (
+                  <Fragment key={programs[0].idx}>
+                    <label className="block text-sm font-medium">{capitilize(programType)}</label>
+                    {programs.map((sp) => {
+                      const splitSP = sp.name.toLowerCase().replace(/\s+/g, ' ').split(' ');
+                      const filteredPrograms = programOptions.filter((program) => {
+                        if (sp.id !== -1) return program.id === sp.id;
+                        const splitP = program.name.toLowerCase().split(' ');
+                        let spI = 0;
+                        let pI = 0;
+                        while (pI < splitP.length && spI < splitSP.length) {
+                          const spWord = splitSP[spI];
+                          const pWord = splitP[pI];
+                          if (pWord.includes(spWord)) {
+                            ++spI;
+                          }
+                          ++pI;
+                        }
+                        return spI === splitSP.length;
+                      });
+                      return (
+                        <div key={sp.idx} className="flex mt-2 items-center gap-2 justify-start">
+                          <DropDown2<programOptionType>
+                            currentValue={sp}
+                            placeholder="start typing..."
+                            options={filteredPrograms}
+                            updateInputFunction={(value) => {
+                              setSelectedPrograms(
+                                selectedPrograms.map((sp_hat, idx_hat) =>
+                                  idx_hat === sp.idx
+                                    ? { ...defaultSelectedProgram, name: value, programType }
+                                    : sp_hat,
+                                ),
+                              );
+                            }}
+                            updateSelectFunction={(value) => {
+                              setSelectedPrograms(
+                                selectedPrograms.map((sp_hat, idx_hat) =>
+                                  idx_hat === sp.idx ? value : sp_hat,
+                                ),
+                              );
+                              if (state == 'error') setMessage('');
+                              setState('changes_pending');
+                            }}
+                            valueFunction={(pt) => pt.name}
+                            grouped={true}
+                            getGroup={(pt) => pt.groupName}
+                            hover={true}
+                            getHover={(pt) => pt.name}
+                          />
+                          {(majorCounter !== 1 ||
+                            !(programType.includes('major') || programType.includes('degree'))) && (
+                            <button
+                              onClick={() => handleProgramRemove(sp.idx)}
+                              className="text-red-500 hover:text-red-700 hover:cursor-pointer"
+                            >
+                              <FiXCircle size={20} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <Button
+                      onClick={() => handlePorgramAdd(programType)}
+                      className="text-dark-green flex items-center gap-2"
                     >
-                      <FiXCircle size={20} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                      <FiPlusCircle size={20} />
+                    </Button>
+                  </Fragment>
+                ));
+              })()}
               <Button
-                onClick={addField<[string, string, number] | undefined>(
-                  setMajors,
-                  majors,
-                  undefined,
-                )}
+                onClick={() => handlePorgramAdd()}
                 className="text-dark-green flex items-center gap-2"
               >
-                <FiPlusCircle size={20} />
-              </Button>
-            </div>
-            <div className="space-y-2 max-w-80">
-              <label className="block text-sm font-medium">Minor</label>
-              {minors.map((minor, index) => (
-                <div key={index} className="flex items-center gap-2 max-w-80 w-full">
-                  <DropDown
-                    options={minorOptions}
-                    classes={{
-                      mainDiv: 'flex-1 min-w-0',
-                      searchBar: 'w-full border-1 py-2 pl-2 border-gray-300',
-                      optionBox: 'w-full border-1 border-dark-green',
-                    }}
-                    selectedValue={minor}
-                    setSelectedValue={(e) => {
-                      setLoadingState('Save Changes');
-                      const newMinors = [...minors];
-                      newMinors[index] = e;
-                      setMinors(newMinors);
-                    }}
-                  />
-                  <button
-                    onClick={removeField(setMinors, minors, index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <FiXCircle size={20} />
-                  </button>
-                </div>
-              ))}
-              <Button
-                onClick={addField(setMinors, minors, undefined)}
-                className="text-dark-green flex items-center gap-2"
-              >
-                <FiPlusCircle size={20} />
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium">Specialization</label>
-              {specs.map((spec, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <DropDown
-                    options={specOptions}
-                    classes={{
-                      mainDiv: 'flex-1 min-w-0',
-                      searchBar: 'w-full border-1 py-2 pl-2 border-gray-300',
-                      optionBox: 'w-full border-1 border-dark-green',
-                    }}
-                    selectedValue={spec}
-                    setSelectedValue={(e) => {
-                      setLoadingState('Save Changes');
-                      const newSpecs = [...specs];
-                      newSpecs[index] = e;
-                      setSpecs(newSpecs);
-                    }}
-                  />
-                  <button
-                    onClick={removeField(setSpecs, specs, index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <FiXCircle size={20} />
-                  </button>
-                </div>
-              ))}
-              <Button
-                onClick={addField(setSpecs, specs, undefined)}
-                className="text-dark-green flex items-center gap-2"
-              >
-                <FiPlusCircle size={20} />
+                <FiPlusCircle size={16} />
               </Button>
             </div>
           </div>
         </div>
       </div>
-      <p className="mt-4 mb-3 text-red-600">{errorMessage}</p>
+      <p className={clsx('mt-4 mb-3', state === 'error' && 'text-red-600')}>{message}</p>
       {/* Action Buttons */}
       <div className="flex justify-end gap-4">
         <Button
           style={
-            loadingState == 'Save Changes'
+            state == 'changes_pending'
               ? {}
               : {
                   backgroundColor: '#aba5a561',
@@ -474,19 +475,18 @@ export function PublicProfileForm() {
                 }
           }
           className="border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150"
-          disabled={loadingState != 'Save Changes'}
+          disabled={state != 'changes_pending'}
           onClick={() => {
-            if (loadingState == 'Save Changes') initialSetup();
-            setLoadingState('No Changes');
+            if (state == 'changes_pending' || state == 'error') initialSetup();
           }}
         >
           Cancel
         </Button>
         <Button
           onClick={handleSubmit}
-          disabled={loadingState != 'Save Changes'}
+          disabled={state != 'changes_pending'}
           style={
-            loadingState == 'Save Changes'
+            state == 'changes_pending'
               ? {}
               : {
                   backgroundColor: '#aba5a561',
@@ -497,7 +497,13 @@ export function PublicProfileForm() {
           }
           className="bg-dark-green text-white duration-150 px-3 hover:bg-[#2c464a]"
         >
-          {loadingState}
+          {state === 'changes_pending'
+            ? 'Save Changes'
+            : state === 'idle'
+              ? 'No Changes'
+              : state === 'loading'
+                ? 'Loading'
+                : 'Error Occured'}
         </Button>
       </div>
     </div>

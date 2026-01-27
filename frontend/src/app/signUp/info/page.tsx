@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
 import HoverEffect from '@/components/HoverEffect';
+import { defaultSelectedProgram } from '@/components/utils/constants';
 import DropDown2 from '@/components/utils/DropDown2';
 import { useApi } from '@/lib/useApi';
 
@@ -14,8 +15,6 @@ type programOptionType = {
   id: number;
   name: string;
 };
-
-const defaultSelectedProgram = { groupName: '', id: -1, name: '' };
 
 interface RestStatusType {
   coop: boolean | undefined;

@@ -5,6 +5,8 @@ from typing import Optional
 from flask import Blueprint, g, jsonify, make_response, request
 
 from backend.Auth import verify as verify_jwt
+from backend.Auth.auth import add_tokens
+from backend.Auth.send_mail import send_verification_mail
 from backend.Schema import (
     Course,
     Programs,
@@ -31,11 +33,18 @@ GET Endpoints:
     - programs -> ProgramReturn
     - sequences -> SequenceReturn
     (student information)
-    - get_all -> {
-        programIds: number[];
-        coop: boolean;
-        sequence: str[];
+    - user_info -> {
+        username: str;
+        bio: str;
+        email: str;
     }
+    - user_seqs: include_courses (if false, course_ids is empty) -> {
+        coop: boolean;
+        path: {"name":'1A'|...,"course_ids":int[]}[];
+        sequence_name: str;
+        started_term_id: number;
+    }
+    #About to go out
     - get_user_seq -> {
         current_sem: number,
         started_term_id: number,
@@ -54,7 +63,7 @@ UPDATE (POST) Endpoints:
         coop: boolean;
         sequence: number | str[];
     }
-    - update_personal_user_info : {
+    - update_user_info : {
         username: str,
         bio: str,
         email: str,
@@ -67,12 +76,14 @@ ProgramReturn: {
         id: number;
         name: str;  
         groupName: str;  
+        programType: str;
     }[]
     availablePrograms: {
         groupName: str;
         programs: {
             id: number;
-            name: str;    
+            name: str;
+            programType: str; 
         }[]
     }[]
 }
@@ -108,21 +119,31 @@ def get_programs():
         Users.query.filter_by(username=g.username).first().programs
     )
     if not only_majors:
-        programs = Programs.query.filter(
+        programs: list[Programs] = Programs.query.filter(
             Programs.programType.in_(
                 onlyMajorProgramTypes + ["minor", "specialization", "option"]
             )
         ).all()
         enroled_ids = [
-            {"id": p.id, "name": p.name, "groupName": p.groupName}
+            {
+                "id": p.id,
+                "name": p.name,
+                "groupName": p.groupName,
+                "programType": p.programType,
+            }
             for p in user_programs
         ]
     else:
-        programs = Programs.query.filter(
+        programs: list[Programs] = Programs.query.filter(
             Programs.programType.in_(onlyMajorProgramTypes)
         ).all()
         enroled_ids = [
-            {"id": p.id, "name": p.name, "groupName": p.groupName}
+            {
+                "id": p.id,
+                "name": p.name,
+                "groupName": p.groupName,
+                "programType": p.programType,
+            }
             for p in user_programs
             if p.programType in onlyMajorProgramTypes
         ]
@@ -130,7 +151,9 @@ def get_programs():
     for p in programs:
         if p.groupName not in counter:
             counter[p.groupName] = []
-        counter[p.groupName].append({"id": p.id, "name": p.name})
+        counter[p.groupName].append(
+            {"id": p.id, "name": p.name, "programType": p.programType}
+        )
     available_programs = [{"groupName": k, "programs": v} for k, v in counter.items()]
     return jsonify(
         {"availablePrograms": available_programs, "enroledIds": enroled_ids}
@@ -152,7 +175,7 @@ def update_programs():
 def update_programs_in_db(user: Users, program_ids: list[int], only_majors: bool):
     programs = Programs.query.filter(Programs.id.in_(program_ids)).all()
     if len(programs) != len(program_ids):
-        return jsonify({"message": "one of the programs does not exist in db"}), 404
+        return jsonify({"message": "There might be a duplicate in programs"}), 404
     if only_majors:
         programs += [
             p for p in user.programs if p.programType not in onlyMajorProgramTypes
@@ -247,6 +270,72 @@ def update_sequences() -> tuple[str, int]:
         db.session.commit()
 
     return jsonify({"message": "change successfull"}), 200
+
+
+@update_info.route("/user_info", methods=["GET"])
+def get_all() -> tuple[str, int]:
+    user: Users = Users.query.filter_by(username=g.username).first()
+    return jsonify(
+        {
+            "username": user.username,
+            "email": user.email,
+            "bio": user.bio,
+        }
+    ), 200
+
+
+@update_info.route("/user_seqs", methods=["GET"])
+def get_user_seqs() -> tuple[str, int]:
+    include_courses = request.args.get("include_courses", False) == True
+    user: Users = Users.query.filter_by(username=g.username).first()
+    path = [{"name": term, "course_ids": []} for term in translate_path(user.path)]
+    if include_courses:
+        user_semesters = {sem.id: json.loads(sem.courses) for sem in user.semesters}
+        for i in range(len(path)):
+            path[i]["course_ids"] = user_semesters.get(user.started_term + i, [])
+    return {
+        "coop": user.coop,
+        "sequence_name": user.sequence.name,
+        "started_term_id": user.started_term,
+        "path": path,
+    }
+
+
+@update_info.route("/update_user_info", methods=["POST"])
+def update_user_info():
+    # TODO: add a failsafe for when they accidently add the wrong email
+    data: dict[str, str] = request.get_json()
+    user: Users = Users.query.filter_by(username=g.username).first()
+
+    user.bio = data.get("bio", "")
+    db.session.add(user)
+    new_username = data.get("username", "")
+    username_updated = False
+    if user.username != new_username:
+        existing_user = Users.query.filter_by(username=new_username).first()
+        if existing_user:
+            db.session.commit()
+            return jsonify({"message": "user with this username already exists"}), 403
+        user.username = new_username
+        username_updated = True
+        db.session.add(user)
+
+    new_email = data.get("email", "")
+    if user.email != new_email:
+        existing_user = Users.query.filter_by(email=new_email).first()
+        if existing_user:
+            db.session.commit()
+            return jsonify({"message": "user with this email already exists"}), 403
+        user.email = new_email
+        user.is_verified = False
+        db.session.add(user)
+        db.session.commit()
+        send_verification_mail(user)
+    db.session.add(user)
+    db.session.commit()
+    if username_updated:
+        return add_tokens("user updated", 200, user)
+    return jsonify({"message": "user updated"}), 200
 
 
 """
@@ -491,27 +580,6 @@ def update_all() -> tuple[str, int]:
 
     return jsonify({"message": "change successfull"}), 200
 """
-
-
-@update_info.route("/get_user_info", methods=["GET"])
-def get_all() -> tuple[str, int]:
-    user = Users.query.filter_by(username=g.username).first()
-    socials = [l.url for l in user.links]
-    majors = [[m.name, m.name, m.id] for m in user.majors]
-    minors = [[m.name, m.name, m.id] for m in user.minors]
-    specs = [[m.name, m.name, m.id] for m in user.specializations]
-    return jsonify(
-        {
-            "username": g.username,
-            "email": user.email,
-            "bio": user.bio,
-            "links": [l.url for l in user.links],
-            "socials": socials,
-            "majors": majors,
-            "minors": minors,
-            "specializations": specs,
-        }
-    ), 200
 
 
 @update_info.route("/get_course_reqs", methods=["POST"])

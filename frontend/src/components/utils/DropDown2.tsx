@@ -5,8 +5,8 @@ import { Fragment, useRef, useState } from 'react';
 import HoverEffect from '../HoverEffect';
 
 interface GroupedDropDownProps<T> {
-  updateInputFunction: (value: string) => void;
-  updateSelectFunction: (value: T) => void;
+  updateInputFunction: (value: string) => void; // Called when typing in input
+  updateSelectFunction: (value: T) => void; // Called when clicking/entering on the options
   valueFunction: (value: T) => string;
   currentValue?: T;
   placeholder?: string;

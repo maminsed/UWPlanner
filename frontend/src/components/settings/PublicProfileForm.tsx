@@ -7,7 +7,7 @@ import { FiPlusCircle, FiXCircle } from 'react-icons/fi';
 import { LuCamera, LuUser } from 'react-icons/lu';
 
 import { defaultSelectedProgram } from '../utils/constants';
-import DropDown2 from '../utils/DropDown2';
+import DropDown2 from '../utils/GroupedDropDown';
 import { capitilize } from '../utils/textUtils';
 
 import type { InputHTMLAttributes } from 'react';
@@ -375,8 +375,9 @@ export function PublicProfileForm() {
                   if (
                     program.programType.includes('major') ||
                     program.programType.includes('degree')
-                  )
+                  ) {
                     ++majorCounter;
+                  }
                   programTypeMap.get(program.programType)!.push({ ...program, idx });
                 });
                 return Array.from(programTypeMap.entries()).map(([programType, programs]) => (

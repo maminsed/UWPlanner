@@ -7,7 +7,7 @@ import { LuMinus, LuPlus } from 'react-icons/lu';
 
 import HoverEffect from '../HoverEffect';
 import { termIdInterface } from '../interface';
-import DropDown2 from '../utils/DropDown2';
+import GroupedDropDown from '../utils/GroupedDropDown';
 import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermDistance } from '../utils/termUtils';
 
@@ -285,7 +285,7 @@ export default function AddACourse({
         {!termId && termOptions && (
           <label className="block text-lg">
             Term:
-            <DropDown2<termIdInterface>
+            <GroupedDropDown<termIdInterface>
               currentValue={actualTermId}
               valueFunction={(v) => v.display}
               options={filterTermId()}
@@ -299,7 +299,7 @@ export default function AddACourse({
         )}
         <label className="block text-lg">
           Search:
-          <DropDown2<OptionsInterface>
+          <GroupedDropDown<OptionsInterface>
             currentValue={searchPhrase}
             valueFunction={(phrase) =>
               `${phrase.code.toUpperCase()}${phrase.code == '' ? '' : ' - '}${phrase.name}`
@@ -316,7 +316,7 @@ export default function AddACourse({
             Class Number: <IoIosInformationCircleOutline className="inline-block cursor-pointer" />
             {chosenSections.map((section, i) => (
               <div key={i} className="flex items-center gap-1">
-                <DropDown2<SectionInterface>
+                <GroupedDropDown<SectionInterface>
                   currentValue={section}
                   options={
                     section

@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { AiOutlineClose } from 'react-icons/ai';
 
 import { termIdInterface } from '../interface';
-import DropDown2 from '../utils/DropDown2';
+import GroupedDropDown from '../utils/GroupedDropDown';
 import RightSide from '../utils/RightSide';
 
 import { useApi } from '@/lib/useApi';
@@ -128,7 +128,7 @@ export default function BatchAddCourses({
             <p className="">Please choose a term: (e.g. 1A)</p>
             <label className="block text-lg">
               Term Id:
-              <DropDown2<termIdInterface>
+              <GroupedDropDown<termIdInterface>
                 currentValue={actualTermId}
                 valueFunction={(v) => v.display}
                 options={filterTermId()}

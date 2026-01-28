@@ -19,7 +19,14 @@ interface GroupedDropDownProps<T> {
   // TODO:
   hover?: boolean;
   getHover?: (value: T) => string;
+  size?: 'sm' | 'md' | 'lg';
 }
+
+const widthMapping = {
+  sm: 'max-w-[10vw]',
+  md: 'max-w-[40vw]',
+  lg: 'max-w-[90vw]',
+};
 
 export default function GroupedDropDown<T>({
   updateInputFunction,
@@ -33,7 +40,10 @@ export default function GroupedDropDown<T>({
   getGroup = () => '',
   hover = false,
   getHover = () => '',
+  size = 'lg',
 }: GroupedDropDownProps<T>) {
+  // TODO: make it so that when they click on it, the dropdown shows up
+  //       add the option to choose if they want the dropDown to be over stuff or not.
   const [close, setClose] = useState<boolean>(true);
   const ref = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
@@ -72,7 +82,7 @@ export default function GroupedDropDown<T>({
         }
       }}
     >
-      <div className="relative max-w-[90vw] w-75">
+      <div className={clsx('relative w-75', widthMapping[size])}>
         <input
           className="border-1 rounded-sm block w-full py-2 pl-1 pr-2 focus:outline-none focus:shadow-2xs focus:shadow-dark-green duration-75"
           value={currentValue ? valueFunction(currentValue) : ''}
@@ -82,15 +92,26 @@ export default function GroupedDropDown<T>({
           }}
           onKeyDown={(e) => handleKeyDown(e)}
           placeholder={placeholder}
+          onClick={() => setClose(false)}
         />
       </div>
       {!close && (
-        <div className="bg-teal-800 text-light-green py-1 rounded-sm mt-1 scroller max-h-30 overflow-x-clip overflow-y-auto max-w-[90vw] w-75">
+        <div
+          className={clsx(
+            'bg-teal-800 text-light-green py-1 rounded-sm mt-1 scroller max-h-30 overflow-x-clip overflow-y-auto w-75',
+            widthMapping[size],
+          )}
+        >
           {options.map((o, k) => {
             const optionGroup = getGroup(o);
             const group =
               grouped && optionGroup !== currGroup ? (
-                <div className="font-medium text-lime-300/90 truncate px-1 max-w-[90vw] w-75">
+                <div
+                  className={clsx(
+                    'font-medium text-lime-300/90 truncate px-1 w-75',
+                    widthMapping[size],
+                  )}
+                >
                   {optionGroup}
                 </div>
               ) : (
@@ -102,8 +123,9 @@ export default function GroupedDropDown<T>({
                 {group}
                 <div
                   className={clsx(
-                    'cursor-pointer hover:bg-teal-700 truncate px-1 max-w-[90vw] w-75',
+                    'cursor-pointer hover:bg-teal-700 truncate px-1 w-75',
                     highlightedIndex === k && 'bg-teal-600',
+                    widthMapping[size],
                   )}
                   onClick={() => {
                     updateSelectFunction(o);

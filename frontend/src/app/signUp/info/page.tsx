@@ -7,7 +7,7 @@ import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
 import HoverEffect from '@/components/HoverEffect';
 import { defaultSelectedProgram } from '@/components/utils/constants';
-import DropDown2 from '@/components/utils/DropDown2';
+import DropDown2 from '@/components/utils/GroupedDropDown';
 import { useApi } from '@/lib/useApi';
 
 type programOptionType = {

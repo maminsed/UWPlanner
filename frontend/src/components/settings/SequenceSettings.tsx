@@ -1,9 +1,11 @@
 'use client';
 import clsx from 'clsx';
 import { Fragment, useEffect, useState } from 'react';
+import { LuPencil } from 'react-icons/lu';
 import { MdArrowBackIosNew } from 'react-icons/md';
 
-import { getTermSeason, termOperation } from '../utils/termUtils';
+import GroupedDropDown from '../utils/GroupedDropDown';
+import { getCurrentTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 
@@ -20,78 +22,79 @@ function groupK<T>(path: T[], k: number = 3): T[][] {
 
 export function SequenceSettings() {
   // TODO: There is a fake save button on this page. You should implement it.
-  // Also get rid of currentSem. It's useless and it's easier to dynamically calculate it.
+  // There are a lot of fake buttons on this page. Fix them.
   const backend = useApi();
-  const [currentSem, setCurrentSem] = useState<number>(0);
-  const [seq, setSeq] = useState<string>('');
-  const [startedTerm, setStartedTerm] = useState<string>('');
+  const currentSem = getCurrentTermId();
+  const starting_term_id_options = [...Array(40)].map((_, idx) =>
+    termOperation(currentSem, idx - 20),
+  );
+  const [seqName, setSeqName] = useState<string>('');
+  const [startedTermId, setStartedTermId] = useState<number>(0);
   const [gradTerm, setGradTerm] = useState<string>('');
   const [coop, setCoop] = useState<boolean>(false);
-  const [path, setPath] = useState<string[]>([]);
+  const [path, setPath] = useState<{ name: string }[]>([]);
 
   useEffect(() => {
     async function handleInitial() {
-      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/get_user_seq`);
+      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/user_seqs`);
       const response = await res.json().catch(() => {});
       if (!res.ok) {
         console.error('error occured - please reload');
       } else {
-        setCurrentSem(response.current_sem);
-        setSeq(response.sequence);
-        setStartedTerm(getTermSeason(response.started_term_id));
-        setGradTerm(getTermSeason(termOperation(response.started_term_id, response.path.length)));
+        setSeqName(response.sequence_name);
         setCoop(response.coop);
+        setStartedTermId(response.started_term_id);
         setPath(response.path);
       }
     }
 
     handleInitial();
   }, []);
+  useEffect(() => {
+    setGradTerm(getTermSeason(termOperation(startedTermId, path.length)));
+  }, [startedTermId]);
 
   return (
     <div id="courses">
       <h2 className="text-xl font-medium text-palette-rich-teal mt-10">Sequence</h2>
       <p className="mb-8">View and manage your sequence-related settings.</p>
       <div className="max-w-80 mb-10 gap-3 flex flex-col">
-        <div className="flex flex-row justify-between">
+        {/*<div className="flex flex-row justify-between">
           <p className="text-lg">Current Semester</p>
-          <select
+           <select
             className="border-1 rounded-md min-w-20"
-            onChange={(e) => {
-              setCurrentSem(parseInt(e.target.value));
-            }}
             value={currentSem}
           >
-            {/* TODO: ADD API */}
             {path.map((sem, i) => (
               <option key={i} value={i}>
                 {sem}
               </option>
             ))}
-          </select>
+          </select> 
+        </div>*/}
+        <div className="flex flex-row justify-between">
+          <p className="text-lg">Current Semester</p>
+          <p>{getTermSeason(currentSem)}</p>
         </div>
 
         <div className="flex flex-row justify-between">
-          <p className="text-lg">Sequence</p>
-          <select
-            className="border-1 rounded-md min-w-20"
-            value={seq}
-            onChange={(e) => {
-              setSeq(e.target.value);
-            }}
-          >
-            {/* TODO: ADD API */}
-            <option>SEQ 1</option>
-            <option>SEQ 2</option>
-            <option>SEQ 3</option>
-            <option>SEQ 4</option>
-            <option>Stream1_Arts</option>
-          </select>
+          <p className="text-lg">Sequence Name</p>
+          <div className="flex felx-row gap-1 items-center">
+            <p>{seqName}</p>
+            <LuPencil className="cursor-pointer hover:text-slate-600" />
+          </div>
         </div>
 
-        <div className="flex flex-row justify-between">
+        <div className="flex flex-row justify-between items-center">
           <p className="text-lg">Started Term</p>
-          <p>{startedTerm}</p>
+          <GroupedDropDown<number>
+            updateInputFunction={() => {}}
+            updateSelectFunction={setStartedTermId}
+            currentValue={startedTermId}
+            options={starting_term_id_options}
+            valueFunction={getTermSeason}
+            size="sm"
+          />
         </div>
 
         <div className="flex flex-row justify-between">
@@ -113,18 +116,19 @@ export function SequenceSettings() {
 
         <div>
           <p className="text-lg">Path</p>
-          {/* TODO: Make the current sem update automaticaly and not require backend */}
-          {groupK<string>(path).map((group, index) => (
+          {groupK<{ name: string }>(path).map((group, index) => (
             <div
               className="flex flex-row justify-start gap-4 align-middle mt-2 max-w-60"
               key={index}
             >
-              {group.map((sem, j) => (
+              {group.map(({ name: sem }, j) => (
                 <Fragment key={j}>
                   <div
                     className={clsx(
                       'w-11 aspect-square rounded-lg text-light-green text-center leading-11 font-semibold',
-                      3 * index + j !== currentSem ? 'bg-dark-green' : 'bg-green-400',
+                      termOperation(startedTermId, 3 * index + j) !== currentSem
+                        ? 'bg-dark-green'
+                        : 'bg-green-400',
                     )}
                   >
                     {sem}

@@ -5,7 +5,7 @@ import { LuPencil } from 'react-icons/lu';
 import { MdArrowBackIosNew } from 'react-icons/md';
 
 import GroupedDropDown from '../utils/GroupedDropDown';
-import { getCurrentTermId, getTermSeason, termOperation } from '../utils/termUtils';
+import { getCurrentTermId, getTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 
@@ -26,33 +26,76 @@ export function SequenceSettings() {
   const backend = useApi();
   const currentSem = getCurrentTermId();
   const starting_term_id_options = [...Array(40)].map((_, idx) =>
-    termOperation(currentSem, idx - 20),
+    getTermSeason(termOperation(currentSem, idx - 20)),
   );
   const [seqName, setSeqName] = useState<string>('');
   const [startedTermId, setStartedTermId] = useState<number>(0);
+  const [startedTermSearchPhrase, setStartedTermSearchPhrase] = useState<string>();
   const [gradTerm, setGradTerm] = useState<string>('');
   const [coop, setCoop] = useState<boolean>(false);
   const [path, setPath] = useState<{ name: string }[]>([]);
 
-  useEffect(() => {
-    async function handleInitial() {
-      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/user_seqs`);
-      const response = await res.json().catch(() => {});
-      if (!res.ok) {
-        console.error('error occured - please reload');
-      } else {
-        setSeqName(response.sequence_name);
-        setCoop(response.coop);
-        setStartedTermId(response.started_term_id);
-        setPath(response.path);
-      }
-    }
+  const [state, setState] = useState<'idle' | 'error' | 'changes_pending' | 'loading'>('idle');
+  const [message, setMessage] = useState<string>('');
 
+  async function handleInitial() {
+    setState('loading');
+    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/user_seqs`);
+    const response = await res.json().catch(() => {});
+    if (!res.ok) {
+      console.error('error occured - please reload');
+      setState('error');
+    } else {
+      setSeqName(response.sequence_name);
+      setCoop(response.coop);
+      setStartedTermId(response.started_term_id);
+      setPath(response.path);
+      setState('idle');
+    }
+  }
+
+  useEffect(() => {
     handleInitial();
   }, []);
   useEffect(() => {
     setGradTerm(getTermSeason(termOperation(startedTermId, path.length)));
   }, [startedTermId]);
+
+  async function handleSubmit() {
+    if (state != 'changes_pending') return;
+    if (startedTermSearchPhrase !== undefined) {
+      setState('error');
+      setMessage('Please select Started Term first');
+      return;
+    }
+    setState('loading');
+    try {
+      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/sequences`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (err) {
+      setState('error');
+      setMessage('error occured while submitting');
+    }
+  }
+
+  function updateSelectFunction(termSeason: string) {
+    setStartedTermId(getTermId(termSeason) as number);
+    setStartedTermSearchPhrase(undefined);
+    if (state === 'error') setMessage('');
+    setState('changes_pending');
+  }
+
+  function updateInputFunction(searchPhrase: string) {
+    setStartedTermSearchPhrase(searchPhrase);
+    // setStartedTermId(-1);
+    if (state === 'error') setMessage('');
+    setState('changes_pending');
+  }
 
   return (
     <div id="courses">
@@ -87,12 +130,22 @@ export function SequenceSettings() {
 
         <div className="flex flex-row justify-between items-center">
           <p className="text-lg">Started Term</p>
-          <GroupedDropDown<number>
-            updateInputFunction={() => {}}
-            updateSelectFunction={setStartedTermId}
-            currentValue={startedTermId}
-            options={starting_term_id_options}
-            valueFunction={getTermSeason}
+          <GroupedDropDown<string>
+            updateInputFunction={updateInputFunction}
+            updateSelectFunction={updateSelectFunction}
+            currentValue={
+              startedTermSearchPhrase === undefined
+                ? getTermSeason(startedTermId)
+                : startedTermSearchPhrase
+            }
+            options={
+              startedTermSearchPhrase === undefined
+                ? starting_term_id_options
+                : starting_term_id_options.filter((termSesaon) =>
+                    termSesaon.toLowerCase().includes(startedTermSearchPhrase.toLowerCase()),
+                  )
+            }
+            valueFunction={(v) => v}
             size="sm"
           />
         </div>
@@ -110,6 +163,8 @@ export function SequenceSettings() {
             checked={coop}
             onChange={(e) => {
               setCoop(e.target.checked);
+              if (state === 'error') setMessage('');
+              setState('changes_pending');
             }}
           />
         </div>
@@ -144,40 +199,41 @@ export function SequenceSettings() {
           ))}
         </div>
       </div>
-
+      {message.length ? <p className={clsx(state == 'error' && 'text-red-500')}>{message}</p> : ''}
       {/* Action Buttons */}
       <div className="flex justify-end gap-4">
         <button
           style={
-            //TODO: fix this
-            // true ?
-            // {} :
-            {
-              backgroundColor: '#aba5a561',
-              color: 'oklch(55.2% 0.016 285.938)',
-              borderWidth: '0',
-              cursor: 'not-allowed',
-            }
+            state === 'idle' || state === 'loading'
+              ? {
+                  backgroundColor: '#aba5a561',
+                  color: 'oklch(55.2% 0.016 285.938)',
+                  borderWidth: '0',
+                  cursor: 'not-allowed',
+                }
+              : {}
           }
           className="p-1 rounded-md font-medium cursor-pointer border border-gray-500 text-settings-text px-3 hover:bg-dark-green hover:text-light-green duration-150"
-          // disabled={loadingState != "Save Changes"}
-          // onClick={()=>{if (loadingState == "Save Changes") initialSetup(); setLoadingState("No Changes")}}
+          disabled={state === 'idle' || state === 'loading'}
+          onClick={() => {
+            if (state !== 'idle') handleInitial();
+            setState('idle');
+          }}
         >
           Cancel
         </button>
         <button
-          // onClick={handleSubmit}
-          // disabled={loadingState != "Save Changes"}
+          onClick={handleSubmit}
+          disabled={state != 'changes_pending'}
           style={
-            //TODO: fix this
-            // true ?
-            //     {} :
-            {
-              backgroundColor: '#aba5a561',
-              color: 'oklch(55.2% 0.016 285.938)',
-              borderColor: 'oklch(70.4% 0.04 256.788)',
-              cursor: 'not-allowed',
-            }
+            state != 'changes_pending'
+              ? {
+                  backgroundColor: '#aba5a561',
+                  color: 'oklch(55.2% 0.016 285.938)',
+                  borderWidth: '0',
+                  cursor: 'not-allowed',
+                }
+              : {}
           }
           className="p-1 rounded-md font-medium cursor-pointer bg-dark-green text-white duration-150 px-3 hover:bg-[#2c464a]"
         >

@@ -16,7 +16,6 @@ interface GroupedDropDownProps<T> {
   // e.g. first they are all group1, then they are all group2
   grouped?: boolean;
   getGroup?: (value: T) => string;
-  // TODO:
   hover?: boolean;
   getHover?: (value: T) => string;
   size?: 'sm' | 'md' | 'lg';
@@ -42,8 +41,8 @@ export default function GroupedDropDown<T>({
   getHover = () => '',
   size = 'lg',
 }: GroupedDropDownProps<T>) {
-  // TODO: make it so that when they click on it, the dropdown shows up
-  //       add the option to choose if they want the dropDown to be over stuff or not.
+  // TODO: Make it so that if there is only one option and they press enter, it just selects that.
+  //       Add the option to choose if they want the dropDown to be over stuff or not.
   const [close, setClose] = useState<boolean>(true);
   const ref = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(0);

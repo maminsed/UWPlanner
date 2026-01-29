@@ -37,6 +37,30 @@ export function getTermSeason(termId: number) {
   return res;
 }
 
+export function getTermId(termSeason: string) {
+  // Inputs in: '<Season> <Year>' outputs in: 1255 or false if not valid
+  termSeason = termSeason.toLowerCase();
+  if (
+    !termSeason.startsWith('fall ') &&
+    !termSeason.startsWith('winter ') &&
+    !termSeason.startsWith('spring ')
+  ) {
+    return false;
+  }
+  const firstSpace = termSeason.indexOf(' ');
+  const seasonMap = { fall: 9, spring: 5, winter: 1 };
+  const season = termSeason.substring(0, firstSpace);
+  const year = termSeason.substring(firstSpace + 1);
+  if (year.length != 4 || year[0] < '1') return false;
+  let yearNumber = 0;
+  try {
+    yearNumber = Number(year);
+  } catch (_) {
+    return false;
+  }
+  return (yearNumber - 1900) * 10 + seasonMap[season as keyof typeof seasonMap];
+}
+
 export function getTermDistance(termId1: number, termId2: number) {
   if (termId2 < termId1) return getTermDistance(termId2, termId1);
   const yearDiff = Math.floor(termId2 / 10) - Math.floor(termId1 / 10);

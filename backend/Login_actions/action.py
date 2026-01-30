@@ -61,7 +61,8 @@ UPDATE (POST) Endpoints:
     - programs: {"programIds": number[]}
     - sequences: {
         coop: boolean;
-        sequence: number | str[];
+        sequence_id?: number || sequence_path: str[]
+        started_term_id: number;
     }
     - update_user_info : {
         username: str,
@@ -244,7 +245,7 @@ def get_sequence():
 
 @update_info.route("/sequences", methods=["POST"])
 def update_sequences() -> tuple[str, int]:
-    required_keys = "coop", "sequence"
+    required_keys = "coop", "started_term_id"
     data: dict[str,] = request.get_json()
     user: Users = Users.query.filter_by(username=g.username).first()
     if not user:
@@ -252,22 +253,29 @@ def update_sequences() -> tuple[str, int]:
     for k in required_keys:
         if k not in data or data[k] is None:
             return jsonify({"message": "fill out all the information first"}), 400
+    if "sequence_id" not in data and "sequence_path" not in data:
+        return jsonify({"message": "fill out all the information first"}), 400
     # updating coop
     user.coop = data.get("coop")
+    user.started_term = data.get("started_term_id")
     # updating sequence
-    sequence = data.get("sequence")
-    if type(sequence) == int:
-        seq_obj: Sequence = Sequence.query.filter_by(id=sequence).first()
+    sequence_id = data.get("sequence_id", None)
+    sequence_path = data.get("sequence_path", None)
+    sequence_path = json.dumps(sequence_path) if sequence_path is not None else None
+    if sequence_id is not None:
+        if user.sequence and user.sequence.id == sequence_id:
+            seq_obj = user.sequence
+        else:
+            seq_obj: Sequence = Sequence.query.filter_by(id=sequence_id).first()
         if not seq_obj:
             return jsonify({"message": "sequence does not exist"}), 400
         user.sequence = seq_obj
-        user.path = seq_obj.plan
-        db.session.add(user)
-        db.session.commit()
-    else:
-        user.path = json.dumps(sequence)
-        db.session.add(user)
-        db.session.commit()
+        if sequence_path is None:
+            sequence_path = seq_obj.plan
+    if sequence_path is not None and sequence_path != user.path:
+        user.path = sequence_path
+    db.session.add(user)
+    db.session.commit()
 
     return jsonify({"message": "change successfull"}), 200
 

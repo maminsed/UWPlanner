@@ -220,7 +220,7 @@ export function PublicProfileForm() {
   async function handleSubmit() {
     setState('error');
     setMessage(undefined);
-    const responses = await Promise.all([handleUserInfoSubmit(), handleProgramsSubmit()]);
+    const responses = await Promise.all([handleProgramsSubmit(), handleUserInfoSubmit()]);
     responses.sort((a, b) => statusOrdering[a[0]] - statusOrdering[b[0]]);
     setState(responses[0][0]);
     setMessage(responses[0][1]);

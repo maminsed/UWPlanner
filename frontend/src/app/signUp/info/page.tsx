@@ -7,7 +7,13 @@ import { LuCircleMinus, LuCirclePlus } from 'react-icons/lu';
 
 import HoverEffect from '@/components/HoverEffect';
 import { defaultSelectedProgram } from '@/components/utils/constants';
-import DropDown2 from '@/components/utils/GroupedDropDown';
+import GroupedDropDown from '@/components/utils/GroupedDropDown';
+import {
+  getCurrentTermId,
+  getTermId,
+  getTermSeason,
+  termOperation,
+} from '@/components/utils/termUtils';
 import { useApi } from '@/lib/useApi';
 
 type programOptionType = {
@@ -19,6 +25,7 @@ type programOptionType = {
 interface RestStatusType {
   coop: boolean | undefined;
   sequenceId: number | undefined;
+  started_term_id: number | undefined;
 }
 
 type SequenceOptionsType = {
@@ -46,12 +53,18 @@ export default function Info() {
   const [selectedPrograms, setSelectedPrograms] = useState<programOptionType[]>([
     defaultSelectedProgram,
   ]);
+  const currentSem = getCurrentTermId();
+  const starting_term_id_options = [...Array(40)].map((_, idx) =>
+    getTermSeason(termOperation(currentSem, idx - 20)),
+  );
   const [programOptions, setProgramOptions] = useState<programOptionType[]>([]);
   const [sequenceOptions, setSequenceOptions] = useState<SequenceOptionsType>([]);
   const [restStatus, setRestStatus] = useState<RestStatusType>({
     coop: undefined,
+    started_term_id: undefined,
     sequenceId: undefined,
   });
+  const [startedTermSearchPhrase, setStartedTermSearchPhrase] = useState<string>();
 
   const stage = ['major', 'program', 'all'][order];
   const urlEnding = URLS[order];
@@ -106,7 +119,9 @@ export default function Info() {
       return;
     } else if (
       stage === 'all' &&
-      (restStatus.coop === undefined || restStatus.sequenceId === undefined)
+      (restStatus.coop === undefined ||
+        restStatus.sequenceId === undefined ||
+        restStatus.started_term_id == undefined)
     ) {
       setMessage('Please select coop and at least one sequence');
       return;
@@ -115,7 +130,7 @@ export default function Info() {
       method: 'POST',
       body: JSON.stringify(
         stage === 'all'
-          ? { ...restStatus, sequence: restStatus.sequenceId }
+          ? { ...restStatus, sequence_id: restStatus.sequenceId }
           : { programIds: programIds },
       ),
       headers: {
@@ -142,6 +157,15 @@ export default function Info() {
 
   function handleRemove(idx: number) {
     setSelectedPrograms((pis) => pis.filter((_, i) => idx !== i));
+  }
+
+  function updateSelectFunction(termSeason: string) {
+    setRestStatus((v) => ({ ...v, started_term_id: getTermId(termSeason) as number }));
+    setStartedTermSearchPhrase(undefined);
+  }
+
+  function updateInputFunction(searchPhrase: string) {
+    setStartedTermSearchPhrase(searchPhrase);
   }
 
   return (
@@ -178,7 +202,7 @@ export default function Info() {
               });
               return (
                 <div key={idx} className="flex mt-2 items-center gap-2 justify-center">
-                  <DropDown2<programOptionType>
+                  <GroupedDropDown<programOptionType>
                     currentValue={sp}
                     placeholder="start typing..."
                     options={filteredPrograms}
@@ -235,6 +259,27 @@ export default function Info() {
                 No
               </label>
             </div>
+
+            <h4 className="text-lg font-medium mt-2">Started Term:</h4>
+            <GroupedDropDown<string>
+              updateInputFunction={updateInputFunction}
+              updateSelectFunction={updateSelectFunction}
+              currentValue={
+                startedTermSearchPhrase === undefined
+                  ? getTermSeason(restStatus.started_term_id || currentSem)
+                  : startedTermSearchPhrase
+              }
+              options={
+                startedTermSearchPhrase === undefined
+                  ? starting_term_id_options
+                  : starting_term_id_options.filter((termSesaon) =>
+                      termSesaon.toLowerCase().includes(startedTermSearchPhrase.toLowerCase()),
+                    )
+              }
+              valueFunction={(v) => v}
+              size="sm"
+            />
+
             <h4 className="text-lg font-medium mt-2">Sequence:</h4>
             <div>
               {sequenceOptions.map((seqGroup, idx) => (

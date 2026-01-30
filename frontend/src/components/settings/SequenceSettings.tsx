@@ -72,11 +72,23 @@ export function SequenceSettings() {
     try {
       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/sequences`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          coop: coop,
+          sequence_path: path.map((v) => v.name),
+          started_term_id: startedTermId,
+        }),
         headers: {
           'Content-Type': 'application/json',
         },
       });
+      const response = await res.json().catch(() => {});
+      if (!res.ok) {
+        setState('error');
+        setMessage(response?.message || 'error occured');
+      } else {
+        setState('idle');
+        setMessage('Changes saved');
+      }
     } catch (err) {
       setState('error');
       setMessage('error occured while submitting');

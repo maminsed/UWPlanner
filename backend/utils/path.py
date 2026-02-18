@@ -49,12 +49,21 @@ def translate_to_id(path: str, started_term: int):  # returns [1255,...]
     return res
 
 
-termMap = {1: 0, 5: 1, 9: 2}
+monthIdtoIdx = {1: 0, 5: 1, 9: 2}
+idxToMonthId = [1, 5, 9]
 
 
-def term_distance(termId1: int, termId2: int):
+def term_distance(termId1: int, termId2: int) -> int:
+    """Returns the absolute distance of two terms"""
     if termId1 > termId2:
         return term_distance(termId2, termId1)
     yearDiff = termId2 // 10 - termId1 // 10
-    monthDiff = termMap[termId2 % 10] - termMap[termId1 % 10]
+    monthDiff = monthIdtoIdx[termId2 % 10] - monthIdtoIdx[termId1 % 10]
     return yearDiff * 3 + monthDiff
+
+
+def term_operation(termId1: int, dist: int) -> int:
+    monthId1 = monthIdtoIdx[termId1 % 10]
+    finalMonthId = idxToMonthId[(monthId1 + dist) % 3]
+    finalYearId = (termId1 // 10) + ((monthId1 + dist) // 3)
+    return finalYearId * 10 + finalMonthId

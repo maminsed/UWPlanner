@@ -20,7 +20,6 @@ export default function BatchAddCourses({
   termId?: number;
   termOptions?: termIdInterface[];
 }) {
-  //TODO: disable when loading
   const zoneRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'term_choosing' | 'idle' | 'sending' | 'done' | 'error'>(
     termId ? 'idle' : 'term_choosing',
@@ -44,6 +43,7 @@ export default function BatchAddCourses({
 
   async function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
     e.preventDefault(); // stop the browser from inserting content
+    if (status === 'sending') return;
     setStatus('sending');
     setMessage('Processing paste...');
 
@@ -102,7 +102,7 @@ export default function BatchAddCourses({
 
   return (
     <div className="fixed top-0 bottom-0 left-0 right-0 bg-light-green/50 z-[999] flex items-center justify-center mx-2">
-      <div className="w-[90vw] pb-4 max-w-200 bg-white max-h-full overflow-y-auto scroller rounded-xl shadow-2xl shadow-dark-green/10 flex flex-col items-center px-4">
+      <div className="w-[90vw] pb-4 max-w-200 bg-white max-h-[85%] mt-15 overflow-y-auto scroller rounded-xl shadow-2xl shadow-dark-green/10 flex flex-col items-center px-4">
         <RightSide className="mt-4 w-full">
           <AiOutlineClose
             className="w-6 font-semibold h-auto cursor-pointer hover:text-red-600 duration-150"

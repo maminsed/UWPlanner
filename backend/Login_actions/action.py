@@ -15,7 +15,12 @@ from backend.Schema import (
     Users,
     db,
 )
-from backend.utils.path import term_distance, translate_path, translate_to_id
+from backend.utils.path import (
+    term_distance,
+    term_operation,
+    translate_path,
+    translate_to_id,
+)
 
 update_info = Blueprint("UpdateInfo", __name__)
 
@@ -257,7 +262,6 @@ def update_sequences() -> tuple[str, int]:
         return jsonify({"message": "fill out all the information first"}), 400
     # updating coop
     user.coop = data.get("coop")
-    user.started_term = data.get("started_term_id")
     # updating sequence
     sequence_id = data.get("sequence_id", None)
     sequence_path = data.get("sequence_path", None)
@@ -274,6 +278,17 @@ def update_sequences() -> tuple[str, int]:
             sequence_path = seq_obj.plan
     if sequence_path is not None and sequence_path != user.path:
         user.path = sequence_path
+
+    # updating started_term
+    new_started_term_id = data.get("started_term_id")
+    if user.started_term != new_started_term_id:
+        dist = (1 if user.started_term < new_started_term_id else -1) * term_distance(
+            user.started_term, new_started_term_id
+        )
+        for semester in user.semesters:
+            semester.term_id = term_operation(semester.term_id, dist)
+        user.started_term = new_started_term_id
+
     db.session.add(user)
     db.session.commit()
 

@@ -7,6 +7,7 @@ import { MdArrowBackIosNew } from 'react-icons/md';
 import GroupedDropDown from '../utils/GroupedDropDown';
 import { getCurrentTermId, getTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
+import { SequenceChoosing, SequenceOptionsType } from '@/app/signUp/info/page';
 import { useApi } from '@/lib/useApi';
 
 function groupK<T>(path: T[], k: number = 3): T[][] {
@@ -21,22 +22,38 @@ function groupK<T>(path: T[], k: number = 3): T[][] {
 }
 
 export function SequenceSettings() {
-  // TODO: There is a fake save button on this page. You should implement it.
-  // There are a lot of fake buttons on this page. Fix them.
   const backend = useApi();
   const currentSem = getCurrentTermId();
   const starting_term_id_options = [...Array(40)].map((_, idx) =>
     getTermSeason(termOperation(currentSem, idx - 20)),
   );
   const [seqName, setSeqName] = useState<string>('');
+  const [seqId, setSeqId] = useState<number>(0);
   const [startedTermId, setStartedTermId] = useState<number>(0);
   const [startedTermSearchPhrase, setStartedTermSearchPhrase] = useState<string>();
+  const [sequenceOptions, setSequenceOptions] = useState<SequenceOptionsType>([]);
   const [gradTerm, setGradTerm] = useState<string>('');
   const [coop, setCoop] = useState<boolean>(false);
   const [path, setPath] = useState<{ name: string }[]>([]);
 
   const [state, setState] = useState<'idle' | 'error' | 'changes_pending' | 'loading'>('idle');
+  const [isChoosingSeq, setIsChoosingSeq] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
+
+  async function retreiveSequenceOptions() {
+    const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/sequences`, {
+      method: 'GET',
+    });
+    const response = await (res as Response).json().catch(() => {});
+    if (!res.ok) {
+      console.error('Error in Resposne');
+      setState('error');
+      setMessage('error when fetching sequences');
+      console.info(response);
+      return;
+    }
+    setSequenceOptions(response);
+  }
 
   async function handleInitial() {
     setState('loading');
@@ -47,6 +64,7 @@ export function SequenceSettings() {
       setState('error');
     } else {
       setSeqName(response.sequence_name);
+      setSeqId(response.sequence_id);
       setCoop(response.coop);
       setStartedTermId(response.started_term_id);
       setPath(response.path);
@@ -56,6 +74,7 @@ export function SequenceSettings() {
 
   useEffect(() => {
     handleInitial();
+    retreiveSequenceOptions();
   }, []);
   useEffect(() => {
     setGradTerm(getTermSeason(termOperation(startedTermId, path.length)));
@@ -113,7 +132,7 @@ export function SequenceSettings() {
     <div id="courses">
       <h2 className="text-xl font-medium text-palette-rich-teal mt-10">Sequence</h2>
       <p className="mb-8">View and manage your sequence-related settings.</p>
-      <div className="max-w-80 mb-10 gap-3 flex flex-col">
+      <div className="max-w-120 mb-10 gap-3 flex flex-col">
         {/*<div className="flex flex-row justify-between">
           <p className="text-lg">Current Semester</p>
            <select
@@ -136,9 +155,27 @@ export function SequenceSettings() {
           <p className="text-lg">Sequence Name</p>
           <div className="flex felx-row gap-1 items-center">
             <p>{seqName}</p>
-            <LuPencil className="cursor-pointer hover:text-slate-600" />
+            <LuPencil
+              className="cursor-pointer hover:text-slate-600"
+              onClick={() => setIsChoosingSeq((v) => !v)}
+            />
           </div>
         </div>
+
+        {!isChoosingSeq ? (
+          ''
+        ) : (
+          <SequenceChoosing
+            sequenceOptions={sequenceOptions}
+            sequenceId={seqId}
+            setSequenceId={(seqId, seqName, seqPath) => {
+              setSeqId(seqId);
+              setSeqName(seqName);
+              setPath(seqPath.map((term) => ({ name: term })));
+              setState('changes_pending');
+            }}
+          />
+        )}
 
         <div className="flex flex-row justify-between items-center">
           <p className="text-lg">Started Term</p>

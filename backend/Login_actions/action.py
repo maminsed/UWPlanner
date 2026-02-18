@@ -47,6 +47,7 @@ GET Endpoints:
         coop: boolean;
         path: {"name":'1A'|...,"course_ids":int[]}[];
         sequence_name: str;
+        sequence_id: number;
         started_term_id: number;
     }
     #About to go out
@@ -321,6 +322,7 @@ def get_user_seqs() -> tuple[str, int]:
         "sequence_name": user.sequence.name,
         "started_term_id": user.started_term,
         "path": path,
+        "sequence_id": user.sequence.id,
     }
 
 

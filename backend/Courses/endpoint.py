@@ -158,12 +158,31 @@ def delete_course():
 def add_section_to_user():
     data = request.get_json()
     term_id = data.get("term_id")
-    course_id = data.get("course_id")
-    class_numbers = data.get("class_numbers") or []
+    courses: dict = data.get("courses", dict())
+    # course_id = data.get("course_id")
+    # class_numbers = data.get("class_numbers") or []
     user = Users.query.filter_by(username=g.username).first()
-    if not user or not term_id or not course_id:
+    if (
+        not user
+        or not term_id
+        or not courses
+        or not ("course_ids" in courses or "sections" in courses)
+    ):
         return jsonify({"message": "please provide all fields"}), 400
-    return enrol_user_in_section(user, class_numbers, term_id, course_id)
+    if "course_ids" in courses:
+        course_ids = courses["course_ids"]
+        for course_id in course_ids:
+            _, code = enrol_user_in_section(user, [], term_id, course_id)
+            if code < 200 or code >= 300:
+                print(f"debug: 172: code: {code} happend in course_id: {course_id}")
+        return "", 200
+    else:
+        return enrol_user_in_section(
+            user,
+            courses["sections"]["class_number"],
+            term_id,
+            courses["sections"]["course_id"],
+        )
 
 
 def enrol_user_in_section(

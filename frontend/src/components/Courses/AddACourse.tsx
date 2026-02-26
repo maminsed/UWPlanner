@@ -84,6 +84,7 @@ export default function AddACourse({
   const [chosenSections, setChosenSections] = useState<(SectionInterface | undefined)[]>([
     undefined,
   ]);
+  const [selectedCourses, setSelectedCourses] = useState<OptionsInterface[]>([]);
 
   const [actualTermId, setActualTermId] = useState<termIdInterface>({
     value: termId || -1,
@@ -91,6 +92,10 @@ export default function AddACourse({
   });
 
   const gql = useGQL();
+
+  useEffect(() => {
+    updateStatus(status, actualTermId.value);
+  }, []);
 
   useEffect(() => {
     async function fetchOptions() {
@@ -217,14 +222,32 @@ export default function AddACourse({
     }
 
     if (newStatus.includes('section_excempt') && chosenSections.length) setChosenSections([]);
+    if (!newStatus.includes('section_excempt') && selectedCourses.length) setSelectedCourses([]);
     if (newStatus == 'section_excempt') setMessage(secExceptMsg);
     if (newStatus == 'idle' && message == secExceptMsg) setMessage('');
     setStatus(newStatus);
   }
 
   async function handleSubmit() {
-    const class_numbers = [];
-    if (status != 'section_excempt') {
+    const classes: {
+      course_ids?: number[];
+      sections?: { course_id: number; class_numbers: number[] };
+    } = {};
+    if (status.includes('section_excempt')) {
+      classes.course_ids = selectedCourses.map((c) => c.course_id);
+      if (
+        searchPhrase.course_id !== -1 &&
+        !selectedCourses.some((c) => c.course_id === searchPhrase.course_id)
+      ) {
+        classes.course_ids.push(searchPhrase.course_id);
+      }
+      if (classes.course_ids.length === 0) {
+        setMessage('Please add at least one course');
+        updateStatus('error');
+        return;
+      }
+    } else {
+      const class_numbers: number[] = [];
       for (const chosenSection of chosenSections) {
         if (!chosenSection || chosenSection.class_number == -1) {
           setMessage('Please choose all the options first');
@@ -233,11 +256,15 @@ export default function AddACourse({
         }
         class_numbers.push(chosenSection.class_number);
       }
-    }
-    if (searchPhrase.course_id == -1) {
-      setMessage('Please choose all the options first');
-      updateStatus('error');
-      return;
+      if (searchPhrase.course_id == -1) {
+        setMessage('Please choose all the options first');
+        updateStatus('error');
+        return;
+      }
+      classes.sections = {
+        course_id: searchPhrase.course_id,
+        class_numbers,
+      };
     }
     setMessage('Loading...');
     updateStatus('idle');
@@ -248,8 +275,7 @@ export default function AddACourse({
       },
       body: JSON.stringify({
         term_id: actualTermId.value,
-        class_numbers: status === 'section_excempt' ? [] : class_numbers,
-        course_id: searchPhrase.course_id,
+        courses: classes,
       }),
     });
 
@@ -271,7 +297,7 @@ export default function AddACourse({
       )}
       {...props}
     >
-      <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10">
+      <div className="bg-white pt-8 px-6 rounded-xl shadow-2xl shadow-dark-green/10 max-h-[calc(100vh-100px)] mt-13 overflow-y-auto scroller">
         <RightSide className="!mb-1 !mr-0">
           <HoverEffect hover="close" className="cursor-pointer" onClick={close}>
             <AiOutlineClose className="w-6 font-semibold h-auto" />
@@ -310,7 +336,38 @@ export default function AddACourse({
             }
             updateSelectFunction={(value) => updateSearchPhrase(value)}
           />
+          {status.includes('section_excempt') && (
+            <LuPlus
+              className="mt-1 w-5 border-1 rounded-full p-0.5 h-auto cursor-pointer hover:text-green-700 hover:border-green-700 duration-300"
+              onClick={() => {
+                if (
+                  searchPhrase.course_id !== -1 &&
+                  !selectedCourses.some((c) => c.course_id === searchPhrase.course_id)
+                ) {
+                  setSelectedCourses((prev) => [...prev, searchPhrase]);
+                  setSearchPhrase({ code: '', course_id: -1, name: '' });
+                }
+              }}
+            />
+          )}
         </label>
+        {status.includes('section_excempt') && selectedCourses.length > 0 && (
+          <div className="mt-2 space-y-1 max-w-75">
+            {selectedCourses.map((course, i) => (
+              <div key={course.course_id} className="flex items-center gap-1 text-sm">
+                <span className="flex-1 break-words min-w-0">
+                  {course.code.toUpperCase()} - {course.name}
+                </span>
+                <LuMinus
+                  className="w-4 h-auto border-1 p-0.5 rounded-full cursor-pointer hover:text-red-600 hover:border-red-600 duration-300"
+                  onClick={() =>
+                    setSelectedCourses((prev) => prev.filter((_, index) => index !== i))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        )}
         {status.includes('section_excempt') || (
           <label className="block text-lg mt-4" onFocus={fetchIds}>
             Class Number: <IoIosInformationCircleOutline className="inline-block cursor-pointer" />

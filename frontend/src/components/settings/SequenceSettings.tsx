@@ -129,7 +129,7 @@ export function SequenceSettings() {
   }
 
   return (
-    <div id="courses">
+    <div id="sequence">
       <h2 className="text-xl font-medium text-palette-rich-teal mt-10">Sequence</h2>
       <p className="mb-8">View and manage your sequence-related settings.</p>
       <div className="max-w-120 mb-10 gap-3 flex flex-col">

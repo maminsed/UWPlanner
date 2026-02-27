@@ -172,9 +172,7 @@ def add_section_to_user():
     if "course_ids" in courses:
         course_ids = courses["course_ids"]
         for course_id in course_ids:
-            _, code = enrol_user_in_section(user, [], term_id, course_id)
-            if code < 200 or code >= 300:
-                print(f"debug: 172: code: {code} happend in course_id: {course_id}")
+            enrol_user_in_section(user, [], term_id, course_id)
         return "", 200
     else:
         return enrol_user_in_section(

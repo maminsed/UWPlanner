@@ -92,16 +92,16 @@ export default function LogedInNav() {
             isXs && (dropOn ? 'max-h-30' : 'max-h-0 !py-0'),
           )}
         >
-          <div>
+          {/* <div>
             <Link href="/discussions" className="text-md sm:text-[1.2rem]">
               Discussions
             </Link>
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <Link href="/courses" className="text-md sm:text-[1.2rem]">
               Courses
             </Link>
-          </div>
+          </div> */}
           <div>
             <Link href="/graph" className="text-md sm:text-[1.2rem]">
               Graph

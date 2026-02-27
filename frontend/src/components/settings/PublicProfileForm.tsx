@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, Fragment } from 'react';
 import { FiPlusCircle, FiXCircle } from 'react-icons/fi';
-import { LuCamera, LuUser } from 'react-icons/lu';
+import { LuUser } from 'react-icons/lu';
 
 import { defaultSelectedProgram } from '../utils/constants';
 import GroupedDropDown from '../utils/GroupedDropDown';
@@ -335,15 +335,16 @@ export function PublicProfileForm() {
               }
               <label
                 htmlFor="profile-picture-upload"
-                className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-white p-2 shadow-md hover:bg-gray-200"
+                // className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-white p-2 shadow-md hover:bg-gray-200"
               >
-                <LuCamera className="h-5 w-5 text-gray-800" />
+                {/* <LuCamera className="h-5 w-5 text-gray-800" /> */}
                 <input
                   id="profile-picture-upload"
                   name="profile-picture-upload"
                   type="file"
                   className="sr-only"
-                  onChange={handleProfilePictureChange}
+                  disabled
+                  // onChange={handleProfilePictureChange}
                   accept="image/png, image/jpeg, image/gif, image/webp"
                 />
               </label>

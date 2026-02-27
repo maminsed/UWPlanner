@@ -11,8 +11,8 @@ export default function SettingsPage() {
 
   const settingSections = [
     { name: 'Account' },
-    { name: 'Security' },
-    { name: 'Discussions' },
+    // { name: 'Security' },
+    // { name: 'Discussions' },
     { name: 'Courses' },
     { name: 'Reporting' },
   ];
@@ -39,9 +39,9 @@ export default function SettingsPage() {
       <section className="hidden sm:block shrink-0 text-[15px] box-content mb-30 py-3 pr-4 md:px-6 lg:pl-8 border-r-dark-green border-r-2">
         <div className="flex flex-col gap-1 sticky top-0 pt-2">
           <Link href="#public_profile">Public Profile</Link>
-          <Link href="#academics">Academics</Link>
-          <Link href="#security">Security</Link>
-          <Link href="#discussions">My Discussions</Link>
+          {/* <Link href="#academics">Academics</Link> */}
+          {/* <Link href="#security">Security</Link> */}
+          {/* <Link href="#discussions">My Discussions</Link> */}
           <Link href="#sequence">Sequence</Link>
           <Link href="#report">Report an Issue</Link>
         </div>

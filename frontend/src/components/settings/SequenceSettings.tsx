@@ -94,7 +94,7 @@ export function SequenceSettings() {
       return;
     }
 
-    if (seqId !== originalSeqId || startedTermId !== originalStartedTermId) {
+    if (startedTermId !== originalStartedTermId) {
       setShowWarningPopup(true);
       return;
     }
@@ -321,8 +321,11 @@ export function SequenceSettings() {
               />
             </RightSide>
             <h2 className="text-lg font-semibold mb-4">Are you sure you want to continue?</h2>
-            <p className="text-sm mb-4">
-              Saving these changes will erase your existing schedule information.
+            <p className="text-sm">
+              Saving these changes will erase your existing schedule information
+            </p>
+            <p className="text-xs text-dark-green/80">
+              (e.g. 8:30 LEC for your CS135 class in Fall seemster).
             </p>
             <RightSide className="mt-4 gap-2">
               <button

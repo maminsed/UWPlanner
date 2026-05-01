@@ -291,6 +291,7 @@ def update_sequences() -> tuple[str, int]:
         )
         for semester in user.semesters:
             semester.term_id = term_operation(semester.term_id, dist)
+            semester.sections = "[]"
         user.started_term = new_started_term_id
 
     db.session.add(user)

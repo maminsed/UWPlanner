@@ -11,7 +11,12 @@ import BatchAddCourses from '../Courses/BatchAddCourses';
 import HoverEffect from '../HoverEffect';
 import { DaysOfWeek, GQLCourseSection } from '../interface';
 import RightSide from '../utils/RightSide';
-import { getCurrentTermId, getTermSeason, termOperation } from '../utils/termUtils';
+import {
+  getCurrentTermId,
+  getTermDistance,
+  getTermSeason,
+  termOperation,
+} from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
@@ -176,8 +181,6 @@ type DayMapInterface = {
 };
 
 export default function ClassSchedule() {
-  // TODO: option to choose from available courses what to display - Fix the downloading of scheudle into a google calendar - colour coding courses - send alerats and stuff to upstream so that it can display
-  // There is an issue with when the user is in compact and they decide to hide tutorial or something
   const dateBoxClass = clsx(
     'bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg',
   );
@@ -233,7 +236,69 @@ export default function ClassSchedule() {
   });
   const backend = useApi();
   const gql = useGQL();
+  const noSections: boolean = getTermDistance(getCurrentTermId(), termId) > 1;
+
   useEffect(() => {
+    async function getGqlClassInformation(sections: number[]) {
+      const GQL_QUERY = `
+        query Course_section($sections: [Int!]!, $termId: Int!) {
+                course_section(
+                where: {
+                    class_number: { _in: $sections }
+                    term_id: { _eq: $termId }
+                }
+            ) {
+                class_number
+                course_id
+                id
+                section_name
+                term_id
+                course {
+                    code
+                    name
+                }
+                meetings {
+                    days
+                    end_date
+                    end_seconds
+                    location
+                    prof_id
+                    start_date
+                    start_seconds
+                }
+            }
+        }
+    `;
+      const gql_response = await gql(GQL_QUERY, { sections, termId });
+      const data: ClassInterface[] = [];
+      gql_response?.data?.course_section.forEach((section: GQLCourseSection): void => {
+        section.meetings.forEach((meeting) => {
+          const prevSection = data[data.length - 1];
+          const newSection = {
+            sectionId: section.id,
+            startSeconds: meeting.start_seconds || 0,
+            endSeconds: meeting.end_seconds || 0,
+            startDate: meeting.start_date || '',
+            endDate: meeting.end_date || '',
+            classNumber: section.class_number,
+            days: meeting.days,
+            code: section.course.code.toUpperCase() || '',
+            courseId: section.course_id,
+            title: section.course.name || '',
+            type: section.section_name || '',
+            location: meeting.location || '',
+            prof: meeting.prof_id || '',
+          };
+          if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
+            data.push(newSection);
+          }
+        });
+      });
+      setClasses(data as ClassInterface[]);
+    }
+
+    async function getGQLCourseInfo(course_ids: number[]) {}
+
     async function initialSetup() {
       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`, {
         method: 'POST',
@@ -260,62 +325,7 @@ export default function ClassSchedule() {
           handleOptions(1, 3, true);
           return;
         }
-
-        const GQL_QUERY = `
-                    query Course_section($sections: [Int!]!, $termId: Int!) {
-                            course_section(
-                            where: {
-                                class_number: { _in: $sections }
-                                term_id: { _eq: $termId }
-                            }
-                        ) {
-                            class_number
-                            course_id
-                            id
-                            section_name
-                            term_id
-                            course {
-                                code
-                                name
-                            }
-                            meetings {
-                                days
-                                end_date
-                                end_seconds
-                                location
-                                prof_id
-                                start_date
-                                start_seconds
-                            }
-                        }
-                    }
-                `;
-        const gql_response = await gql(GQL_QUERY, { sections, termId });
-        const data: ClassInterface[] = [];
-        gql_response?.data?.course_section.forEach((section: GQLCourseSection): void => {
-          section.meetings.forEach((meeting) => {
-            const prevSection = data[data.length - 1];
-            const newSection = {
-              sectionId: section.id,
-              startSeconds: meeting.start_seconds || 0,
-              endSeconds: meeting.end_seconds || 0,
-              startDate: meeting.start_date || '',
-              endDate: meeting.end_date || '',
-              classNumber: section.class_number,
-              days: meeting.days,
-              code: section.course.code.toUpperCase() || '',
-              courseId: section.course_id,
-              title: section.course.name || '',
-              type: section.section_name || '',
-              location: meeting.location || '',
-              prof: meeting.prof_id || '',
-            };
-            if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
-              data.push(newSection);
-            }
-          });
-        });
-        setClasses(data as ClassInterface[]);
+        await getGqlClassInformation(sections);
       }
     }
 

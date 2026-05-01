@@ -97,7 +97,7 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
             : `You have ${reqMet ? '' : 'not '}met all your requirements`}
         </li>
         <li className={clsx(term?.termCompatible ? 'text-green-500' : 'text-yellow-500')}>
-          This course is usually {term?.termCompatible ? '' : '(not )'}offered in{' '}
+          This course is usually {term?.termCompatible ? '' : 'not '}offered in{' '}
           {getTermSeason(termId).split(' ')[0]}
         </li>
       </ul>

@@ -35,6 +35,8 @@ export class AllCourseInformation {
   //general state variables
   #ReqsOnCount = 0;
   scale = 1;
+  // degree information:
+  #studentDegrees: { name: string; url: string }[] = [];
 
   // initializers:
   constructor(
@@ -52,7 +54,6 @@ export class AllCourseInformation {
   }
 
   async init() {
-    //TODO: wrap this whole thing in a try catch and if it failing anywhere just send it to a 500 page
     await this.#extractPath();
     // Fetch UWF course info (includes id, code, name, rating, and sections)
     const uwfResponse = await this.#extractFromUWF();
@@ -62,6 +63,7 @@ export class AllCourseInformation {
 
     // Kick off BK request concurrently while we compute colours/other mappings
     const bkResponsePromise = this.#extractFromBK(courseCodes);
+    const bkDegreePromise = this.#getDegreefromBK();
 
     // Generate or reuse a colour for each course based on its subject prefix.
     // Example: "CS135" => "CS". This keeps all CS courses with the same palette.
@@ -80,6 +82,7 @@ export class AllCourseInformation {
 
     // Await the backend response (requirements / links)
     const bkResponse = await bkResponsePromise;
+    await bkDegreePromise;
 
     // Merge UWF + BK info and initialise termInfo for each course
     uwfResponse.forEach((course, index) => {
@@ -201,13 +204,34 @@ export class AllCourseInformation {
     }
   }
 
+  async #getDegreefromBK() {
+    try {
+      const res = await this.#backend(
+        `${process.env.NEXT_PUBLIC_API_URL}/update_info/get_degree_info`,
+      );
+      if (!res.ok) {
+        throw new Error('Error in backend for fetching programs');
+      }
+      this.#studentDegrees = (await res.json().catch(() => {})).programs;
+    } catch (err) {
+      console.error(`error occured in #getDegreefromBK: ${err}`);
+      throw err;
+    }
+  }
+
   async #calculateReqStatus() {
     this.#connectingIds = [];
     for (const courseId of this.courseInfoMap.keys()) {
       const course = this.courseInfoMap.get(courseId)!;
       let dependentCourses = undefined;
       for (const [termId, term] of course.termInfo.entries()) {
-        const res = totalRequirementStatus(course.courseInfo, termId, courseId, this);
+        const res = totalRequirementStatus(
+          course.courseInfo,
+          termId,
+          courseId,
+          this,
+          this.#studentDegrees,
+        );
         if (dependentCourses === undefined) dependentCourses = res;
         term.termCompatible = course.sections.some(({ term_id }) => term_id % 10 === termId % 10);
       }

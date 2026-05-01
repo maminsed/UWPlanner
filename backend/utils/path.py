@@ -1,7 +1,7 @@
 import json
 
 
-def translate_path(path: str):  # returns: [1A, 1B, ...]
+def translate_path(path: str) -> list[str]:  # returns: [1A, 1B, ...]
     # Split the input path string by the "-" delimiter
     res = json.loads(path)
 

@@ -47,7 +47,7 @@ export default function Semester({
       {term.courseIds.map((courseId, i) => (
         <Course key={i} courseId={courseId} termId={termId} allCourses={allCourses} />
       ))}
-      <div className="flex flex-col items-center gap-2 opacity-5 group-hover:opacity-100 transition-opacity duration-500">
+      <div className="flex flex-col items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity duration-500">
         <LuSettings
           className="w-7 h-auto aspect-square backdrop-blur-md hover:animate-spin hover:[animation-iteration-count:1] bg-sky-300/30 cursor-pointer rounded-full p-[0.6rem] box-content"
           onClick={() => setSettingOpen(!settingOpen)}

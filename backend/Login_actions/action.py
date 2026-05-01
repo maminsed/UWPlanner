@@ -62,6 +62,9 @@ GET Endpoints:
     }
     (course information)
     - get_course_reqs (POST)
+    - get_degree_info -> {
+        programs: {name: string, url: string}[]
+    }
 
 UPDATE (POST) Endpoints:
     - programs: {"programIds": number[]}
@@ -623,6 +626,13 @@ def get_course_reqs() -> tuple[str, int]:
             courseInfo = {}
         res[course.code] = {"url": url, "courseInfo": courseInfo}
     return jsonify({"courses": res}), 200
+
+
+@update_info.route("/get_degree_info", methods=["GET"])
+def get_degree_info() -> tuple[str, int]:
+    user: Users = Users.query.filter_by(username=g.username).first()
+    res = [{"name": p.degreeName, "url": p.url} for p in user.programs]
+    return jsonify({"programs": res}), 200
 
 
 @update_info.route("/get_user_seq", methods=["GET"])

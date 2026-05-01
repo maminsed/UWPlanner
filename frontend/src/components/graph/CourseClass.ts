@@ -425,7 +425,7 @@ export class AllCourseInformation {
     this.#setToTerm(term2.courseIds, termId1, termId2);
     this.#setToTerm(term1.courseIds, termId2, termId1);
 
-    if (!(term1.termName.startsWith('WT') && term2.termName.startsWith('WT'))) {
+    if (term1.termName.startsWith('WT') !== term2.termName.startsWith('WT')) {
       const term1Name = term1.termName;
       term1.termName = term2.termName;
       term2.termName = term1Name;

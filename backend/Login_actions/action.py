@@ -16,6 +16,7 @@ from backend.Schema import (
     db,
 )
 from backend.utils.path import (
+    reverse_translate_path,
     term_distance,
     term_operation,
     translate_path,
@@ -269,7 +270,11 @@ def update_sequences() -> tuple[str, int]:
     # updating sequence
     sequence_id = data.get("sequence_id", None)
     sequence_path = data.get("sequence_path", None)
-    sequence_path = json.dumps(sequence_path) if sequence_path is not None else None
+    sequence_path = (
+        json.dumps(reverse_translate_path(sequence_path))
+        if sequence_path is not None
+        else None
+    )
     if sequence_id is not None:
         if user.sequence and user.sequence.id == sequence_id:
             seq_obj = user.sequence

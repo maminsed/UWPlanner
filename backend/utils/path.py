@@ -33,6 +33,18 @@ def translate_path(path: str) -> list[str]:  # returns: [1A, 1B, ...]
     return res
 
 
+def reverse_translate_path(terms: list[str]) -> list[str]:
+    res = []
+    for term in terms:
+        if term.startswith("WT"):
+            res.append("Coop")
+        elif term.endswith("A") or term.endswith("B"):
+            res.append("Study")
+        else:
+            res.append("Off")
+    return res
+
+
 def term_inc(term: int):
     next_map = {1: 5, 5: 9, 9: 1}
     month = next_map[term % 10]

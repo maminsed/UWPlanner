@@ -1,10 +1,11 @@
 'use client';
 import clsx from 'clsx';
 import { Fragment, useEffect, useState } from 'react';
-import { LuPencil } from 'react-icons/lu';
+import { LuPencil, LuX } from 'react-icons/lu';
 import { MdArrowBackIosNew } from 'react-icons/md';
 
 import GroupedDropDown from '../utils/GroupedDropDown';
+import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { SequenceChoosing, SequenceOptionsType } from '@/app/signUp/info/page';
@@ -30,6 +31,8 @@ export function SequenceSettings() {
   const [seqName, setSeqName] = useState<string>('');
   const [seqId, setSeqId] = useState<number>(0);
   const [startedTermId, setStartedTermId] = useState<number>(0);
+  const [originalStartedTermId, setOriginalStartedTermId] = useState<number>(0);
+  const [originalSeqId, setOriginalSeqId] = useState<number>(0);
   const [startedTermSearchPhrase, setStartedTermSearchPhrase] = useState<string>();
   const [sequenceOptions, setSequenceOptions] = useState<SequenceOptionsType>([]);
   const [gradTerm, setGradTerm] = useState<string>('');
@@ -39,6 +42,7 @@ export function SequenceSettings() {
   const [state, setState] = useState<'idle' | 'error' | 'changes_pending' | 'loading'>('idle');
   const [isChoosingSeq, setIsChoosingSeq] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
+  const [showWarningPopup, setShowWarningPopup] = useState<boolean>(false);
 
   async function retreiveSequenceOptions() {
     const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/sequences`, {
@@ -65,8 +69,10 @@ export function SequenceSettings() {
     } else {
       setSeqName(response.sequence_name);
       setSeqId(response.sequence_id);
+      setOriginalSeqId(response.sequence_id);
       setCoop(response.coop);
       setStartedTermId(response.started_term_id);
+      setOriginalStartedTermId(response.started_term_id);
       setPath(response.path);
       setState('idle');
     }
@@ -87,6 +93,16 @@ export function SequenceSettings() {
       setMessage('Please select Started Term first');
       return;
     }
+
+    if (seqId !== originalSeqId || startedTermId !== originalStartedTermId) {
+      setShowWarningPopup(true);
+      return;
+    }
+
+    await executeSubmit();
+  }
+
+  async function executeSubmit() {
     setState('loading');
     try {
       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/sequences`, {
@@ -107,6 +123,8 @@ export function SequenceSettings() {
       } else {
         setState('idle');
         setMessage('Changes saved');
+        setOriginalSeqId(seqId);
+        setOriginalStartedTermId(startedTermId);
       }
     } catch (err) {
       setState('error');
@@ -289,6 +307,46 @@ export function SequenceSettings() {
           Save Changes
         </button>
       </div>
+
+      {showWarningPopup && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-50 flex justify-center items-center">
+          <div className="px-6 py-4 max-w-[96%] bg-white rounded-xl shadow-2xl shadow-dark-green/10">
+            <RightSide className="!mb-1 !mr-0">
+              <LuX
+                className="w-4 font-semibold h-auto cursor-pointer"
+                onClick={() => {
+                  setShowWarningPopup(false);
+                  handleInitial();
+                }}
+              />
+            </RightSide>
+            <h2 className="text-lg font-semibold mb-4">Are you sure you want to continue?</h2>
+            <p className="text-sm mb-4">
+              Saving these changes will erase your existing schedule information.
+            </p>
+            <RightSide className="mt-4 gap-2">
+              <button
+                className="px-4 py-1 border rounded-sm cursor-pointer hover:bg-gray-50"
+                onClick={() => {
+                  setShowWarningPopup(false);
+                  handleInitial();
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-1 bg-red-700 text-white rounded-sm cursor-pointer hover:bg-red-800"
+                onClick={() => {
+                  setShowWarningPopup(false);
+                  executeSubmit();
+                }}
+              >
+                Go Through
+              </button>
+            </RightSide>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

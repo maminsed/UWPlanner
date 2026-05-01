@@ -225,6 +225,9 @@ export default function ClassSchedule() {
   const [updateCond, setUpdateCond] = useState<number>(0);
   const [path, setPath] = useState<string[]>([]);
   const [batchOverLay, setBatchOverLay] = useState<boolean>(false);
+  const [missingCourses, setMissingCourses] = useState<
+    { id: number; code: string; name: string }[]
+  >([]);
 
   const [dayMap, setDayMap] = useState<DayMapInterface>({
     M: [],
@@ -295,9 +298,23 @@ export default function ClassSchedule() {
         });
       });
       setClasses(data as ClassInterface[]);
+      return data as ClassInterface[];
     }
 
-    async function getGQLCourseInfo(course_ids: number[]) {}
+    async function getGQLCourseInfo(course_ids: number[]) {
+      if (course_ids.length === 0) return [];
+      const GQL_QUERY = `
+        query Courses($course_ids: [Int!]!) {
+            course(where: { id: { _in: $course_ids } }) {
+                id
+                code
+                name
+            }
+        }
+      `;
+      const res = await gql(GQL_QUERY, { course_ids });
+      return (res?.data?.course || []) as { id: number; code: string; name: string }[];
+    }
 
     async function initialSetup() {
       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`, {
@@ -313,19 +330,35 @@ export default function ClassSchedule() {
         console.error('error!');
       } else {
         const response = await res.json().catch(() => {});
-        const sections = response.sections;
+        let sections = response.sections || [];
+        const course_ids: number[] = response.courses || [];
+
         setstartedTerm(response.start_sem || 0);
         setPath(response.path || []);
         if (!response.path) {
           alert('Please get a sequence first in settings or Graph');
           console.error('User with no sequence is here?');
         }
+
+        if (noSections) {
+          sections = [];
+        }
+        let fetchedData: ClassInterface[] = [];
         if (!sections || sections.length === 0) {
           setClasses([]);
           handleOptions(1, 3, true);
-          return;
+        } else {
+          fetchedData = (await getGqlClassInformation(sections)) || [];
         }
-        await getGqlClassInformation(sections);
+
+        const scheduledCourseIds = new Set(fetchedData.map((c) => c.courseId));
+        const missingCourseIds = course_ids.filter((id) => !scheduledCourseIds.has(id));
+        if (missingCourseIds.length > 0) {
+          const missingData = await getGQLCourseInfo(missingCourseIds);
+          setMissingCourses(missingData);
+        } else {
+          setMissingCourses([]);
+        }
       }
     }
 
@@ -421,6 +454,28 @@ export default function ClassSchedule() {
           return null;
         })}
       </>
+    );
+  }
+
+  function MissingCoursesList() {
+    if (missingCourses.length === 0) return null;
+    return (
+      <div className="mt-8 mb-4 max-w-181 flex flex-col align-middle mx-auto bg-white rounded-b-lg relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
+        <div className="bg-yellow-300/80 rounded-t-lg text-dark-green pl-4 py-0.5 text-lg min-w-132 font-semibold">
+          Courses with no sections specified
+        </div>
+        <div className="flex flex-col pt-2 pb-2">
+          {missingCourses.map((course) => (
+            <div
+              key={course.id}
+              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0"
+            >
+              <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
+              <span>{course.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -670,6 +725,8 @@ export default function ClassSchedule() {
           <div className="flex-1 min-w-20" />
         </div>
       </div>
+
+      <MissingCoursesList />
 
       <RightSide className="mb-5 mx-auto max-w-181">
         <HoverEffect hover="Add Class" onClick={() => setsingleOverLay(true)}>

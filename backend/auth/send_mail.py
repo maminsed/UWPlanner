@@ -4,59 +4,92 @@ from datetime import datetime, timedelta, timezone
 from ..Google_api.gmail_api import gmail_send_message
 from ..Schema import Users, db
 
+APP_NAME = "UWPlanner"
 
-def send_verification_mail(user: Users) -> None:
-    """Sends a verification email to user and saves the code in database.
 
-    Requires:
-        user (Users):
-            The user which is being sent to.
+def send_verification_mail(
+    user: Users, verification_expiration_minutes: int = 30
+) -> None:
+    """Sends a verification email to the user and saves the code in the database."""
+    now = datetime.now(timezone.utc)
 
-    """
+    if user.verification_code and user.verification_expiration:
+        if user.verification_expiration > now + timedelta(
+            minutes=verification_expiration_minutes, seconds=-30
+        ):
+            return
+
     code = secrets.randbelow(900_000) + 100_000
-    body = f"""
-Hi,
+    expiration_time = now + timedelta(minutes=verification_expiration_minutes)
 
-Your verification code is: [{code}]
-This verification code will expire in 30 minutes.
-
-This e-mail was sent from a notification-only address that cannot accept incoming e-mails. Please do not reply to this message. 
-    """
     try:
         user.verification_code = code
-        time = datetime.now(timezone.utc) + timedelta(minutes=30)
-        user.verification_expiration = time
+        user.verification_expiration = expiration_time
+
         db.session.add(user)
         db.session.commit()
-    except Exception as e:
-        print("ERROR OCCURED NO VERIFICATION CODE SENT")
-        print(e)
 
-    gmail_send_message(
-        to=user.email, body=body, subject="Verification Code For UWPlanner"
-    )
+    except Exception as e:
+        db.session.rollback()
+        print("ERROR OCCURRED: VERIFICATION CODE WAS NOT SAVED")
+        print(e)
+        return
+
+    body = f"""Hi there,
+
+Welcome to {APP_NAME}!
+
+To verify your email address, enter this code in the website:
+
+{code}
+
+This code will expire in {verification_expiration_minutes} minutes.
+
+If you did not request this code, you can safely ignore this email. No changes will be made to your account.
+
+Thanks,
+The {APP_NAME} Team
+
+---
+This is an automated message from {APP_NAME}. Please do not reply to this email.
+"""
+
+    try:
+        gmail_send_message(
+            to=user.email,
+            body=body,
+            subject=f"Your {APP_NAME} verification code",
+        )
+    except Exception as e:
+        print("ERROR OCCURRED WHILE SENDING VERIFICATION EMAIL")
+        print(e)
 
 
 def send_delete_account_mail(email: str) -> None:
-    """Sends an email confirming the account deletion.
+    """Sends an email confirming the account deletion."""
+    body = f"""Hi there,
 
-    Requires:
-        email (str):
-            The email address of the deleted user.
-    """
-    body = """
-Hi,
+Your {APP_NAME} account has been deleted successfully.
 
-Your UWPlanner account has been deleted.
+You no longer have access to this account, and your account-related data has been removed according to our account deletion process.
 
-If you did not request this, please contact support immediately.
+If you requested this deletion, no further action is needed.
 
-This e-mail was sent from a notification-only address that cannot accept incoming e-mails. Please do not reply to this message. 
-    """
+If you did not request this, please contact the {APP_NAME} team as soon as possible.
+
+Thanks,
+The {APP_NAME} Team
+
+---
+This is an automated message from {APP_NAME}. Please do not reply to this email.
+"""
+
     try:
         gmail_send_message(
-            to=email, body=body, subject="Your UWPlanner Account Has Been Deleted"
+            to=email,
+            body=body,
+            subject=f"Your {APP_NAME} account has been deleted",
         )
     except Exception as e:
-        print("ERROR OCCURED WHILE SENDING ACCOUNT DELETION EMAIL")
+        print("ERROR OCCURRED WHILE SENDING ACCOUNT DELETION EMAIL")
         print(e)

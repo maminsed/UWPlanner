@@ -1,5 +1,6 @@
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
+import clsx from 'clsx';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -19,6 +20,7 @@ export default function Verify() {
   //                                                 start, end
   const [last, setLast] = useState<[number, number]>([0, 0]);
   const [email, setEmail] = useState<string>('');
+  const [countdown, setCountdown] = useState<number>(0);
   const {
     handleSubmit,
     register,
@@ -38,7 +40,16 @@ export default function Verify() {
     sendVerification();
   }, []);
 
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
+
   async function sendVerification() {
+    if (countdown > 0) return;
+    setCountdown(32);
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh_veri`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -135,9 +146,10 @@ export default function Verify() {
                   maxLength={1}
                   value={item}
                   readOnly={true}
-                  className={`bg-light-green text-dark-green text-center rounded-md font-semibold text-xl ${
-                    index >= last[0] && index <= last[1] ? 'shadow-[0_0_21.7px_0px_#DEF2F580]' : ''
-                  } w-8 aspect-[4/5]`}
+                  className={clsx(
+                    'bg-light-green text-dark-green text-center rounded-md font-semibold text-xl w-8 aspect-[4/5]',
+                    index >= last[0] && index <= last[1] && 'shadow-[0_0_21.7px_0px_#DEF2F580]',
+                  )}
                 />
               ))}
             </div>
@@ -158,9 +170,15 @@ export default function Verify() {
             <button
               type="button"
               onClick={sendVerification}
-              className="text-cyan-400 underline cursor-pointer hover:text-cyan-500 active:text-cyan-600 transition-colors duration-500"
+              disabled={countdown > 0}
+              className={clsx(
+                'underline transition-colors duration-500',
+                countdown > 0
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-cyan-400 cursor-pointer hover:text-cyan-500 active:text-cyan-600',
+              )}
             >
-              resend
+              resend{countdown > 0 ? ` (${countdown}s)` : ''}
             </button>
           </p>
           {errors?.code && <p className="text-sm text-red-400 mb-1">{errors.code.message}</p>}

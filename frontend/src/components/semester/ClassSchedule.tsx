@@ -236,6 +236,9 @@ export default function ClassSchedule() {
   const [missingCourses, setMissingCourses] = useState<
     { id: number; code: string; name: string }[]
   >([]);
+  const [noMeetingSections, setNoMeetingSections] = useState<
+    { id: number; code: string; name: string; sectionName: string; courseId: number }[]
+  >([]);
 
   const [dayMap, setDayMap] = useState<DayMapInterface>({
     M: [],
@@ -282,31 +285,50 @@ export default function ClassSchedule() {
     `;
       const gql_response = await gql(GQL_QUERY, { sections, termId });
       const data: ClassInterface[] = [];
+      const noMeetingData: {
+        id: number;
+        code: string;
+        name: string;
+        sectionName: string;
+        courseId: number;
+      }[] = [];
+
       gql_response?.data?.course_section.forEach((section: GQLCourseSection): void => {
-        section.meetings.forEach((meeting) => {
-          const prevSection = data[data.length - 1];
-          const newSection = {
-            sectionId: section.id,
-            startSeconds: meeting.start_seconds || 0,
-            endSeconds: meeting.end_seconds || 0,
-            startDate: meeting.start_date || '',
-            endDate: meeting.end_date || '',
-            classNumber: section.class_number,
-            days: meeting.days,
-            code: section.course.code.toUpperCase() || '',
+        if (!section.meetings || section.meetings.length === 0) {
+          noMeetingData.push({
+            id: section.id,
+            code: section.course.code,
+            name: section.course.name,
+            sectionName: section.section_name,
             courseId: section.course_id,
-            title: section.course.name || '',
-            type: section.section_name || '',
-            location: meeting.location || '',
-            prof: meeting.prof_id || '',
-          };
-          if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
-            data.push(newSection);
-          }
-        });
+          });
+        } else {
+          section.meetings.forEach((meeting) => {
+            const prevSection = data[data.length - 1];
+            const newSection = {
+              sectionId: section.id,
+              startSeconds: meeting.start_seconds || 0,
+              endSeconds: meeting.end_seconds || 0,
+              startDate: meeting.start_date || '',
+              endDate: meeting.end_date || '',
+              classNumber: section.class_number,
+              days: meeting.days,
+              code: section.course.code.toUpperCase() || '',
+              courseId: section.course_id,
+              title: section.course.name || '',
+              type: section.section_name || '',
+              location: meeting.location || '',
+              prof: meeting.prof_id || '',
+            };
+            if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
+              data.push(newSection);
+            }
+          });
+        }
       });
       setClasses(data as ClassInterface[]);
-      return data as ClassInterface[];
+      setNoMeetingSections(noMeetingData);
+      return { classesData: data, noMeetingData };
     }
 
     async function getGQLCourseInfo(course_ids: number[]) {
@@ -351,14 +373,23 @@ export default function ClassSchedule() {
           sections = [];
         }
         let fetchedData: ClassInterface[] = [];
+        let noMeetingIds: number[] = [];
         if (!sections || sections.length === 0) {
           setClasses([]);
+          setNoMeetingSections([]);
           handleOptions(1, 3, true);
         } else {
-          fetchedData = (await getGqlClassInformation(sections)) || [];
+          const res = await getGqlClassInformation(sections);
+          if (res) {
+            fetchedData = res.classesData;
+            noMeetingIds = res.noMeetingData.map((c) => c.courseId);
+          }
         }
 
-        const scheduledCourseIds = new Set(fetchedData.map((c) => c.courseId));
+        const scheduledCourseIds = new Set([
+          ...fetchedData.map((c) => c.courseId),
+          ...noMeetingIds,
+        ]);
         const missingCourseIds = course_ids.filter((id) => !scheduledCourseIds.has(id));
         if (missingCourseIds.length > 0) {
           const missingData = await getGQLCourseInfo(missingCourseIds);
@@ -461,6 +492,41 @@ export default function ClassSchedule() {
           return null;
         })}
       </>
+    );
+  }
+
+  function NoMeetingSectionsList() {
+    if (noMeetingSections.length === 0) return null;
+    return (
+      <div className="mt-8 mb-4 max-w-181 flex flex-col align-middle mx-auto bg-white rounded-b-lg relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
+        <div className="bg-blue-400/80 rounded-t-lg text-white pl-4 py-2 text-lg min-w-132 font-semibold">
+          Courses with no meeting data
+          <span className="block text-sm font-normal mt-1">
+            This might be caused because class schedules aren&apos;t out yet.
+          </span>
+        </div>
+        <div className="flex flex-col pt-2 pb-2">
+          <div className="flex px-4 py-2 text-sm sm:text-base border-b-2 border-gray-100 font-bold justify-between">
+            <div className="flex gap-4">
+              <span className="w-24">Course</span>
+              <span>Name</span>
+            </div>
+            <span className="w-32 text-right">Section</span>
+          </div>
+          {noMeetingSections.map((course) => (
+            <div
+              key={course.id}
+              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
+                <span>{course.name}</span>
+              </div>
+              <span className="w-32 text-right">{course.sectionName}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -742,6 +808,7 @@ export default function ClassSchedule() {
       </div>
 
       <MissingCoursesList />
+      <NoMeetingSectionsList />
 
       <RightSide className="mb-5 mx-auto max-w-181">
         <HoverEffect hover="Add Class" onClick={() => setsingleOverLay(true)}>

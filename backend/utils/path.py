@@ -41,7 +41,7 @@ def reverse_translate_path(terms: list[str]) -> list[str]:
         elif term.endswith("A") or term.endswith("B"):
             res.append("Study")
         else:
-            res.append("Off")
+            res.append(term)
     return res
 
 

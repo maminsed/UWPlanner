@@ -30,7 +30,7 @@ export type CourseTermInfo = {
   location?: Location;
   visible: boolean;
   reqsOn: boolean;
-  allReqsMet?: boolean;
+  allReqsMet?: boolean | undefined;
   termCompatible?: boolean;
 };
 

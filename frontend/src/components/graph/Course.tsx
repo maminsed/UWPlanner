@@ -49,9 +49,9 @@ export default function Course({ courseId, termId, allCourses }: CourseInterface
   const termInfo = courseInfo.termInfo.get(termId);
   const colour = courseInfo.colour;
   let hoverMessage = '';
-  if (termInfo?.allReqsMet === undefined || termInfo?.termCompatible === undefined) {
-    hoverMessage = 'Loading';
-  } else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+  if (termInfo?.allReqsMet === undefined) hoverMessage = 'Unknown Req Status';
+  else if (termInfo?.termCompatible === undefined) hoverMessage = 'Loading';
+  else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
   else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
   else hoverMessage = 'Reqs met';
 

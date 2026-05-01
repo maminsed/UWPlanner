@@ -91,9 +91,15 @@ function NormalVersion({ course, termId }: { course: CourseInformation; termId: 
 
       <h3 className={subHeaderClsx}>Status: </h3>
       <ul className="list-inside list-disc">
-        <li className={clsx(reqMet && 'text-green-500', reqMet === false && 'text-red-500')}>
+        <li
+          className={clsx(
+            reqMet === true && 'text-green-500',
+            reqMet === false && 'text-red-500',
+            reqMet === undefined && 'text-gray-500',
+          )}
+        >
           {reqMet === undefined
-            ? 'Loading Requirement Status'
+            ? 'Unknown Requirement Status'
             : `You have ${reqMet ? '' : 'not '}met all your requirements`}
         </li>
         <li className={clsx(term?.termCompatible ? 'text-green-500' : 'text-yellow-500')}>

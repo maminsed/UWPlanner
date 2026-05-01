@@ -39,6 +39,7 @@ export function totalRequirementStatus(
   termId: number, // e.g. 1255
   courseId: number,
   allCourses: AllCourseInformation,
+  allDegrees: { name: string; url: string }[],
 ): number[] {
   const termName = allCourses.getTermsInfo({ termId })!.termName;
   const dependentCourses: number[] = [];
@@ -46,33 +47,36 @@ export function totalRequirementStatus(
     courseInfo: Requirement,
     status: Requirement['conditionStatus'],
     isPrereq: boolean = false,
-  ): boolean {
+  ): boolean | undefined {
     if (courseInfo.conditionedOn == 'final' || courseInfo.conditionedOn == 'unclassified') {
-      let decision = true;
+      let decision: boolean | undefined = undefined;
       for (const link of courseInfo.relatedLinks) {
         // Checking courses
         if (link.linkType == 'courses' || link.linkType == 'course') {
           const course = allCourses.getCourseInfoCode(link.value.toLowerCase());
           if (course) {
             if (isPrereq) dependentCourses.push(course.id);
+            let conditionMet = false;
             switch (status) {
               case 'none':
               case 'complete':
-                decision = decision && [...course.termInfo.keys()].some((term) => term < termId);
+                conditionMet = [...course.termInfo.keys()].some((term) => term < termId);
                 break;
               case 'currently_enrolled':
-                decision = decision && [...course.termInfo.keys()].some((term) => term === termId);
+                conditionMet = [...course.termInfo.keys()].some((term) => term === termId);
                 break;
               case 'both':
-                decision = decision && [...course.termInfo.keys()].some((term) => term <= termId);
+                conditionMet = [...course.termInfo.keys()].some((term) => term <= termId);
                 break;
             }
+            decision = decision === undefined ? conditionMet : decision && conditionMet;
           } else {
             decision = false;
           }
           // checking programs
         } else if (link.linkType == 'programs') {
           //TODO: complete
+          // decision = decision && allDegrees.some((degree)=>{degree.url == link.url});
         }
       }
       // checking year requirements
@@ -89,55 +93,84 @@ export function totalRequirementStatus(
             );
             isEnroled = termName >= biggestSem;
           }
-          decision = decision && isEnroled;
+          decision = decision === undefined ? isEnroled : decision && isEnroled;
         }
       }
       courseInfo.met = decision;
       return decision;
     }
-    const conditionsMet = courseInfo.appliesTo.filter((req) =>
+    const childResults = courseInfo.appliesTo.map((req) =>
       singleRequirementStatus(req, courseInfo.conditionStatus, isPrereq),
-    ).length;
+    );
+    const trueCount = childResults.filter((r) => r === true).length;
+    const undefCount = childResults.filter((r) => r === undefined).length;
+    const falseCount = childResults.filter((r) => r === false).length;
 
-    let decision = false;
+    let decision: boolean | undefined = undefined;
     switch (courseInfo.conditionedOn) {
       case 'all':
-        decision = conditionsMet === courseInfo.appliesTo.length;
+        if (falseCount > 0) decision = false;
+        else if (undefCount > 0) decision = undefined;
+        else decision = true;
         break;
       case 'any':
-        decision = conditionsMet >= 1;
+        if (trueCount >= 1) decision = true;
+        else if (undefCount > 0) decision = undefined;
+        else decision = false;
         break;
       case 'two':
-        decision = conditionsMet >= 2;
+        if (trueCount >= 2) decision = true;
+        else if (trueCount + undefCount >= 2) decision = undefined;
+        else decision = false;
         break;
       case 'three':
-        decision = conditionsMet >= 3;
+        if (trueCount >= 3) decision = true;
+        else if (trueCount + undefCount >= 3) decision = undefined;
+        else decision = false;
         break;
       case 'four':
-        decision = conditionsMet >= 4;
+        if (trueCount >= 4) decision = true;
+        else if (trueCount + undefCount >= 4) decision = undefined;
+        else decision = false;
         break;
       case 'not_all':
-        decision = conditionsMet < courseInfo.appliesTo.length;
+        if (falseCount > 0) decision = true;
+        else if (undefCount > 0) decision = undefined;
+        else decision = false;
         break;
       case 'not_any':
-        decision = conditionsMet === 0;
+        if (trueCount > 0) decision = false;
+        else if (undefCount > 0) decision = undefined;
+        else decision = true;
         break;
     }
     courseInfo.met = decision;
     return decision;
   }
 
-  let finalResult = true;
+  let finalResult: boolean | undefined = true;
   if (courseInfo.prerequisites) {
-    finalResult = finalResult && singleRequirementStatus(courseInfo.prerequisites, 'none', true);
+    const pDecision = singleRequirementStatus(courseInfo.prerequisites, 'none', true);
+    finalResult = pDecision === false ? false : pDecision === undefined ? undefined : finalResult;
   }
   if (courseInfo.antirequisites) {
     const decision = singleRequirementStatus(courseInfo.antirequisites, 'none');
-    finalResult = finalResult && decision;
+    finalResult =
+      finalResult === false || decision === false
+        ? false
+        : finalResult === undefined || decision === undefined
+          ? undefined
+          : true;
     // console.log(`debug: at antiReq for: ${allCourses.getCourseInfoId(courseId)?.code} with decision: ${decision}`)
   }
   if (courseInfo.corequisites) {
-    finalResult = finalResult && singleRequirementStatus(courseInfo.corequisites, 'none');
+    const cDecision = singleRequirementStatus(courseInfo.corequisites, 'none');
+    finalResult =
+      finalResult === false || cDecision === false
+        ? false
+        : finalResult === undefined || cDecision === undefined
+          ? undefined
+          : true;
   }
   const term = allCourses.getCourseInfoId(courseId)?.termInfo.get(termId);
   if (term) term.allReqsMet = finalResult;

@@ -181,6 +181,14 @@ type DayMapInterface = {
 };
 
 export default function ClassSchedule() {
+  // TODO:
+  //    migrate to the CourseClass feature
+  //    add the option to show everything in that semester in one week
+  // option to choose from available courses what to display
+  // Fix the downloading of scheudle into a google calendar
+  // colour coding courses
+  // send alerats and stuff to upstream so that it can display
+  // There is an issue with when the user is in compact and they decide to hide tutorial or something
   const dateBoxClass = clsx(
     'bg-[#CAEDF2] text-center flex-1 h-16 flex flex-col justify-center text-sm md:text-lg',
   );
@@ -332,7 +340,6 @@ export default function ClassSchedule() {
         const response = await res.json().catch(() => {});
         let sections = response.sections || [];
         const course_ids: number[] = response.courses || [];
-
         setstartedTerm(response.start_sem || 0);
         setPath(response.path || []);
         if (!response.path) {
@@ -468,10 +475,18 @@ export default function ClassSchedule() {
           {missingCourses.map((course) => (
             <div
               key={course.id}
-              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0"
+              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
             >
-              <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
-              <span>{course.name}</span>
+              <div className="flex items-center gap-4">
+                <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
+                <span>{course.name}</span>
+              </div>
+              <button
+                className="bg-dark-green text-light-green px-4 py-1 rounded-md text-sm cursor-pointer hover:bg-dark-green/90 transition-colors"
+                onClick={() => setsingleOverLay(true)}
+              >
+                Fix
+              </button>
             </div>
           ))}
         </div>

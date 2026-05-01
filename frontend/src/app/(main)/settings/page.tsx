@@ -11,10 +11,10 @@ export default function SettingsPage() {
 
   const settingSections = [
     { name: 'Account' },
-    // { name: 'Security' },
     // { name: 'Discussions' },
     { name: 'Courses' },
     { name: 'Reporting' },
+    { name: 'Security' },
   ];
 
   const renderSection = (section: string, key: number) => {
@@ -40,13 +40,13 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-1 sticky top-0 pt-2">
           <Link href="#public_profile">Public Profile</Link>
           {/* <Link href="#academics">Academics</Link> */}
-          {/* <Link href="#security">Security</Link> */}
           {/* <Link href="#discussions">My Discussions</Link> */}
           <Link href="#sequence">Sequence</Link>
           <Link href="#report">Report an Issue</Link>
+          <Link href="#security">Security</Link>
         </div>
       </section>
-      <div className="mr-3 md:mr-5">
+      <div className="mr-3 md:mr-5 mb-50">
         {/* <p className="text-gray-500">
                     Manage your account settings and preferences.
                 </p> */}

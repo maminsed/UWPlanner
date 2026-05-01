@@ -16,7 +16,57 @@ auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
 
 
-# TODO: make the delete function
+@auth_bp.route("/delete_user", methods=["DELETE"])
+def delete_account() -> Response:
+    """Deletes the current user.
+
+    Requires:
+        - The request to include jwt in httponly cookies
+
+    Returns:
+        - The response Code
+        - Removes the user and all associated data from the database
+
+    """
+    refresh_token = request.cookies.get("jwt")
+    if not refresh_token:
+        return make_response(jsonify({"message": "Not authenticated"}), 401)
+
+    try:
+        jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
+        if not jwt_db:
+            resp = make_response(jsonify({"message": "Invalid token"}), 401)
+            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+            return resp
+
+        user = jwt_db.user
+
+        # Clean up JWTs
+        clean_up_jwt(user.username)
+
+        # Clear many-to-many relationships
+        user.programs.clear()
+        user.majors.clear()
+        user.minors.clear()
+        user.specializations.clear()
+
+        # Note: links, semesters, and refresh_tokens are deleted automatically
+        # due to cascade="all, delete-orphan" in the Users model.
+
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+
+        resp = make_response(jsonify({"message": "User deleted successfully"}), 200)
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+        return resp
+    except Exception as e:
+        db.session.rollback()
+        return make_response(
+            jsonify({"message": "error in backend", "error": str(e)}), 500
+        )
+
+
 @auth_bp.route("/signup", methods=["POST"])
 def add_user() -> Response:
     """Register a new user.

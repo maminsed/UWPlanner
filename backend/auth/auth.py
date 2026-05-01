@@ -10,7 +10,7 @@ from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
 from .jwt import clean_up_jwt, encode
-from .send_mail import send_verification_mail
+from .send_mail import send_delete_account_mail, send_verification_mail
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
@@ -53,9 +53,14 @@ def delete_account() -> Response:
         # Note: links, semesters, and refresh_tokens are deleted automatically
         # due to cascade="all, delete-orphan" in the Users model.
 
+        user_email = user.email
+
         # Delete user
         db.session.delete(user)
         db.session.commit()
+
+        # Send deletion notification
+        send_delete_account_mail(user_email)
 
         resp = make_response(jsonify({"message": "User deleted successfully"}), 200)
         resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")

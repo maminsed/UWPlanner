@@ -35,3 +35,28 @@ This e-mail was sent from a notification-only address that cannot accept incomin
     gmail_send_message(
         to=user.email, body=body, subject="Verification Code For UWPlanner"
     )
+
+
+def send_delete_account_mail(email: str) -> None:
+    """Sends an email confirming the account deletion.
+
+    Requires:
+        email (str):
+            The email address of the deleted user.
+    """
+    body = """
+Hi,
+
+Your UWPlanner account has been deleted.
+
+If you did not request this, please contact support immediately.
+
+This e-mail was sent from a notification-only address that cannot accept incoming e-mails. Please do not reply to this message. 
+    """
+    try:
+        gmail_send_message(
+            to=email, body=body, subject="Your UWPlanner Account Has Been Deleted"
+        )
+    except Exception as e:
+        print("ERROR OCCURED WHILE SENDING ACCOUNT DELETION EMAIL")
+        print(e)

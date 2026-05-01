@@ -66,10 +66,18 @@ def get_user_sections():
     if len(section_ids) > 0:
         sections = json.loads(section_ids[0])  # Parse the sections JSON
 
+    course_ids = [
+        semester.courses for semester in user.semesters if semester.term_id == term_id
+    ]
+    courses = []
+    if len(course_ids) > 0:
+        courses = json.loads(course_ids[0])
+
     # Return the sections, start semester, and user path
     return jsonify(
         {
             "sections": sections,
+            "courses": courses,
             "start_sem": user.started_term,
             "path": translate_path(user.path),
         }
@@ -177,7 +185,7 @@ def add_section_to_user():
     else:
         return enrol_user_in_section(
             user,
-            courses["sections"]["class_number"],
+            courses["sections"]["class_numbers"],
             term_id,
             courses["sections"]["course_id"],
         )

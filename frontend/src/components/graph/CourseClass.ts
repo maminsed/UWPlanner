@@ -6,10 +6,17 @@ import {
   TermInformation,
   UWFCourseInfo,
   LineType,
+  ClassInterface,
+  GQLCourseSection,
 } from '../interface';
 import { generateRandomColours } from '../utils/colour';
 import { generateConnectionLines, totalRequirementStatus } from '../utils/preReqUtils';
-import { getTermSeason, termOperation } from '../utils/termUtils';
+import {
+  getTermSeason,
+  termOperation,
+  getTermDistance,
+  getCurrentTermId,
+} from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
@@ -38,11 +45,22 @@ export class AllCourseInformation {
   // degree information:
   #studentDegrees: { name: string; url: string }[] = [];
 
+  // schedule information:
+  scheduleClasses: ClassInterface[] = [];
+  noMeetingSections: {
+    id: number;
+    code: string;
+    name: string;
+    sectionName: string;
+    courseId: number;
+  }[] = [];
+  missingCourses: { id: number; code: string; name: string }[] = [];
+
   // initializers:
   constructor(
-    updateCourseVisibility: () => void,
-    updateCourseLocations: () => void,
-    updatePanRef: () => void,
+    updateCourseVisibility: () => void = () => {},
+    updateCourseLocations: () => void = () => {},
+    updatePanRef: () => void = () => {},
     gql: ReturnType<typeof useGQL>,
     backend: ReturnType<typeof useApi>,
   ) {
@@ -107,6 +125,144 @@ export class AllCourseInformation {
     this.#updateCourseVisibility();
     this.#updateCourseLocations();
     this.#updatePanRef();
+  }
+
+  async initSchedule(termId: number) {
+    const res = await this.#backend(
+      `${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term_id: termId }),
+      },
+    );
+
+    if (!res?.ok) {
+      console.error('error fetching user sections');
+      return;
+    }
+
+    const response = await res.json().catch(() => {});
+    let sections: number[] = response.sections || [];
+    const course_ids: number[] = response.courses || [];
+
+    const noSections = getTermDistance(getCurrentTermId(), termId) > 1;
+    if (noSections) {
+      sections = [];
+    }
+
+    let fetchedData: ClassInterface[] = [];
+    let noMeetingData: {
+      id: number;
+      code: string;
+      name: string;
+      sectionName: string;
+      courseId: number;
+    }[] = [];
+
+    if (sections.length > 0) {
+      const { classesData, noMeeting } = await this.#getGqlClassInformation(sections, termId);
+      fetchedData = classesData;
+      noMeetingData = noMeeting;
+    }
+
+    this.scheduleClasses = fetchedData;
+    this.noMeetingSections = noMeetingData;
+
+    const scheduledCourseIds = new Set([
+      ...fetchedData.map((c) => c.courseId),
+      ...noMeetingData.map((c) => c.courseId),
+    ]);
+    const missingCourseIds = course_ids.filter((id) => !scheduledCourseIds.has(id));
+
+    if (missingCourseIds.length > 0) {
+      this.missingCourses = await this.#getGQLCourseInfo(missingCourseIds);
+    } else {
+      this.missingCourses = [];
+    }
+  }
+
+  async #getGqlClassInformation(sections: number[], termId: number) {
+    const GQL_QUERY = `
+      query Course_section($sections: [Int!]!, $termId: Int!) {
+        course_section(where: { class_number: { _in: $sections }, term_id: { _eq: $termId } }) {
+          class_number
+          course_id
+          id
+          section_name
+          term_id
+          course { code name }
+          meetings {
+            days
+            end_date
+            end_seconds
+            location
+            prof_id
+            start_date
+            start_seconds
+          }
+        }
+      }
+    `;
+    const gql_response = await this.#gql(GQL_QUERY, { sections, termId });
+    const data: ClassInterface[] = [];
+    const noMeetingData: {
+      id: number;
+      code: string;
+      name: string;
+      sectionName: string;
+      courseId: number;
+    }[] = [];
+
+    gql_response?.data?.course_section.forEach((section: GQLCourseSection) => {
+      if (!section.meetings || section.meetings.length === 0) {
+        noMeetingData.push({
+          id: section.id,
+          code: section.course.code,
+          name: section.course.name,
+          sectionName: section.section_name,
+          courseId: section.course_id,
+        });
+      } else {
+        section.meetings.forEach((meeting) => {
+          const prevSection = data[data.length - 1];
+          const newSection = {
+            sectionId: section.id,
+            startSeconds: meeting.start_seconds || 0,
+            endSeconds: meeting.end_seconds || 0,
+            startDate: meeting.start_date || '',
+            endDate: meeting.end_date || '',
+            classNumber: section.class_number,
+            days: meeting.days,
+            code: section.course.code.toUpperCase() || '',
+            courseId: section.course_id,
+            title: section.course.name || '',
+            type: section.section_name || '',
+            location: meeting.location || '',
+            prof: meeting.prof_id || '',
+          };
+          if (JSON.stringify(prevSection) !== JSON.stringify(newSection)) {
+            data.push(newSection);
+          }
+        });
+      }
+    });
+    return { classesData: data, noMeeting: noMeetingData };
+  }
+
+  async #getGQLCourseInfo(course_ids: number[]) {
+    if (course_ids.length === 0) return [];
+    const GQL_QUERY = `
+      query Courses($course_ids: [Int!]!) {
+        course(where: { id: { _in: $course_ids } }) {
+          id
+          code
+          name
+        }
+      }
+    `;
+    const res = await this.#gql(GQL_QUERY, { course_ids });
+    return (res?.data?.course || []) as { id: number; code: string; name: string }[];
   }
 
   async #extractPath() {

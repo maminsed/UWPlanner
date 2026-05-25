@@ -134,3 +134,19 @@ export type GQLCourseSection = {
   course: GQLCourse;
   meetings: GQLMeeting[];
 };
+
+export type ClassInterface = {
+  sectionId: number;
+  startSeconds: number;
+  endSeconds: number;
+  startDate: string;
+  endDate: string;
+  days: DaysOfWeek[];
+  code: string;
+  classNumber: number;
+  courseId: number;
+  title: string;
+  type: string;
+  prof: string;
+  location: string;
+};

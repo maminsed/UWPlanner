@@ -75,7 +75,7 @@ export function totalRequirementStatus(
           }
           // checking programs
         } else if (link.linkType == 'programs') {
-          //TODO: complete
+          //TODO: complete this:
           // decision = decision && allDegrees.some((degree)=>{degree.url == link.url});
         }
       }

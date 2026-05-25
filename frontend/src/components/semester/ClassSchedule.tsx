@@ -1,41 +1,22 @@
 'use client';
 import clsx from 'clsx';
-import { useEffect, useState } from 'react';
-import { Fragment } from 'react';
+import { useEffect, useState, useRef, Fragment } from 'react';
 import { BiImport } from 'react-icons/bi';
 import { IoIosInformationCircleOutline } from 'react-icons/io';
 import { LuChevronLeft, LuChevronRight, LuMaximize2, LuPlus, LuShare2 } from 'react-icons/lu';
 
 import AddACourse from '../Courses/AddACourse';
 import BatchAddCourses from '../Courses/BatchAddCourses';
+import CourseInfoPage from '../Courses/CourseInfoPage';
+import { GetReqIcon } from '../Courses/utils';
+import { AllCourseInformation } from '../graph/CourseClass';
 import HoverEffect from '../HoverEffect';
-import { DaysOfWeek, GQLCourseSection } from '../interface';
+import { ClassInterface } from '../interface';
 import RightSide from '../utils/RightSide';
-import {
-  getCurrentTermId,
-  getTermDistance,
-  getTermSeason,
-  termOperation,
-} from '../utils/termUtils';
+import { getCurrentTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
-
-type ClassInterface = {
-  sectionId: number;
-  startSeconds: number;
-  endSeconds: number;
-  startDate: string;
-  endDate: string;
-  days: DaysOfWeek[];
-  code: string;
-  classNumber: number;
-  courseId: number;
-  title: string;
-  type: string;
-  prof: string;
-  location: string;
-};
 
 function translateSecToHour(time: number, checkBoxes: [string, boolean][][]) {
   const min = Math.floor((time % 3600) / 60);
@@ -70,13 +51,32 @@ function Class({
   dayMap,
   top,
   height,
+  courseClass,
+  termId,
+  openCourseInfo,
 }: ClassInterface & {
   checkBoxes: [string, boolean][][];
   dayMap: DayMapInterface;
   top: number;
   height: number;
+  courseClass: AllCourseInformation;
+  termId: number;
+  openCourseInfo: (id: number) => void;
 }) {
   const dayLeft = { M: '100%/6', T: '200%/6', W: '300%/6', Th: '400%/6', F: '500%/6' };
+
+  const courseInfo = courseClass.getCourseInfoId(courseId);
+  const color = courseInfo?.colour;
+  const bgColor = color ? color.bg : 'rgba(6, 182, 212, 0.5)'; // 50% opacity equivalent
+  const textColor = color ? color.text : 'inherit';
+  const termInfo = courseInfo?.termInfo.get(termId);
+
+  let hoverMessage = '';
+  if (termInfo?.allReqsMet === undefined) hoverMessage = 'Unknown Req Status';
+  else if (termInfo?.termCompatible === undefined) hoverMessage = 'Loading';
+  else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+  else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
+  else hoverMessage = 'Reqs met';
 
   function countOccurance(day: keyof DayMapInterface): [number, number] {
     // #overlap,ith overlap
@@ -101,16 +101,29 @@ function Class({
         return (
           <div
             key={day}
-            className="absolute bg-cyan-500/50 rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller"
+            className="absolute rounded-md text-sm leading-[120%] z-20 pl-1 overflow-y-auto overflow-x-hidden scroller border-1"
             style={{
               left: `calc(${dayLeft[day]} + ${offset})`,
               top: `calc(${top} * var(--spacing))`,
               height: `calc(${height} * var(--spacing)`,
               width: `calc(100%/${width})`,
+              backgroundColor: bgColor,
+              color: textColor,
+              borderColor: textColor,
             }}
           >
-            {getVal('course code', checkBoxes) && <p className="pt-1">{code}</p>}
-            {getVal('course title', checkBoxes) && <p>{title}</p>}
+            <div className="absolute top-1 right-1 cursor-default z-30">
+              {termInfo && (
+                <HoverEffect hoverStyle={{ minWidth: '4.5rem' }} hover={hoverMessage}>
+                  <GetReqIcon
+                    termCompatible={termInfo.termCompatible}
+                    reqsMet={termInfo.allReqsMet}
+                  />
+                </HoverEffect>
+              )}
+            </div>
+            {getVal('course code', checkBoxes) && <p className="pt-1 w-11/12">{code}</p>}
+            {getVal('course title', checkBoxes) && <p className="w-11/12">{title}</p>}
             <p>{classNumber}</p>
             <p>{type}</p>
             <p>
@@ -120,7 +133,10 @@ function Class({
             <p>{location}</p>
             <p>{prof}</p>
             <div className="flex justify-end pr-[3%]">
-              <LuMaximize2 className="right-2.5 my-1 cursor-pointer" />
+              <LuMaximize2
+                className="right-2.5 my-1 cursor-pointer"
+                onClick={() => openCourseInfo(courseId)}
+              />
             </div>
           </div>
         );
@@ -136,14 +152,47 @@ function OnlineClass({
   startDate,
   classNumber,
   endDate,
+  courseId,
   first = false,
   checkBoxes,
-}: ClassInterface & { first?: boolean; checkBoxes: [string, boolean][][] }) {
+  courseClass,
+  termId,
+  openCourseInfo,
+}: ClassInterface & {
+  first?: boolean;
+  checkBoxes: [string, boolean][][];
+  courseClass: AllCourseInformation;
+  termId: number;
+  openCourseInfo: (id: number) => void;
+}) {
+  const courseInfo = courseClass.getCourseInfoId(courseId);
+  const color = courseInfo?.colour;
+  const textColor = color ? color.text : 'inherit';
+  const termInfo = courseInfo?.termInfo.get(termId);
+
+  let hoverMessage = '';
+  if (termInfo?.allReqsMet === undefined) hoverMessage = 'Unknown Req Status';
+  else if (termInfo?.termCompatible === undefined) hoverMessage = 'Loading';
+  else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+  else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
+  else hoverMessage = 'Reqs met';
+
   return (
-    <div className="flex flex-row px-2 py-1 items-center min-w-132 relative">
+    <div className="flex flex-row px-2 py-1 items-center min-w-[34rem] relative">
+      <div className="w-8 flex-shrink-0 flex items-center justify-center mr-2">
+        {termInfo && (
+          <HoverEffect hoverStyle={{ minWidth: '4.5rem' }} hover={hoverMessage}>
+            <GetReqIcon termCompatible={termInfo.termCompatible} reqsMet={termInfo.allReqsMet} />
+          </HoverEffect>
+        )}
+      </div>
       {getVal('course code', checkBoxes) && (
-        <div className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer">
-          {code} <IoIosInformationCircleOutline className="min-w-4" />
+        <div
+          className="flex-1 min-w-20 flex items-center gap-1 cursor-pointer font-semibold"
+          style={{ color: textColor }}
+          onClick={() => openCourseInfo(courseId)}
+        >
+          {code} <IoIosInformationCircleOutline className="min-w-4 flex-shrink-0" />
         </div>
       )}
       {getVal('course title', checkBoxes) && <div className="flex-2 min-w-40">{title}</div>}
@@ -181,7 +230,7 @@ type DayMapInterface = {
 };
 
 export default function ClassSchedule() {
-  // TODO:
+  // TODO: uwu
   //    migrate to the CourseClass feature
   //    add the option to show everything in that semester in one week
   // option to choose from available courses what to display
@@ -196,7 +245,6 @@ export default function ClassSchedule() {
   const lineVertClass = 'border-r-1 border-[#6EC0CB]';
   const lineHorMidClass = 'absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/50 border-dashed';
   const lineHorFullClass = 'absolute w-[85%] right-4 border-b-1 border-[#6EC0CB]/80';
-  const [classes, setClasses] = useState<ClassInterface[]>([]);
   const [mondayDate, setMondayDate] = useState<Date>(() => getMonday());
   const months = [
     'Jan',
@@ -233,12 +281,8 @@ export default function ClassSchedule() {
   const [updateCond, setUpdateCond] = useState<number>(0);
   const [path, setPath] = useState<string[]>([]);
   const [batchOverLay, setBatchOverLay] = useState<boolean>(false);
-  const [missingCourses, setMissingCourses] = useState<
-    { id: number; code: string; name: string }[]
-  >([]);
-  const [noMeetingSections, setNoMeetingSections] = useState<
-    { id: number; code: string; name: string; sectionName: string; courseId: number }[]
-  >([]);
+  const [courseToView, setCourseToView] = useState<number | null>(null);
+  const [renderVersion, setRenderVersion] = useState<number>(0);
 
   const [dayMap, setDayMap] = useState<DayMapInterface>({
     M: [],
@@ -250,158 +294,38 @@ export default function ClassSchedule() {
   });
   const backend = useApi();
   const gql = useGQL();
-  const noSections: boolean = getTermDistance(getCurrentTermId(), termId) > 1;
+
+  const courseClassRef = useRef<AllCourseInformation | null>(null);
+  if (!courseClassRef.current) {
+    courseClassRef.current = new AllCourseInformation(
+      undefined,
+      undefined,
+      undefined,
+      gql,
+      backend,
+    );
+  }
+  const courseClass = courseClassRef.current;
+
+  // Derive references from CourseClass to avoid local states tracking arrays.
+  const classes = courseClass.scheduleClasses || [];
+  const noMeetingSections = courseClass.noMeetingSections || [];
+  const missingCourses = courseClass.missingCourses || [];
 
   useEffect(() => {
-    async function getGqlClassInformation(sections: number[]) {
-      const GQL_QUERY = `
-        query Course_section($sections: [Int!]!, $termId: Int!) {
-                course_section(
-                where: {
-                    class_number: { _in: $sections }
-                    term_id: { _eq: $termId }
-                }
-            ) {
-                class_number
-                course_id
-                id
-                section_name
-                term_id
-                course {
-                    code
-                    name
-                }
-                meetings {
-                    days
-                    end_date
-                    end_seconds
-                    location
-                    prof_id
-                    start_date
-                    start_seconds
-                }
-            }
-        }
-    `;
-      const gql_response = await gql(GQL_QUERY, { sections, termId });
-      const data: ClassInterface[] = [];
-      const noMeetingData: {
-        id: number;
-        code: string;
-        name: string;
-        sectionName: string;
-        courseId: number;
-      }[] = [];
-
-      gql_response?.data?.course_section.forEach((section: GQLCourseSection): void => {
-        if (!section.meetings || section.meetings.length === 0) {
-          noMeetingData.push({
-            id: section.id,
-            code: section.course.code,
-            name: section.course.name,
-            sectionName: section.section_name,
-            courseId: section.course_id,
-          });
-        } else {
-          section.meetings.forEach((meeting) => {
-            const prevSection = data[data.length - 1];
-            const newSection = {
-              sectionId: section.id,
-              startSeconds: meeting.start_seconds || 0,
-              endSeconds: meeting.end_seconds || 0,
-              startDate: meeting.start_date || '',
-              endDate: meeting.end_date || '',
-              classNumber: section.class_number,
-              days: meeting.days,
-              code: section.course.code.toUpperCase() || '',
-              courseId: section.course_id,
-              title: section.course.name || '',
-              type: section.section_name || '',
-              location: meeting.location || '',
-              prof: meeting.prof_id || '',
-            };
-            if (JSON.stringify(prevSection) != JSON.stringify(newSection)) {
-              data.push(newSection);
-            }
-          });
-        }
-      });
-      setClasses(data as ClassInterface[]);
-      setNoMeetingSections(noMeetingData);
-      return { classesData: data, noMeetingData };
-    }
-
-    async function getGQLCourseInfo(course_ids: number[]) {
-      if (course_ids.length === 0) return [];
-      const GQL_QUERY = `
-        query Courses($course_ids: [Int!]!) {
-            course(where: { id: { _in: $course_ids } }) {
-                id
-                code
-                name
-            }
-        }
-      `;
-      const res = await gql(GQL_QUERY, { course_ids });
-      return (res?.data?.course || []) as { id: number; code: string; name: string }[];
-    }
-
     async function initialSetup() {
-      const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          term_id: termId,
-        }),
-      });
-      if (!res?.ok) {
-        console.error('error!');
-      } else {
-        const response = await res.json().catch(() => {});
-        let sections = response.sections || [];
-        const course_ids: number[] = response.courses || [];
-        setstartedTerm(response.start_sem || 0);
-        setPath(response.path || []);
-        if (!response.path) {
-          alert('Please get a sequence first in settings or Graph');
-          console.error('User with no sequence is here?');
-        }
-
-        if (noSections) {
-          sections = [];
-        }
-        let fetchedData: ClassInterface[] = [];
-        let noMeetingIds: number[] = [];
-        if (!sections || sections.length === 0) {
-          setClasses([]);
-          setNoMeetingSections([]);
-          handleOptions(1, 3, true);
-        } else {
-          const res = await getGqlClassInformation(sections);
-          if (res) {
-            fetchedData = res.classesData;
-            noMeetingIds = res.noMeetingData.map((c) => c.courseId);
-          }
-        }
-
-        const scheduledCourseIds = new Set([
-          ...fetchedData.map((c) => c.courseId),
-          ...noMeetingIds,
-        ]);
-        const missingCourseIds = course_ids.filter((id) => !scheduledCourseIds.has(id));
-        if (missingCourseIds.length > 0) {
-          const missingData = await getGQLCourseInfo(missingCourseIds);
-          setMissingCourses(missingData);
-        } else {
-          setMissingCourses([]);
-        }
+      if (courseClass.path.length === 0) {
+        await courseClass.init();
+        setstartedTerm(courseClass.startingTermId);
+        setPath(courseClass.path.map((p) => p.termName));
       }
+      await courseClass.initSchedule(termId);
+
+      setRenderVersion((v) => v + 1);
     }
 
     initialSetup();
-  }, [termId, updateCond]);
+  }, [termId, updateCond, courseClass]);
 
   useEffect(() => {
     function updateDayMap() {
@@ -442,7 +366,7 @@ export default function ClassSchedule() {
     }
 
     updateDayMap();
-  }, [classes, mondayDate]);
+  }, [classes, mondayDate, renderVersion]);
 
   function moveTime(diff: number) {
     setMondayDate((prevDate) => {
@@ -485,9 +409,28 @@ export default function ClassSchedule() {
           ) {
             if (first) {
               first = false;
-              return <OnlineClass {...section} key={i} first={true} checkBoxes={checkBoxes} />;
+              return (
+                <OnlineClass
+                  {...section}
+                  key={i}
+                  first={true}
+                  checkBoxes={checkBoxes}
+                  courseClass={courseClass}
+                  termId={termId}
+                  openCourseInfo={setCourseToView}
+                />
+              );
             }
-            return <OnlineClass {...section} key={i} checkBoxes={checkBoxes} />;
+            return (
+              <OnlineClass
+                {...section}
+                key={i}
+                checkBoxes={checkBoxes}
+                courseClass={courseClass}
+                termId={termId}
+                openCourseInfo={setCourseToView}
+              />
+            );
           }
           return null;
         })}
@@ -508,23 +451,53 @@ export default function ClassSchedule() {
         <div className="flex flex-col pt-2 pb-2">
           <div className="flex px-4 py-2 text-sm sm:text-base border-b-2 border-gray-100 font-bold justify-between">
             <div className="flex gap-4">
+              <div className="w-5" />
               <span className="w-24">Course</span>
               <span>Name</span>
             </div>
             <span className="w-32 text-right">Section</span>
           </div>
-          {noMeetingSections.map((course) => (
-            <div
-              key={course.id}
-              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
-                <span>{course.name}</span>
+          {noMeetingSections.map((course) => {
+            const courseInfo = courseClass.getCourseInfoId(course.courseId);
+            const termInfo = courseInfo?.termInfo.get(termId);
+
+            let hoverMessage = '';
+            if (termInfo?.allReqsMet === undefined) hoverMessage = 'Unknown Req Status';
+            else if (termInfo?.termCompatible === undefined) hoverMessage = 'Loading';
+            else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+            else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
+            else hoverMessage = 'Reqs met';
+
+            return (
+              <div
+                key={course.id}
+                className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-5 flex justify-center">
+                    {termInfo && (
+                      <HoverEffect hoverStyle={{ minWidth: '4.5rem' }} hover={hoverMessage}>
+                        <GetReqIcon
+                          termCompatible={termInfo.termCompatible}
+                          reqsMet={termInfo.allReqsMet}
+                        />
+                      </HoverEffect>
+                    )}
+                  </div>
+                  <span
+                    className="w-24 font-bold cursor-pointer flex items-center gap-1 text-[inherit]"
+                    style={{ color: courseInfo?.colour?.text || 'inherit' }}
+                    onClick={() => setCourseToView(course.courseId)}
+                  >
+                    {course.code.toUpperCase()}{' '}
+                    <IoIosInformationCircleOutline className="min-w-4" />
+                  </span>
+                  <span>{course.name}</span>
+                </div>
+                <span className="w-32 text-right">{course.sectionName}</span>
               </div>
-              <span className="w-32 text-right">{course.sectionName}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -538,23 +511,52 @@ export default function ClassSchedule() {
           Courses with no sections specified
         </div>
         <div className="flex flex-col pt-2 pb-2">
-          {missingCourses.map((course) => (
-            <div
-              key={course.id}
-              className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <span className="w-24 font-bold">{course.code.toUpperCase()}</span>
-                <span>{course.name}</span>
-              </div>
-              <button
-                className="bg-dark-green text-light-green px-4 py-1 rounded-md text-sm cursor-pointer hover:bg-dark-green/90 transition-colors"
-                onClick={() => setsingleOverLay(true)}
+          {missingCourses.map((course) => {
+            const courseInfo = courseClass.getCourseInfoId(course.id);
+            const termInfo = courseInfo?.termInfo.get(termId);
+
+            let hoverMessage = '';
+            if (termInfo?.allReqsMet === undefined) hoverMessage = 'Unknown Req Status';
+            else if (termInfo?.termCompatible === undefined) hoverMessage = 'Loading';
+            else if (!termInfo.allReqsMet) hoverMessage = 'Reqs not met';
+            else if (!termInfo.termCompatible) hoverMessage = 'term not compatible';
+            else hoverMessage = 'Reqs met';
+
+            return (
+              <div
+                key={course.id}
+                className="flex px-4 py-2 text-sm sm:text-base border-b border-gray-100 last:border-0 items-center justify-between"
               >
-                Fix
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-4">
+                  <div className="w-5 flex justify-center">
+                    {termInfo && (
+                      <HoverEffect hoverStyle={{ minWidth: '4.5rem' }} hover={hoverMessage}>
+                        <GetReqIcon
+                          termCompatible={termInfo.termCompatible}
+                          reqsMet={termInfo.allReqsMet}
+                        />
+                      </HoverEffect>
+                    )}
+                  </div>
+                  <span
+                    className="w-24 font-bold cursor-pointer flex items-center gap-1"
+                    style={{ color: courseInfo?.colour?.text || 'inherit' }}
+                    onClick={() => setCourseToView(course.id)}
+                  >
+                    {course.code.toUpperCase()}{' '}
+                    <IoIosInformationCircleOutline className="min-w-4" />
+                  </span>
+                  <span>{course.name}</span>
+                </div>
+                <button
+                  className="bg-dark-green text-light-green px-4 py-1 rounded-md text-sm cursor-pointer hover:bg-dark-green/90 transition-colors"
+                  onClick={() => setsingleOverLay(true)}
+                >
+                  Fix
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -587,7 +589,8 @@ export default function ClassSchedule() {
     );
   }
 
-  function updatePage() {
+  async function updatePage() {
+    await courseClass.updateAllCourses();
     setUpdateCond(updateCond + 1);
     setsingleOverLay(false);
   }
@@ -622,21 +625,41 @@ export default function ClassSchedule() {
   return (
     <section className="my-5 max-w-[96vw]">
       {singleOverLay && (
-        <AddACourse
-          close={() => {
-            setsingleOverLay(false);
-          }}
-          updatePage={updatePage}
-          termId={termId}
-        />
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-[100] flex justify-center items-center">
+          <AddACourse
+            close={() => {
+              setsingleOverLay(false);
+            }}
+            updatePage={updatePage}
+            termId={termId}
+          />
+        </div>
       )}
 
       {batchOverLay && (
-        <BatchAddCourses
-          close={() => setBatchOverLay(false)}
-          updatePage={() => {}}
-          termId={termId}
-        />
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-[100] flex justify-center items-center">
+          <BatchAddCourses
+            close={() => setBatchOverLay(false)}
+            updatePage={updatePage}
+            termId={termId}
+            termOptions={courseClass.getPath().map((termInfo) => ({
+              value: termInfo.termId,
+              display: `${termInfo.termName} - ${termInfo.termSeason}`,
+            }))}
+          />
+        </div>
+      )}
+
+      {courseToView !== null && (
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-light-green/40 z-[100] flex justify-center items-center">
+          <CourseInfoPage
+            close={() => setCourseToView(null)}
+            allCourses={courseClass}
+            deleteCourse={() => {}} // No-op, not supported in schedule view or maybe it could be?
+            courseId={courseToView}
+            termId={termId}
+          />
+        </div>
       )}
 
       {/* Semester Selector */}
@@ -700,6 +723,9 @@ export default function ClassSchedule() {
                 height={
                   getIthValue(section.endSeconds, true) - getIthValue(section.startSeconds, true)
                 }
+                courseClass={courseClass}
+                termId={termId}
+                openCourseInfo={setCourseToView}
               />
             ) : null,
           )}
@@ -780,30 +806,34 @@ export default function ClassSchedule() {
       </div>
 
       {/* Online Classes */}
-      <div className="mt-15 mb-4 max-w-181 flex flex-col align-middle mx-auto overflow-x-auto bg-white rounded-b-lg scroller relative [box-shadow:2px_4px_54.2px_0px_#608E9436] rounded-t-lg">
-        <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg min-w-132">
-          Online Classes
-        </div>
-        <div className="text-sm sm:text-[1.1rem] gap-0.5 min-w-132 z-20 relative">
-          <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
-            {getVal('course code', checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
-            {getVal('course title', checkBoxes) && (
-              <div className="flex-2 min-w-40">Course Title</div>
-            )}
-            <div className="flex-2 min-w-16">Section Name</div>
-            <div className="flex-2 min-w-16">SectionId</div>
-            <div className="flex-1 min-w-20">Start Date</div>
-            <div className="flex-1 min-w-20">End Date</div>
+      <div className="mt-15 mb-4 max-w-181 mx-auto overflow-x-auto bg-white rounded-lg scroller [box-shadow:2px_4px_54.2px_0px_#608E9436]">
+        <div className="min-w-[34rem] min-w-fit w-full relative flex flex-col pb-2">
+          <div className="bg-dark-green rounded-t-lg text-light-green pl-4 py-0.5 text-lg">
+            Online Classes
           </div>
-          {loadOnlines()}
-        </div>
-        <div className="absolute left-0 right-0 top-10 bottom-2 min-w-132 flex flex-row pr-2 z-2">
-          {getVal('course code', checkBoxes) && <div className="border-r-1 flex-1 min-w-20" />}
-          {getVal('course title', checkBoxes) && <div className="border-r-1 flex-2 min-w-40" />}
-          <div className="border-r-1 flex-2 min-w-16" />
-          <div className="border-r-1 flex-2 min-w-16" />
-          <div className="border-r-1 flex-1 min-w-20" />
-          <div className="flex-1 min-w-20" />
+          <div className="text-sm sm:text-[1.1rem] gap-0.5 z-20 relative">
+            <div className="flex flex-row pl-2 py-2 border-b-1 items-center">
+              <div className="w-8 flex-shrink-0 mr-2" />
+              {getVal('course code', checkBoxes) && <div className="flex-1 min-w-20">Code</div>}
+              {getVal('course title', checkBoxes) && (
+                <div className="flex-2 min-w-40">Course Title</div>
+              )}
+              <div className="flex-2 min-w-16">Section Name</div>
+              <div className="flex-2 min-w-16">SectionId</div>
+              <div className="flex-1 min-w-20">Start Date</div>
+              <div className="flex-1 min-w-20">End Date</div>
+            </div>
+            {loadOnlines()}
+          </div>
+          <div className="absolute left-0 right-0 top-10 bottom-2 flex flex-row pr-2 z-2 pl-2">
+            <div className="border-r-1 w-8 flex-shrink-0 mr-2" />
+            {getVal('course code', checkBoxes) && <div className="border-r-1 flex-1 min-w-20" />}
+            {getVal('course title', checkBoxes) && <div className="border-r-1 flex-2 min-w-40" />}
+            <div className="border-r-1 flex-2 min-w-16" />
+            <div className="border-r-1 flex-2 min-w-16" />
+            <div className="border-r-1 flex-1 min-w-20" />
+            <div className="flex-1 min-w-20" />
+          </div>
         </div>
       </div>
 

@@ -230,7 +230,7 @@ type DayMapInterface = {
 };
 
 export default function ClassSchedule() {
-  // TODO: uwu
+  // TODO:
   //    migrate to the CourseClass feature
   //    add the option to show everything in that semester in one week
   // option to choose from available courses what to display

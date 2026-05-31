@@ -1,6 +1,7 @@
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import Image from 'next/image';
 
-import AuthForm from '@/components/AuthForm-SignUp';
+import AuthForm from '@/components/Auth/AuthForm-SignUp';
 import PublicNavbar from '@/components/PublicNavbar';
 
 export default function Landing() {
@@ -14,7 +15,9 @@ export default function Landing() {
         height={496}
       />
       <PublicNavbar />
-      <AuthForm />
+      <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_CLIENT_ID || ''}>
+        <AuthForm />
+      </GoogleOAuthProvider>
     </section>
   );
 }

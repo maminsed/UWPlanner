@@ -16,7 +16,7 @@ export function useApi() {
   const router = useSafeRouter();
 
   return async (
-    input: RequestInfo,
+    url: RequestInfo,
     init: RequestInit = {},
     check_protection: boolean = true,
   ): Promise<Response> => {
@@ -60,7 +60,7 @@ export function useApi() {
       }
     }
 
-    const res = await fetch(input, {
+    const res = await fetch(url, {
       ...init,
       credentials: 'include',
       headers: {

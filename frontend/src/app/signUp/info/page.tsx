@@ -147,7 +147,7 @@ export default function Info() {
       setOrder(order + 1);
       setMessage(undefined);
     } else {
-      setMessage(response.message || 'error occured');
+      setMessage(response?.message || 'error occured');
     }
   }
 

@@ -6,10 +6,12 @@ import { useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 //Logos
 import { FaGoogle } from 'react-icons/fa';
-import { FaApple } from 'react-icons/fa';
-import { FaGithub } from 'react-icons/fa';
+// import { FaApple } from 'react-icons/fa';
+// import { FaGithub } from 'react-icons/fa';
 import { IoMdEye, IoMdEyeOff } from 'react-icons/io';
 import { z } from 'zod';
+
+import { useLoginWithGoogle } from './AuthForm-utility';
 
 import { useAuth } from '@/app/AuthProvider';
 
@@ -30,6 +32,7 @@ type FormFields = z.infer<typeof schema>;
 
 export default function SignUp() {
   const [visiblePass, setVisiblePass] = useState('password');
+  const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
   const {
     register,
     handleSubmit,
@@ -39,11 +42,20 @@ export default function SignUp() {
   const { setAccess, setExp, setUsername } = useAuth();
   const router = useRouter();
 
+  const isAuthBusy = isSubmitting || isSigningInWithGoogle;
+  const loginWithGoogle = useLoginWithGoogle(router, setError, () => {
+    setIsSigningInWithGoogle(false);
+  });
+
   function reverseVisibility() {
     setVisiblePass(visiblePass == 'password' ? 'text' : 'password');
   }
 
   const onSubmit: SubmitHandler<FormFields> = async (data) => {
+    if (isSigningInWithGoogle) {
+      return;
+    }
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, {
         method: 'POST',
@@ -80,6 +92,7 @@ export default function SignUp() {
         <form className="flex flex-col" onSubmit={handleSubmit(onSubmit)}>
           <input
             {...register('email')}
+            disabled={isSigningInWithGoogle}
             className="border-2 border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all"
             placeholder="Email"
             type="text"
@@ -88,6 +101,7 @@ export default function SignUp() {
           <div className="flex relative mt-2">
             <input
               {...register('password')}
+              disabled={isSigningInWithGoogle}
               className="border-2 border-light-green rounded-xl pl-3 pr-6 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all w-full"
               placeholder="Password"
               type={visiblePass}
@@ -112,6 +126,7 @@ export default function SignUp() {
           <div className="flex relative mb-t mt-2">
             <input
               {...register('verifyPass')}
+              disabled={isSigningInWithGoogle}
               className="border-2 border-light-green rounded-xl pl-3 pr-6 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all w-full"
               placeholder="Password"
               type={visiblePass}
@@ -133,12 +148,17 @@ export default function SignUp() {
           {errors.verifyPass && (
             <span className="text-red-600 text-sm">{errors.verifyPass.message}</span>
           )}
+          {isSigningInWithGoogle && (
+            <span className="text-yellow-100 text-xs text-center">
+              Signing in with Google in Process
+            </span>
+          )}
           <button
-            disabled={isSubmitting}
+            disabled={isAuthBusy}
             type="submit"
             className="mt-16 cursor-pointer rounded-3xl bg-light-green text-dark-green py-2 hover:bg-[#00b03e] hover:text-light-green hover:shadow-[0px_0px_30px_0px_#f0fdfa44] transition-all duration-500 active:bg-green-600"
           >
-            {isSubmitting ? 'Loading...' : 'Sign Up'}
+            {isAuthBusy ? 'Loading...' : 'Sign Up'}
           </button>
           {errors.root && <span className="text-red-600">{errors.root.message}</span>}
         </form>
@@ -147,15 +167,27 @@ export default function SignUp() {
           Already Have an account?
         </Link>
         <div className="flex w-full justify-center gap-5 items-center h-8 mt-2">
-          <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#0F9D58] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
+          <button
+            type="button"
+            disabled={isSubmitting || isSigningInWithGoogle}
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#0F9D58] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green disabled:hover:before:h-0 disabled:hover:text-dark-green"
+            onClick={() => {
+              if (isAuthBusy) {
+                return;
+              }
+
+              setIsSigningInWithGoogle(true);
+              loginWithGoogle();
+            }}
+          >
             <FaGoogle style={{ width: 'auto', height: '100%' }} />
-          </a>
-          <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#666666] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
+          </button>
+          {/* <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#666666] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
             <FaApple style={{ width: 'auto', height: '100%' }} />
           </a>
           <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#6e5494] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
             <FaGithub style={{ width: 'auto', height: '100%' }} />
-          </a>
+          </a> */}
         </div>
       </div>
     </div>

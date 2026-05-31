@@ -2,15 +2,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { FaGoogle } from 'react-icons/fa';
-import { FaApple } from 'react-icons/fa';
-import { FaGithub } from 'react-icons/fa';
+// import { FaApple } from 'react-icons/fa';
+// import { FaGithub } from 'react-icons/fa';
 import { IoMdEye, IoMdEyeOff } from 'react-icons/io';
 import { z } from 'zod';
 
-import { AuthContext } from '@/app/AuthProvider';
+import { useLoginWithGoogle } from './AuthForm-utility';
+
+import { useAuth } from '@/app/AuthProvider';
 
 const schema = z.object({
   email: z.string({ required_error: 'Email is mandatory' }).email(),
@@ -23,20 +25,30 @@ type FormFields = z.infer<typeof schema>;
 
 export default function LogIn() {
   const [visiblePass, setVisiblePass] = useState('password');
+  const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
   const {
     register,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormFields>({ resolver: zodResolver(schema) });
-  const { setAccess, setExp } = useContext(AuthContext);
+  const { setAccess, setExp, setUsername } = useAuth();
   const router = useRouter();
+  const isAuthBusy = isSubmitting || isSigningInWithGoogle;
+
+  const loginWithGoogle = useLoginWithGoogle(router, setError, () => {
+    setIsSigningInWithGoogle(false);
+  });
 
   function reverseVisibility() {
     setVisiblePass(visiblePass == 'password' ? 'text' : 'password');
   }
 
   const onSubmit: SubmitHandler<FormFields> = async (data) => {
+    if (isSigningInWithGoogle) {
+      return;
+    }
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
@@ -56,11 +68,10 @@ export default function LogIn() {
       }
 
       const res = await response.json();
-      const { Access_Token, exp } = res;
-      setAccess(Access_Token);
-      setExp(exp);
-      const { username } = res;
-      console.info(`Welcome Back baby ${username}`); // TODO: ????
+      const { Access_Token, username } = res;
+      setAccess(Access_Token.token);
+      setExp(Access_Token.exp);
+      setUsername(username);
       router.push('/semester');
     } catch (err) {
       setError('root', {
@@ -76,7 +87,8 @@ export default function LogIn() {
         <form className="flex flex-col" onSubmit={handleSubmit(onSubmit)}>
           <input
             {...register('email')}
-            className="border-2 border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all"
+            disabled={isSigningInWithGoogle}
+            className="border-2 disabled:cursor-not-allowed border-light-green rounded-xl pl-3 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all"
             placeholder="Email"
             type="text"
           />
@@ -84,7 +96,8 @@ export default function LogIn() {
           <div className="flex relative mt-2">
             <input
               {...register('password')}
-              className="border-2 border-light-green rounded-xl pl-3 pr-6 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all w-full"
+              disabled={isSigningInWithGoogle}
+              className="border-2 disabled:cursor-not-allowed border-light-green rounded-xl pl-3 pr-6 py-2 text-sm focus:outline-none focus:shadow-[0px_0px_5px_0px_#ECFDF5] transition-all w-full"
               placeholder="Password"
               type={visiblePass}
             />
@@ -106,12 +119,17 @@ export default function LogIn() {
             <span className="text-red-600 text-sm">{errors.password.message}</span>
           )}
           <a className="mr-1.5 cursor-pointer text-xs ml-auto underline mt-2">Forgot Password?</a>
+          {isSigningInWithGoogle && (
+            <span className="text-yellow-100 text-xs text-center">
+              Signing in with Google in Process
+            </span>
+          )}
           <button
-            disabled={isSubmitting}
+            disabled={isAuthBusy}
             type="submit"
-            className="mt-16 cursor-pointer rounded-3xl bg-light-green text-dark-green py-2 hover:bg-[#00b03e] hover:text-light-green hover:shadow-[0px_0px_30px_0px_#f0fdfa44] transition-all duration-500 active:bg-green-600"
+            className="mt-16 cursor-pointer rounded-3xl bg-light-green text-dark-green py-2 disabled:cursor-not-allowed hover:bg-[#00b03e] hover:text-light-green hover:shadow-[0px_0px_30px_0px_#f0fdfa44] transition-all duration-500 active:bg-green-600"
           >
-            {isSubmitting ? 'Loading...' : 'Log In'}
+            {isAuthBusy ? 'Loading...' : 'Log In'}
           </button>
           {errors.root && <span className="text-red-600">{errors.root.message}</span>}
         </form>
@@ -120,15 +138,27 @@ export default function LogIn() {
           Don&apos;t have an account?
         </Link>
         <div className="flex w-full justify-center gap-5 items-center h-8 mt-2">
-          <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#0F9D58] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
+          <button
+            type="button"
+            disabled={isSubmitting || isSigningInWithGoogle}
+            className="cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#0F9D58] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green disabled:hover:before:h-0 disabled:hover:text-dark-green"
+            onClick={() => {
+              if (isAuthBusy) {
+                return;
+              }
+
+              setIsSigningInWithGoogle(true);
+              loginWithGoogle();
+            }}
+          >
             <FaGoogle style={{ width: 'auto', height: '100%' }} />
-          </a>
-          <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#666666] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
+          </button>
+          {/* <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#666666] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
             <FaApple style={{ width: 'auto', height: '100%' }} />
           </a>
           <a className="cursor-pointer bg-light-green text-dark-green p-2 rounded-full aspect-square h-full relative z-9 overflow-hidden transition-all duration-300 before:absolute before:bottom-0 before:left-0 before:h-0 before:w-full before:bg-[#6e5494] before:-z-10 before:shadow-lg before:transition-all before:duration-300 hover:before:h-full hover:text-light-green">
             <FaGithub style={{ width: 'auto', height: '100%' }} />
-          </a>
+          </a> */}
         </div>
       </div>
     </div>

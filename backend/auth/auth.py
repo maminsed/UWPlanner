@@ -2,10 +2,13 @@ import os
 from datetime import datetime, timezone
 
 import jwt
+import requests
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
 from flask import Blueprint, Response, jsonify, make_response, request
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 from jwt.exceptions import ExpiredSignatureError
 
 from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
@@ -163,7 +166,108 @@ def handle_login() -> Response | tuple[str, int]:
         return jsonify({"message": "error in backend", "error": str(e)}), 500
 
 
-def add_tokens(message: str, code: int, user: Users) -> Response:
+@auth_bp.route("/auth_with_google", methods=["POST"])
+def handle_auth_with_google() -> Response:
+    """Authenticate a user with Google OAuth.
+
+    Expects:
+    JSON body with:
+        code : str
+            Google OAuth authorization code from the frontend sign-in flow.
+
+    Returns:
+    The response with the username, redirect destination, and appropriate tokens.
+
+    """
+    data = request.get_json() or {}
+    code = data.get("code")
+    google_client_id = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_ID")
+    google_client_secret = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_SECRET")
+    if not code:
+        return jsonify({"message": "missing google authorization code"}), 400
+    if not google_client_id or not google_client_secret:
+        return jsonify({"message": "google sign in is not configured"}), 500
+
+    try:
+        token_res = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": google_client_id,
+                "client_secret": google_client_secret,
+                "redirect_uri": "postmessage",
+                "grant_type": "authorization_code",
+            },
+            timeout=10,
+        )
+        token_res.raise_for_status()
+
+        tokens = token_res.json()
+        google_id_token = tokens["id_token"]
+
+        user_info = id_token.verify_oauth2_token(
+            google_id_token,
+            google_requests.Request(),
+            google_client_id,
+        )
+
+        email = user_info.get("email")
+        if not email:
+            return jsonify({"message": "google account did not include an email"}), 400
+        if not user_info.get("email_verified"):
+            return jsonify({"message": "google email is not verified"}), 403
+    except requests.exceptions.HTTPError:
+        return jsonify({"message": "invalid google authorization code"}), 401
+    except requests.exceptions.RequestException:
+        return jsonify(
+            {"message": "could not reach google authentication service"}
+        ), 502
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "error in verifying google account"}), 401
+
+    try:
+        user = Users.query.filter_by(email=email).first()
+        payload = {"message": "auth successfull", "redirect": "main"}  # main or info
+        if not user:
+            # getting a username for the user
+            username = codename(separator="_")
+            while Users.query.filter_by(username=username).first() is not None:
+                username = codename(separator="_")
+
+            # creating the user
+            user = Users(
+                email=email,
+                username=username,
+                pass_hash="",
+                login_method=LoginMethod.google,
+                is_verified=True,
+            )
+
+            # adding default seq
+            default_seq = Sequence.query.filter_by(name="default").first()
+            if default_seq:
+                user.sequence = default_seq
+                user.path = default_seq.plan
+
+            # Adding to database
+            db.session.add(user)
+            db.session.commit()
+            payload["redirect"] = "info"
+        elif not user.is_verified:
+            user.is_verified = True
+            db.session.add(user)
+            db.session.commit()
+        if not user.majors:
+            payload["redirect"] = "info"
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "error creating user", "error": str(e)}), 500
+
+    return add_tokens(payload, 202, user)
+
+
+def add_tokens(payload: dict | str, code: int, user: Users) -> Response:
     """Adds Refresh and Access Tokens to response.
 
     Requires:
@@ -188,17 +292,14 @@ def add_tokens(message: str, code: int, user: Users) -> Response:
     )
     db.session.add(refresh_token_instance)
     db.session.commit()
+
     # Generating the responses
-    resp = make_response(
-        jsonify(
-            {
-                "message": message,
-                "username": user.username,
-                "Access_Token": access_token,
-            }
-        ),
-        code,
-    )
+    if isinstance(payload, str):
+        payload = {"message": payload}
+    payload["username"] = user.username
+    payload["Access_Token"] = access_token
+    resp = make_response(jsonify(payload), code)
+
     resp.set_cookie(
         "jwt",
         refresh_token,

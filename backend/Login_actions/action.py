@@ -2,11 +2,22 @@ import json
 from collections import defaultdict
 from typing import Optional
 
-from flask import Blueprint, g, jsonify, make_response, request
+from flask import Blueprint, g, jsonify, make_response
 
 from backend.Auth import verify as verify_jwt
 from backend.Auth.auth import add_tokens
 from backend.Auth.send_mail import send_verification_mail
+from backend.request_schemas import (
+    CourseRequirementsRequest,
+    IncludeCoursesQuery,
+    ProgramsQuery,
+    ProgramUpdateRequest,
+    SequenceUpdateRequest,
+    UpdateTermsRequest,
+    UpdateUserInfoRequest,
+    parse_json_body,
+    parse_query_params,
+)
 from backend.Schema import (
     Course,
     Programs,
@@ -125,7 +136,10 @@ onlyMajorProgramTypes = [
 
 @update_info.route("/programs", methods=["GET"])
 def get_programs():
-    only_majors: bool = request.args.get("only_majors") or False
+    query, error = parse_query_params(ProgramsQuery)
+    if error:
+        return error
+    only_majors = query.only_majors
     user_programs: list[Programs] = (
         Users.query.filter_by(username=g.username).first().programs
     )
@@ -173,11 +187,16 @@ def get_programs():
 
 @update_info.route("/programs", methods=["POST"])
 def update_programs():
-    only_majors: bool = request.args.get("only_majors") or False
-    data = request.get_json()
-    program_ids = data.get("programIds")
+    query, error = parse_query_params(ProgramsQuery)
+    if error:
+        return error
+    payload, error = parse_json_body(ProgramUpdateRequest)
+    if error:
+        return error
+    only_majors = query.only_majors
+    program_ids = payload.program_ids
     user = Users.query.filter_by(username=g.username).first()
-    if not user or not program_ids:
+    if not user:
         return jsonify({"message": "at least have on program_id"}), 400
     msg, status_code = update_programs_in_db(user, program_ids, only_majors)
     return msg, status_code
@@ -255,21 +274,17 @@ def get_sequence():
 
 @update_info.route("/sequences", methods=["POST"])
 def update_sequences() -> tuple[str, int]:
-    required_keys = "coop", "started_term_id"
-    data: dict[str,] = request.get_json()
+    payload, error = parse_json_body(SequenceUpdateRequest)
+    if error:
+        return error
     user: Users = Users.query.filter_by(username=g.username).first()
     if not user:
         return jsonify({"message": "user does not exist"}), 400
-    for k in required_keys:
-        if k not in data or data[k] is None:
-            return jsonify({"message": "fill out all the information first"}), 400
-    if "sequence_id" not in data and "sequence_path" not in data:
-        return jsonify({"message": "fill out all the information first"}), 400
     # updating coop
-    user.coop = data.get("coop")
+    user.coop = payload.coop
     # updating sequence
-    sequence_id = data.get("sequence_id", None)
-    sequence_path = data.get("sequence_path", None)
+    sequence_id = payload.sequence_id
+    sequence_path = payload.sequence_path
     sequence_path = (
         json.dumps(reverse_translate_path(sequence_path))
         if sequence_path is not None
@@ -289,7 +304,7 @@ def update_sequences() -> tuple[str, int]:
         user.path = sequence_path
 
     # updating started_term
-    new_started_term_id = data.get("started_term_id")
+    new_started_term_id = payload.started_term_id
     if user.started_term != new_started_term_id:
         dist = (1 if user.started_term < new_started_term_id else -1) * term_distance(
             user.started_term, new_started_term_id
@@ -319,7 +334,10 @@ def get_all() -> tuple[str, int]:
 
 @update_info.route("/user_seqs", methods=["GET"])
 def get_user_seqs() -> tuple[str, int]:
-    include_courses = request.args.get("include_courses", False) == True
+    query, error = parse_query_params(IncludeCoursesQuery)
+    if error:
+        return error
+    include_courses = query.include_courses
     user: Users = Users.query.filter_by(username=g.username).first()
     path = [{"name": term, "course_ids": []} for term in translate_path(user.path)]
     if include_courses:
@@ -338,12 +356,14 @@ def get_user_seqs() -> tuple[str, int]:
 @update_info.route("/update_user_info", methods=["POST"])
 def update_user_info():
     # TODO: add a failsafe for when they accidently add the wrong email
-    data: dict[str, str] = request.get_json()
+    payload, error = parse_json_body(UpdateUserInfoRequest)
+    if error:
+        return error
     user: Users = Users.query.filter_by(username=g.username).first()
 
-    user.bio = data.get("bio", "")
+    user.bio = payload.bio
     db.session.add(user)
-    new_username = data.get("username", "")
+    new_username = payload.username
     username_updated = False
     if user.username != new_username:
         existing_user = Users.query.filter_by(username=new_username).first()
@@ -354,7 +374,7 @@ def update_user_info():
         username_updated = True
         db.session.add(user)
 
-    new_email = data.get("email", "")
+    new_email = payload.email
     if user.email != new_email:
         existing_user = Users.query.filter_by(email=new_email).first()
         if existing_user:
@@ -618,8 +638,10 @@ def update_all() -> tuple[str, int]:
 
 @update_info.route("/get_course_reqs", methods=["POST"])
 def get_course_reqs() -> tuple[str, int]:
-    data = request.get_json()
-    course_codes: list[int] = data.get("course_codes") or []
+    payload, error = parse_json_body(CourseRequirementsRequest)
+    if error:
+        return error
+    course_codes = payload.course_codes
     print(course_codes)
     db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
     res = {}
@@ -643,10 +665,13 @@ def get_degree_info() -> tuple[str, int]:
 
 @update_info.route("/get_user_seq", methods=["GET"])
 def get_user_seq() -> tuple[str, int]:
-    include_courses: bool = request.args.get("include_courses") or False
+    query, error = parse_query_params(IncludeCoursesQuery)
+    if error:
+        return error
+    include_courses = query.include_courses
     user = Users.query.filter_by(username=g.username).first()
     path = translate_path(user.path)
-    if include_courses == "true":
+    if include_courses:
         term_ids = translate_to_id(user.path, user.started_term)
         semesters = user.semesters
         for index, term in enumerate(term_ids):
@@ -672,10 +697,11 @@ def get_user_seq() -> tuple[str, int]:
 @update_info.route("/update_terms", methods=["POST"])
 def update_terms():
     """Endpoint to swap courses between two terms/semesters."""
-    # Get the term IDs from the request
-    data = request.get_json()
-    termId1: int = data.get("termId1")
-    termId2: int = data.get("termId2")
+    payload, error = parse_json_body(UpdateTermsRequest)
+    if error:
+        return error
+    termId1 = payload.term_id_1
+    termId2 = payload.term_id_2
 
     # Fetch the user from the database
     user = Users.query.filter_by(username=g.username).first()

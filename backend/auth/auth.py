@@ -11,6 +11,14 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from jwt.exceptions import ExpiredSignatureError
 
+from ..request_schemas import (
+    ConfirmVerificationRequest,
+    GoogleAuthRequest,
+    LoginRequest,
+    RefreshVerificationRequest,
+    SignupRequest,
+    parse_json_body,
+)
 from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
 from .jwt import clean_up_jwt, encode
 from .send_mail import send_delete_account_mail, send_verification_mail
@@ -90,12 +98,11 @@ def add_user() -> Response:
     The response
 
     """
-    # getting the data
-    data = request.get_json() or {}
-    email = data.get("email")
-    password = data.get("password")
-    if not email or not password:
-        return jsonify({"message": "missing email or password"}), 400
+    payload, error = parse_json_body(SignupRequest)
+    if error:
+        return error
+    email = payload.email
+    password = payload.password
 
     # check for duplicates
     res = Users.query.filter_by(email=email).first()
@@ -142,12 +149,12 @@ def handle_login() -> Response | tuple[str, int]:
         The response with the username and appropriate tokens.
 
     """
-    data = request.get_json() or {}
-    username = data.get("username")
-    password = data.get("password")
-    email = data.get("email")
-    if not password or (not username and not email):
-        return jsonify({"message": "missing required fields"}), 400
+    payload, error = parse_json_body(LoginRequest)
+    if error:
+        return error
+    username = payload.username
+    password = payload.password
+    email = payload.email
 
     if email:
         user: Users = Users.query.filter_by(email=email).first()
@@ -181,12 +188,12 @@ def handle_auth_with_google() -> Response:
     The response with the username, redirect destination, and appropriate tokens.
 
     """
-    data = request.get_json() or {}
-    code = data.get("code")
+    payload, error = parse_json_body(GoogleAuthRequest)
+    if error:
+        return error
+    code = payload.code
     google_client_id = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_ID")
     google_client_secret = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_SECRET")
-    if not code:
-        return jsonify({"message": "missing google authorization code"}), 400
     if not google_client_id or not google_client_secret:
         return jsonify({"message": "google sign in is not configured"}), 500
 
@@ -325,11 +332,11 @@ def refresh_ver_code() -> tuple[str, int]:
 
     """
     # Getting data and making sure it's valid
-    data = request.get_json()
-    email = data.get("email")
-    username = data.get("username")
-    if not email and not username:
-        return jsonify({"message": "username or email not provided"}), 400
+    payload, error = parse_json_body(RefreshVerificationRequest)
+    if error:
+        return error
+    email = payload.email
+    username = payload.username
     if email:
         user = Users.query.filter_by(email=email).first()
     else:
@@ -360,11 +367,11 @@ def confirm_ver_code() -> tuple[str, int]:
 
     """
     # Getting data and making sure it's valid
-    data = request.get_json()
-    username = data.get("username")
-    code = data.get("code")
-    if not username or not code:
-        return jsonify({"message": "email or code not provided"}), 400
+    payload, error = parse_json_body(ConfirmVerificationRequest)
+    if error:
+        return error
+    username = payload.username
+    code = payload.code
 
     user = Users.query.filter_by(username=username).first()
     if not user:

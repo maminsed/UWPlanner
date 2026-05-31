@@ -1,8 +1,9 @@
 from typing import Optional
 
-from flask import Blueprint, g, jsonify, make_response, request
+from flask import Blueprint, g, jsonify, make_response
 
 from ..Auth import verify as verify_jwt
+from ..request_schemas import TestRequest, parse_json_body
 
 test_bp = Blueprint("test", __name__)
 
@@ -23,9 +24,10 @@ def test() -> tuple[str, int]:
         - If users Body include error sends back error, else returns the username.
 
     """
-    data = request.get_json()
-    error = data.get("error") or ""
-    if error == "True":
+    payload, error = parse_json_body(TestRequest)
+    if error:
+        return error
+    if payload.error == "True":
         return {"message": "You asked for an error buddy"}, 402
 
     return jsonify({"message": f"HI {g.username} Stop obesity"}), 200

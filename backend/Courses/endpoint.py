@@ -5,9 +5,16 @@ import bleach
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify
 
 from backend.Auth import verify as verify_jwt
+from backend.request_schemas import (
+    AddBatchRequest,
+    AddSingleRequest,
+    DeleteCourseRequest,
+    TermRequest,
+    parse_json_body,
+)
 from backend.utils.path import term_distance, translate_path
 
 from ..Schema import Semester, Users, db
@@ -45,13 +52,10 @@ def populate_courses():
 @courses_bp.route("/get_user_sections", methods=["POST"])
 def get_user_sections():
     """Endpoint to retrieve the sections a user is enrolled in for a specific term."""
-    # Parse the incoming JSON request
-    data = request.get_json()
-    term_id = data.get("term_id")
-
-    # Validate the input data
-    if not term_id:
-        return jsonify({"message": "term_id not specified"}), 400
+    payload, error = parse_json_body(TermRequest)
+    if error:
+        return error
+    term_id = payload.term_id
 
     # Retrieve the user from the database
     user: Users = Users.query.filter_by(username=g.username).first()
@@ -86,10 +90,10 @@ def get_user_sections():
 
 @courses_bp.route("/delete_single", methods=["POST"])
 def delete_course():
-    # Parse the incoming JSON request
-    data: dict[str,] = request.get_json()
-    courses = data.get("courses")
-    current_term = data.get("current_term")
+    payload, error = parse_json_body(DeleteCourseRequest)
+    if error:
+        return error
+    current_term = payload.current_term
 
     # GraphQL query to fetch course section details
     GQL_QUERY = """
@@ -104,10 +108,10 @@ def delete_course():
     }
     """
     courseDict = {}
-    for course in courses:
-        if course["termId"] not in courseDict:
-            courseDict[course["termId"]] = []
-        courseDict[course["termId"]].append(course["courseId"])
+    for course in payload.courses:
+        if course.term_id not in courseDict:
+            courseDict[course.term_id] = []
+        courseDict[course.term_id].append(course.course_id)
     try:
         # Retrieve the user from the database
         user: Users = Users.query.filter_by(username=g.username).first()
@@ -164,31 +168,26 @@ def delete_course():
 
 @courses_bp.route("/add_single", methods=["POST"])
 def add_section_to_user():
-    data = request.get_json()
-    term_id = data.get("term_id")
-    courses: dict = data.get("courses", dict())
-    # course_id = data.get("course_id")
-    # class_numbers = data.get("class_numbers") or []
+    payload, error = parse_json_body(AddSingleRequest)
+    if error:
+        return error
+    term_id = payload.term_id
+    courses = payload.courses
     user = Users.query.filter_by(username=g.username).first()
-    if (
-        not user
-        or not term_id
-        or not courses
-        or not ("course_ids" in courses or "sections" in courses)
-    ):
+    if not user:
         return jsonify({"message": "please provide all fields"}), 400
-    if "course_ids" in courses:
-        course_ids = courses["course_ids"]
+    if courses.course_ids is not None:
+        course_ids = courses.course_ids
         for course_id in course_ids:
             enrol_user_in_section(user, [], term_id, course_id)
         return "", 200
-    else:
-        return enrol_user_in_section(
-            user,
-            courses["sections"]["class_numbers"],
-            term_id,
-            courses["sections"]["course_id"],
-        )
+    sections = courses.sections
+    return enrol_user_in_section(
+        user,
+        sections.class_numbers,
+        term_id,
+        sections.course_id,
+    )
 
 
 def enrol_user_in_section(
@@ -272,14 +271,15 @@ def get_int(value: str) -> int:
 
 @courses_bp.route("/add_batch", methods=["POST"])
 def add_batch():
-    # Parse the incoming JSON request
-    data = request.get_json()
-    term_id: int = data.get("term_id")
-    html: str = data.get("html")
+    payload, error = parse_json_body(AddBatchRequest)
+    if error:
+        return error
+    term_id = payload.term_id
+    html = payload.html
     user = Users.query.filter_by(username=g.username).first()
 
     # Validate the input data
-    if not html or not term_id or not user:
+    if not user:
         return jsonify(
             {
                 "message": "We couldn't parse your information. If it persists please contact someone"

@@ -1,10 +1,39 @@
+import os
 import secrets
+import smtplib
 from datetime import datetime, timedelta, timezone
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-from ..Google_api.gmail_api import gmail_send_message
 from ..Schema import Users, db
 
 APP_NAME = "UWPlanner"
+
+
+def send_SMTP_mail(to: str, subject: str, body: str):
+    smtp_host = os.getenv("SMTP_SERVER") or ""
+    smtp_port = int(os.getenv("SMTP_PORT") or "587")
+    login = os.getenv("SMTP_LOGIN")
+    password = os.getenv("SMTP_PASSWORD")
+    from_addr = os.getenv("VERIFICATION_EMAIL")
+
+    if not login or not password:
+        raise Exception("Brevo SMTP credentials are not set.")
+
+    msg = MIMEMultipart()
+    msg["From"] = from_addr
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(login, password)
+            server.sendmail(from_addr, to, msg.as_string())
+    except Exception as e:
+        print(f"[email] Delivery failed to {to}: {e}")
+        raise Exception(f"Failed to send email to {to}") from e
 
 
 def send_verification_mail(
@@ -55,11 +84,7 @@ This is an automated message from {APP_NAME}. Please do not reply to this email.
 """
 
     try:
-        gmail_send_message(
-            to=user.email,
-            body=body,
-            subject=f"Your {APP_NAME} verification code",
-        )
+        send_SMTP_mail(user.email, f"Your {APP_NAME} verification code", body)
     except Exception as e:
         print("ERROR OCCURRED WHILE SENDING VERIFICATION EMAIL")
         print(e)
@@ -85,11 +110,7 @@ This is an automated message from {APP_NAME}. Please do not reply to this email.
 """
 
     try:
-        gmail_send_message(
-            to=email,
-            body=body,
-            subject=f"Your {APP_NAME} account has been deleted",
-        )
+        send_SMTP_mail(email, f"Your {APP_NAME} account has been deleted", body)
     except Exception as e:
         print("ERROR OCCURRED WHILE SENDING ACCOUNT DELETION EMAIL")
         print(e)

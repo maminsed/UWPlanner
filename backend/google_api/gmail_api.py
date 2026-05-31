@@ -79,7 +79,3 @@ def gmail_send_message(to: str, body: str, subject: str) -> Optional[dict]:
         print("Error Occured")
         print(e)
     send_message = None
-
-
-if __name__ == "__main__":
-    gmail_send_message()

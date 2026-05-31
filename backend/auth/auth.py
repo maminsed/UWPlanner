@@ -150,18 +150,20 @@ def handle_login() -> Response | tuple[str, int]:
         return jsonify({"message": "missing required fields"}), 400
 
     if email:
-        user = Users.query.filter_by(email=email).first()
+        user: Users = Users.query.filter_by(email=email).first()
     elif username:
-        user = Users.query.filter_by(username=username).first()
+        user: Users = Users.query.filter_by(username=username).first()
 
     if not user:
         return jsonify({"message": "user not found"}), 401
+    if user.login_method != LoginMethod.email:
+        return jsonify({"message": "user does not exist or incorrect password"}), 401
     try:
         if ph.verify(user.pass_hash, password):
             # Adding the tokens
             return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
-        return jsonify({"message": "wrong password"}), 401
+        return jsonify({"message": "user does not exist or incorrect password"}), 401
     except Exception as e:
         return jsonify({"message": "error in backend", "error": str(e)}), 500
 
@@ -236,7 +238,7 @@ def handle_auth_with_google() -> Response:
                 username = codename(separator="_")
 
             # creating the user
-            user = Users(
+            user: Users = Users(
                 email=email,
                 username=username,
                 pass_hash="",
@@ -258,7 +260,7 @@ def handle_auth_with_google() -> Response:
             user.is_verified = True
             db.session.add(user)
             db.session.commit()
-        if not user.majors:
+        if not user.programs:
             payload["redirect"] = "info"
     except Exception as e:
         db.session.rollback()
@@ -303,11 +305,11 @@ def add_tokens(payload: dict | str, code: int, user: Users) -> Response:
     resp.set_cookie(
         "jwt",
         refresh_token,
-        max_age=24 * 60 * 60 * 1000,
+        max_age=7 * 24 * 60 * 60,
         httponly=True,
         secure=True,
         samesite="None",
-    )  # TODO set: , secure=True, samesite=None
+    )
     return resp
 
 
@@ -471,18 +473,14 @@ def log_out() -> Response:
             resp = make_response(
                 jsonify({"message": "refresh token not in database"}), 200
             )
-            resp.delete_cookie(
-                "jwt", httponly=True, secure=True, samesite="None"
-            )  # TODO set: , secure=True, samesite=None
+            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
 
             return resp
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
-        resp.delete_cookie(
-            "jwt", httponly=True, secure=True, samesite="None"
-        )  # TODO set: , secure=True, samesite=None
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
         return resp
     except Exception as e:
         return make_response(

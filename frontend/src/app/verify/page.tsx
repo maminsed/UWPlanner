@@ -133,9 +133,10 @@ export default function Verify() {
         <h3 className="text-3xl font-bold leading-[98%] mb-2">
           Two-Factor <br /> Verification
         </h3>
-        <p className="mb-8 text-center">
+        <p className="text-center">
           Enter the code sent to the email: <br /> <span>{email}</span>
         </p>
+        <p className="mb-8 text-center text-xs">Please check your spam account.</p>
         <form className="flex flex-col items-center" onSubmit={handleSubmit(onSubmit)}>
           <div className="relative">
             <div className="flex gap-2 justify-center">

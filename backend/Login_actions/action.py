@@ -2,11 +2,11 @@ import json
 from collections import defaultdict
 from typing import Optional
 
-from flask import Blueprint, g, jsonify, make_response
+from flask import Blueprint, current_app, g, jsonify, make_response
 
 from backend.Auth import verify as verify_jwt
 from backend.Auth.auth import add_tokens
-from backend.Auth.send_mail import send_verification_mail
+from backend.Auth.send_mail import EmailDeliveryError, send_verification_mail
 from backend.request_schemas import (
     CourseRequirementsRequest,
     IncludeCoursesQuery,
@@ -197,15 +197,28 @@ def update_programs():
     program_ids = payload.program_ids
     user = Users.query.filter_by(username=g.username).first()
     if not user:
-        return jsonify({"message": "at least have on program_id"}), 400
+        return jsonify({"message": "user does not exist"}), 400
+    if only_majors and not program_ids:
+        return jsonify({"message": "Please select at least one major"}), 400
     msg, status_code = update_programs_in_db(user, program_ids, only_majors)
     return msg, status_code
 
 
 def update_programs_in_db(user: Users, program_ids: list[int], only_majors: bool):
+    if not only_majors and not program_ids:
+        programs = [p for p in user.programs if p.programType in onlyMajorProgramTypes]
+        if not programs:
+            return jsonify({"message": "Please keep at least one major selected"}), 400
+        user.programs = programs
+        db.session.add(user)
+        db.session.commit()
+        return "", 204
+
     programs = Programs.query.filter(Programs.id.in_(program_ids)).all()
     if len(programs) != len(program_ids):
-        return jsonify({"message": "There might be a duplicate in programs"}), 404
+        return jsonify({"message": "One or more programs do not exist"}), 404
+    if not any(p.programType in onlyMajorProgramTypes for p in programs):
+        return jsonify({"message": "Please select at least one major"}), 400
     if only_majors:
         programs += [
             p for p in user.programs if p.programType not in onlyMajorProgramTypes
@@ -247,6 +260,8 @@ def get_sequence():
                     }
                 )
         default = Sequence.query.filter_by(name="Default").first()
+        if not default:
+            return jsonify({"message": "Default sequence is not configured"}), 500
         res[default.legend]["default"].append(
             {
                 "id": default.id,
@@ -339,11 +354,17 @@ def get_user_seqs() -> tuple[str, int]:
         return error
     include_courses = query.include_courses
     user: Users = Users.query.filter_by(username=g.username).first()
+    if not user.sequence or not user.path:
+        return jsonify({"message": "User sequence is not configured"}), 409
     path = [{"name": term, "course_ids": []} for term in translate_path(user.path)]
     if include_courses:
-        user_semesters = {sem.id: json.loads(sem.courses) for sem in user.semesters}
+        user_semesters = {
+            sem.term_id: json.loads(sem.courses) for sem in user.semesters
+        }
         for i in range(len(path)):
-            path[i]["course_ids"] = user_semesters.get(user.started_term + i, [])
+            path[i]["course_ids"] = user_semesters.get(
+                term_operation(user.started_term, i), []
+            )
     return {
         "coop": user.coop,
         "sequence_name": user.sequence.name,
@@ -382,9 +403,17 @@ def update_user_info():
             return jsonify({"message": "user with this email already exists"}), 403
         user.email = new_email
         user.is_verified = False
+        user.verification_code = 0
+        user.verification_expiration = None
         db.session.add(user)
         db.session.commit()
-        send_verification_mail(user)
+        try:
+            send_verification_mail(user)
+        except EmailDeliveryError:
+            current_app.logger.exception(
+                "Failed to send verification email after email update"
+            )
+            return jsonify({"message": "could not send verification email"}), 502
     db.session.add(user)
     db.session.commit()
     if username_updated:
@@ -643,16 +672,17 @@ def get_course_reqs() -> tuple[str, int]:
         return error
     course_codes = payload.course_codes
     print(course_codes)
-    db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
     res = {}
-    for course in db_courses:
-        url = course.url or ""
-        try:
-            courseInfo = json.loads(course.courseInfo) if course.courseInfo else {}
-        except:
-            print("error in loading courseInfo")
-            courseInfo = {}
-        res[course.code] = {"url": url, "courseInfo": courseInfo}
+    if course_codes:
+        db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
+        for course in db_courses:
+            url = course.url or ""
+            try:
+                courseInfo = json.loads(course.courseInfo) if course.courseInfo else {}
+            except:
+                print("error in loading courseInfo")
+                courseInfo = {}
+            res[course.code] = {"url": url, "courseInfo": courseInfo}
     return jsonify({"courses": res}), 200
 
 

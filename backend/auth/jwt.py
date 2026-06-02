@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Literal, Optional
+from typing import Literal, Optional, TypedDict
 
 import jwt
 from dotenv import load_dotenv
@@ -11,8 +11,27 @@ from ..Schema import Users, db
 
 load_dotenv()
 
+ACCESS_TOKEN_SECONDS = 30 * 60
+REFRESH_TOKEN_SECONDS = 7 * 24 * 60 * 60
 
-def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
+
+class AccessTokenPayload(TypedDict):
+    """JSON payload returned to the frontend for access tokens."""
+
+    token: str
+    exp: str
+
+
+def _token_secret(token_type: Literal["ACCESS", "REFRESH"]) -> str:
+    key = os.getenv(f"{token_type}_TOKEN_SECRET")
+    if not key:
+        raise RuntimeError(f"{token_type}_TOKEN_SECRET is not configured")
+    return key
+
+
+def encode(
+    username: str, kind: Literal["ACCESS", "REFRESH"]
+) -> str | AccessTokenPayload:
     """Generate (encode and sign) a JWT.
 
     Requires:
@@ -26,17 +45,16 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
 
     """
     # Checking which token they need, and setting expiration time
-    key = os.getenv(f"{type.upper()}_TOKEN_SECRET")
-    if type.upper() == "ACCESS":
-        expires_in = 30 * 60
-    else:
-        expires_in = 7 * 24 * 60 * 60
+    kind = kind.upper()
+    key = _token_secret(kind)
+    expires_in = ACCESS_TOKEN_SECONDS if kind == "ACCESS" else REFRESH_TOKEN_SECONDS
+    expires_at = datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
     # creating and sending token
-    if type == "REFRESH":
+    if kind == "REFRESH":
         return jwt.encode(
             {
                 "username": username,
-                "exp": datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in),
+                "exp": expires_at,
             },
             key,
             algorithm="HS256",
@@ -46,12 +64,12 @@ def encode(username: str, type: Literal["ACCESS", "REFRESH"]) -> str:
         "token": jwt.encode(
             {
                 "username": username,
-                "exp": datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in),
+                "exp": expires_at,
             },
             key,
             algorithm="HS256",
         ),
-        "exp": datetime.now(tz=timezone.utc),
+        "exp": expires_at.isoformat(),
     }
 
 
@@ -66,34 +84,34 @@ def verify() -> Optional[Response]:
 
     """
     if request.method == "OPTIONS":
-        resp = make_response("", 204)
-        origin = request.headers.get("Origin")
-        resp.headers.update(
-            {
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-                "Access-Control-Allow-Headers": "Authorization,Content-Type",
-                "Access-Control-Allow-Credentials": "true",
-            }
-        )
-        return resp
+        return None
     # Getting the data
     req = request.headers.get("Authorization")
     if not req:
         return jsonify(
             {"message": "missing required field: authorization", "action": "logout"}
         ), 401
-    auth_header = req.split(" ")[1]
+    auth_header_parts = req.split()
+    if len(auth_header_parts) != 2 or auth_header_parts[0].lower() != "bearer":
+        return jsonify(
+            {"message": "invalid authorization header", "action": "logout"}
+        ), 401
+    auth_header = auth_header_parts[1]
     try:
         # Checking if it's valid, and adding to g
         res = jwt.decode(
             auth_header,
-            os.getenv("ACCESS_TOKEN_SECRET"),
-            algorithms="HS256",
-            options={"require": ["exp", "username"], "verify_exp": "verify_signature"},
+            _token_secret("ACCESS"),
+            algorithms=["HS256"],
+            options={"require": ["exp", "username"], "verify_exp": True},
         )
         g.username = res["username"]
         user = Users.query.filter_by(username=res["username"]).first()
+        if not user:
+            return make_response(
+                jsonify({"message": "invalid authorization token", "action": "logout"}),
+                403,
+            )
         if not user.is_verified:
             return make_response(
                 jsonify({"message": "user not verified", "action": "verify_code"}), 403
@@ -105,13 +123,12 @@ def verify() -> Optional[Response]:
         return make_response(
             jsonify({"message": "access token has timed out", "action": "logout"}), 403
         )
-    except Exception as e:
+    except Exception:
         # In case of tampering
         return make_response(
             jsonify(
                 {
                     "message": "auth_header was tampered with",
-                    "error": str(e),
                     "action": "logout",
                 }
             ),
@@ -137,16 +154,14 @@ def clean_up_jwt(username: str) -> None:
         try:
             jwt.decode(
                 rt.refresh_token_string,
-                os.getenv("REFRESH_TOKEN_SECRET"),
-                algorithms="HS256",
+                _token_secret("REFRESH"),
+                algorithms=["HS256"],
                 options={
                     "require": ["exp", "username"],
-                    "verify_exp": "verify_signature",
+                    "verify_exp": True,
                 },
             )
         except ExpiredSignatureError:
             db.session.delete(rt)
-        except Exception as err:
-            raise RuntimeError(
-                f"token with {rt.id} has been tampered with in the database."
-            ) from err
+        except Exception:
+            db.session.delete(rt)

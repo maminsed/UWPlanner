@@ -17,7 +17,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       if (isExpired(exp)) {
         try {
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
-            method: 'GET',
+            method: 'POST',
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',

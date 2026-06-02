@@ -51,8 +51,9 @@ export default function BatchAddCourses({
     const text = e.clipboardData.getData('text/plain');
     setText(text);
     if (!html) {
-      setMessage('We cannot parse your input. If it persists please Contact someone. ');
+      setMessage('We cannot parse your input. Please try copying the schedule table again.');
       setStatus('error');
+      return;
     }
     try {
       const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/courses/add_batch`, {

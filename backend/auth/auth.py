@@ -6,11 +6,12 @@ import requests
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
-from flask import Blueprint, Response, jsonify, make_response, request
+from flask import Blueprint, Response, current_app, g, jsonify, make_response, request
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from jwt.exceptions import ExpiredSignatureError
 
+from ..rate_limit import client_ip, enforce_rate_limits, normalized_json_value
 from ..request_schemas import (
     ConfirmVerificationRequest,
     GoogleAuthRequest,
@@ -20,11 +21,30 @@ from ..request_schemas import (
     parse_json_body,
 )
 from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
+from ..security import require_trusted_origin
 from .jwt import clean_up_jwt, encode
-from .send_mail import send_delete_account_mail, send_verification_mail
+from .jwt import verify as verify_access_token
+from .send_mail import (
+    EmailDeliveryError,
+    send_delete_account_mail,
+    send_verification_mail,
+)
 
 auth_bp = Blueprint("auth", __name__)
 ph = PasswordHasher()
+
+
+class DefaultSequenceMissingError(RuntimeError):
+    """Raised when required seed data is missing."""
+
+
+def assign_default_sequence(user: Users) -> None:
+    """Attach the required Default sequence to a new user."""
+    default_seq = Sequence.query.filter_by(name="Default").first()
+    if not default_seq:
+        raise DefaultSequenceMissingError("Default sequence is not configured")
+    user.sequence = default_seq
+    user.path = default_seq.plan
 
 
 @auth_bp.route("/delete_user", methods=["DELETE"])
@@ -39,6 +59,14 @@ def delete_account() -> Response:
         - Removes the user and all associated data from the database
 
     """
+    origin_error = require_trusted_origin()
+    if origin_error:
+        return origin_error
+
+    auth_error = verify_access_token()
+    if auth_error:
+        return auth_error
+
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
         return make_response(jsonify({"message": "Not authenticated"}), 401)
@@ -51,6 +79,8 @@ def delete_account() -> Response:
             return resp
 
         user = jwt_db.user
+        if user.username != g.username:
+            return make_response(jsonify({"message": "Invalid token"}), 403)
 
         # Clean up JWTs
         clean_up_jwt(user.username)
@@ -76,11 +106,10 @@ def delete_account() -> Response:
         resp = make_response(jsonify({"message": "User deleted successfully"}), 200)
         resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
         return resp
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        return make_response(
-            jsonify({"message": "error in backend", "error": str(e)}), 500
-        )
+        current_app.logger.exception("Failed to delete user")
+        return make_response(jsonify({"message": "error in backend"}), 500)
 
 
 @auth_bp.route("/signup", methods=["POST"])
@@ -98,6 +127,13 @@ def add_user() -> Response:
     The response
 
     """
+    rate_limit_error = enforce_rate_limits(
+        ("signup.ip.hour", 5, 60 * 60, client_ip),
+        ("signup.email.hour", 5, 60 * 60, lambda: normalized_json_value("email")),
+    )
+    if rate_limit_error:
+        return rate_limit_error
+
     payload, error = parse_json_body(SignupRequest)
     if error:
         return error
@@ -121,20 +157,28 @@ def add_user() -> Response:
             pass_hash=hashpass,
             login_method=LoginMethod.email,
         )
-        # adding default seq
-        default_seq = Sequence.query.filter_by(name="default").first()
-        if default_seq:
-            user.sequence = default_seq
-            user.path = default_seq.plan
+        assign_default_sequence(user)
 
         # Adding to database
         db.session.add(user)
         db.session.commit()
-        send_verification_mail(user)
+        try:
+            send_verification_mail(user)
+        except EmailDeliveryError:
+            db.session.delete(user)
+            db.session.commit()
+            current_app.logger.exception("Failed to send signup verification email")
+            return jsonify({"message": "could not send verification email"}), 502
         # Adding the tokens
         return add_tokens("user created", 201, user)
-    except Exception as e:
-        return jsonify({"message": "error in backend", "error": str(e)}), 500
+    except DefaultSequenceMissingError:
+        db.session.rollback()
+        current_app.logger.exception("Default sequence is missing")
+        return jsonify({"message": "Default sequence is not configured"}), 500
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to create user")
+        return jsonify({"message": "error in backend"}), 500
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -149,6 +193,24 @@ def handle_login() -> Response | tuple[str, int]:
         The response with the username and appropriate tokens.
 
     """
+    rate_limit_error = enforce_rate_limits(
+        ("login.ip.minute", 5, 60, client_ip),
+        (
+            "login.email.minute",
+            5,
+            60,
+            lambda: normalized_json_value("email", "username"),
+        ),
+        (
+            "login.email.hour",
+            20,
+            60 * 60,
+            lambda: normalized_json_value("email", "username"),
+        ),
+    )
+    if rate_limit_error:
+        return rate_limit_error
+
     payload, error = parse_json_body(LoginRequest)
     if error:
         return error
@@ -164,15 +226,18 @@ def handle_login() -> Response | tuple[str, int]:
     if not user:
         return jsonify({"message": "user not found"}), 401
     if user.login_method != LoginMethod.email:
-        return jsonify({"message": "user does not exist or incorrect password"}), 401
+        return jsonify(
+            {"message": "Use an alternate sign-in method for this account"}
+        ), 401
     try:
         if ph.verify(user.pass_hash, password):
             # Adding the tokens
             return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
         return jsonify({"message": "user does not exist or incorrect password"}), 401
-    except Exception as e:
-        return jsonify({"message": "error in backend", "error": str(e)}), 500
+    except Exception:
+        current_app.logger.exception("Login failed unexpectedly")
+        return jsonify({"message": "error in backend"}), 500
 
 
 @auth_bp.route("/auth_with_google", methods=["POST"])
@@ -188,6 +253,13 @@ def handle_auth_with_google() -> Response:
     The response with the username, redirect destination, and appropriate tokens.
 
     """
+    rate_limit_error = enforce_rate_limits(
+        ("google_auth.ip.minute", 10, 60, client_ip),
+        ("google_auth.ip.hour", 60, 60 * 60, client_ip),
+    )
+    if rate_limit_error:
+        return rate_limit_error
+
     payload, error = parse_json_body(GoogleAuthRequest)
     if error:
         return error
@@ -231,8 +303,8 @@ def handle_auth_with_google() -> Response:
         return jsonify(
             {"message": "could not reach google authentication service"}
         ), 502
-    except Exception as e:
-        print(e)
+    except Exception:
+        current_app.logger.exception("Error verifying Google account")
         return jsonify({"message": "error in verifying google account"}), 401
 
     try:
@@ -253,11 +325,7 @@ def handle_auth_with_google() -> Response:
                 is_verified=True,
             )
 
-            # adding default seq
-            default_seq = Sequence.query.filter_by(name="default").first()
-            if default_seq:
-                user.sequence = default_seq
-                user.path = default_seq.plan
+            assign_default_sequence(user)
 
             # Adding to database
             db.session.add(user)
@@ -269,9 +337,14 @@ def handle_auth_with_google() -> Response:
             db.session.commit()
         if not user.programs:
             payload["redirect"] = "info"
-    except Exception as e:
+    except DefaultSequenceMissingError:
         db.session.rollback()
-        return jsonify({"message": "error creating user", "error": str(e)}), 500
+        current_app.logger.exception("Default sequence is missing")
+        return jsonify({"message": "Default sequence is not configured"}), 500
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to create Google-authenticated user")
+        return jsonify({"message": "error creating user"}), 500
 
     return add_tokens(payload, 202, user)
 
@@ -331,6 +404,18 @@ def refresh_ver_code() -> tuple[str, int]:
         The Response. Also adds it to database.
 
     """
+    rate_limit_error = enforce_rate_limits(
+        ("refresh_veri.ip.ten_minutes", 6, 10 * 60, client_ip),
+        (
+            "refresh_veri.account.ten_minutes",
+            3,
+            10 * 60,
+            lambda: normalized_json_value("email", "username"),
+        ),
+    )
+    if rate_limit_error:
+        return rate_limit_error
+
     # Getting data and making sure it's valid
     payload, error = parse_json_body(RefreshVerificationRequest)
     if error:
@@ -351,8 +436,14 @@ def refresh_ver_code() -> tuple[str, int]:
         return jsonify({"message": "user already verified", "action": "main_page"}), 403
 
     # sending the code
-    send_verification_mail(user)
-    return jsonify({"message": "email sent", "email": user.email}), 200
+    try:
+        sent = send_verification_mail(user)
+    except EmailDeliveryError:
+        current_app.logger.exception("Failed to send verification email")
+        return jsonify({"message": "could not send verification email"}), 502
+
+    message = "email sent" if sent else "verification email already sent recently"
+    return jsonify({"message": message, "email": user.email}), 200
 
 
 @auth_bp.route("/confirm_veri", methods=["POST"])
@@ -366,6 +457,18 @@ def confirm_ver_code() -> tuple[str, int]:
         The Response.
 
     """
+    rate_limit_error = enforce_rate_limits(
+        ("confirm_veri.ip.ten_minutes", 15, 10 * 60, client_ip),
+        (
+            "confirm_veri.account.ten_minutes",
+            10,
+            10 * 60,
+            lambda: normalized_json_value("username"),
+        ),
+    )
+    if rate_limit_error:
+        return rate_limit_error
+
     # Getting data and making sure it's valid
     payload, error = parse_json_body(ConfirmVerificationRequest)
     if error:
@@ -406,7 +509,7 @@ def confirm_ver_code() -> tuple[str, int]:
     return jsonify({"message": "successfull"}), 200
 
 
-@auth_bp.route("/refresh", methods=["GET"])
+@auth_bp.route("/refresh", methods=["POST"])
 def refresh_token_handle() -> tuple[str, int]:
     """Returns the new Access_Token in case of success or error in case of error.
 
@@ -418,6 +521,10 @@ def refresh_token_handle() -> tuple[str, int]:
         - Error code in case of Error or wrong request
 
     """
+    origin_error = require_trusted_origin()
+    if origin_error:
+        return origin_error
+
     # Getting the refresh token from user.
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
@@ -428,15 +535,19 @@ def refresh_token_handle() -> tuple[str, int]:
     # getting the username based on the refresh token on database
     jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
     if not jwt_obj:
-        return jsonify({"message": "token was not in databse", "action": "logout"}), 403
+        resp = make_response(
+            jsonify({"message": "token was not in database", "action": "logout"}), 403
+        )
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+        return resp
     user_table = jwt_obj.user
     try:
         # Getting the username based on refresh token
         username_jwt = jwt.decode(
             refresh_token,
             os.getenv("REFRESH_TOKEN_SECRET"),
-            algorithms="HS256",
-            options={"require": ["exp", "username"], "verify_exp": "verify_signature"},
+            algorithms=["HS256"],
+            options={"require": ["exp", "username"], "verify_exp": True},
         )["username"]
         # if the databse does not match the token, it sends an error.
         if username_jwt != user_table.username:
@@ -449,16 +560,23 @@ def refresh_token_handle() -> tuple[str, int]:
             {"Access_Token": access_token, "username": user_table.username}
         ), 200
     except ExpiredSignatureError:
-        return jsonify(
-            {"message": "Token has already expired.", "action": "logout"}
-        ), 403
-    except Exception as e:
-        return jsonify(
-            {"message": "Token has been tampered with", "error": str(e)}
-        ), 403
+        db.session.delete(jwt_obj)
+        db.session.commit()
+        resp = make_response(
+            jsonify({"message": "Token has already expired.", "action": "logout"}), 403
+        )
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+        return resp
+    except Exception:
+        resp = make_response(
+            jsonify({"message": "Token has been tampered with", "action": "logout"}),
+            403,
+        )
+        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+        return resp
 
 
-@auth_bp.route("/logout", methods=["GET"])
+@auth_bp.route("/logout", methods=["POST"])
 def log_out() -> Response:
     """Logs Out the user.
 
@@ -470,6 +588,10 @@ def log_out() -> Response:
         - Removes the jwt from the database
 
     """
+    origin_error = require_trusted_origin()
+    if origin_error:
+        return origin_error
+
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
         return make_response("", 204)
@@ -489,7 +611,6 @@ def log_out() -> Response:
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
         resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
         return resp
-    except Exception as e:
-        return make_response(
-            jsonify({"message": "error in backend", "error": str(e)}), 500
-        )
+    except Exception:
+        current_app.logger.exception("Logout failed")
+        return make_response(jsonify({"message": "error in backend"}), 500)

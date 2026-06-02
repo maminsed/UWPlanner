@@ -14,6 +14,7 @@ import {
 } from 'react-icons/lu';
 
 import { useAuth } from '@/app/AuthProvider';
+import { useApi } from '@/lib/useApi';
 
 const navItems = [
   { name: 'Discussions', href: '/discussions', icon: LuMessageSquare },
@@ -26,12 +27,13 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { username, setAccess, setExp, setUsername } = useAuth();
+  const backend = useApi();
 
   async function logOut() {
     // Logout logic from old Navbar.tsx
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-        credentials: 'include',
+      const response = await backend(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+        method: 'POST',
       });
       if (response.ok) {
         setAccess(undefined);

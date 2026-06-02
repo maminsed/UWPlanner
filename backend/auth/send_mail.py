@@ -10,15 +10,20 @@ from ..Schema import Users, db
 APP_NAME = "UWPlanner"
 
 
-def send_SMTP_mail(to: str, subject: str, body: str):
+class EmailDeliveryError(RuntimeError):
+    """Raised when a verification email cannot be delivered."""
+
+
+def send_smtp_mail(to: str, subject: str, body: str) -> None:
+    """Send a plain-text email with the configured Brevo SMTP credentials."""
     smtp_host = os.getenv("SMTP_SERVER") or ""
     smtp_port = int(os.getenv("SMTP_PORT") or "587")
     login = os.getenv("SMTP_LOGIN")
     password = os.getenv("SMTP_PASSWORD")
     from_addr = os.getenv("VERIFICATION_EMAIL")
 
-    if not login or not password:
-        raise Exception("Brevo SMTP credentials are not set.")
+    if not smtp_host or not login or not password or not from_addr:
+        raise EmailDeliveryError("Brevo SMTP credentials are not set.")
 
     msg = MIMEMultipart()
     msg["From"] = from_addr
@@ -33,12 +38,12 @@ def send_SMTP_mail(to: str, subject: str, body: str):
             server.sendmail(from_addr, to, msg.as_string())
     except Exception as e:
         print(f"[email] Delivery failed to {to}: {e}")
-        raise Exception(f"Failed to send email to {to}") from e
+        raise EmailDeliveryError(f"Failed to send email to {to}") from e
 
 
 def send_verification_mail(
     user: Users, verification_expiration_minutes: int = 30
-) -> None:
+) -> bool:
     """Sends a verification email to the user and saves the code in the database."""
     now = datetime.now(timezone.utc)
 
@@ -46,7 +51,7 @@ def send_verification_mail(
         if user.verification_expiration > now + timedelta(
             minutes=verification_expiration_minutes, seconds=-30
         ):
-            return
+            return False
 
     code = secrets.randbelow(900_000) + 100_000
     expiration_time = now + timedelta(minutes=verification_expiration_minutes)
@@ -62,7 +67,7 @@ def send_verification_mail(
         db.session.rollback()
         print("ERROR OCCURRED: VERIFICATION CODE WAS NOT SAVED")
         print(e)
-        return
+        raise EmailDeliveryError("Failed to save verification code") from e
 
     body = f"""Hi there,
 
@@ -83,11 +88,8 @@ The {APP_NAME} Team
 This is an automated message from {APP_NAME}. Please do not reply to this email.
 """
 
-    try:
-        send_SMTP_mail(user.email, f"Your {APP_NAME} verification code", body)
-    except Exception as e:
-        print("ERROR OCCURRED WHILE SENDING VERIFICATION EMAIL")
-        print(e)
+    send_smtp_mail(user.email, f"Your {APP_NAME} verification code", body)
+    return True
 
 
 def send_delete_account_mail(email: str) -> None:
@@ -110,7 +112,7 @@ This is an automated message from {APP_NAME}. Please do not reply to this email.
 """
 
     try:
-        send_SMTP_mail(email, f"Your {APP_NAME} account has been deleted", body)
+        send_smtp_mail(email, f"Your {APP_NAME} account has been deleted", body)
     except Exception as e:
         print("ERROR OCCURRED WHILE SENDING ACCOUNT DELETION EMAIL")
         print(e)

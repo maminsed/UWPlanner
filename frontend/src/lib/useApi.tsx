@@ -6,9 +6,11 @@ export function isExpired(exp?: string) {
   if (!exp) {
     return true;
   }
-  const prevTime = new Date(exp).getTime();
-  const now = Date.now();
-  return now - prevTime > 30 * 1000;
+  const expiresAt = new Date(exp).getTime();
+  if (Number.isNaN(expiresAt)) {
+    return true;
+  }
+  return Date.now() >= expiresAt - 60 * 1000;
 }
 
 export function useApi() {
@@ -22,11 +24,10 @@ export function useApi() {
   ): Promise<Response> => {
     let token = access;
     if (check_protection) {
-      console.info(`expiration date: ${exp}`);
       if (isExpired(exp)) {
         try {
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
-            method: 'GET',
+            method: 'POST',
             credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
@@ -50,9 +51,8 @@ export function useApi() {
             clearAuth();
             return res;
           }
-        } catch (err) {
+        } catch {
           clearAuth();
-          console.info(`error in frontend ${err}`);
           return new Response(JSON.stringify({ ok: false }), {
             headers: { 'Content-Type': 'application/json' },
           });

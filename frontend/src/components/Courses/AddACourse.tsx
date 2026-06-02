@@ -98,6 +98,8 @@ export default function AddACourse({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchOptions() {
       const [numPhrase, phrase] = changeQuery(searchPhrase.name);
       if (numPhrase == 0) {
@@ -114,18 +116,31 @@ export default function AddACourse({
                     }
                 }
             `;
-      const response1 = (await gql(GQL_QUERY, { queryValue: phrase, code_only: true, limit: 3 }))
-        .data.search_courses;
-      if (response1.length == 3) {
-        setSearchOptions(response1);
-      } else {
-        const response2 = (await gql(GQL_QUERY, { queryValue: phrase, code_only: false, limit: 3 }))
+      try {
+        const response1 = (await gql(GQL_QUERY, { queryValue: phrase, code_only: true, limit: 3 }))
           .data.search_courses;
-        setSearchOptions(response2);
+        if (cancelled) return;
+        if (response1.length == 3) {
+          setSearchOptions(response1);
+        } else {
+          const response2 = (
+            await gql(GQL_QUERY, { queryValue: phrase, code_only: false, limit: 3 })
+          ).data.search_courses;
+          if (!cancelled) setSearchOptions(response2);
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchOptions([]);
+          setMessage('Could not load course search results. Please try again.');
+          updateStatus('error');
+        }
       }
     }
 
     fetchOptions();
+    return () => {
+      cancelled = true;
+    };
   }, [searchPhrase]);
 
   async function fetchIds() {
@@ -153,12 +168,20 @@ export default function AddACourse({
                 }
             }
         `;
-    const response = (
-      await gql(GQL_QUERY, { term_id: actualTermId.value, course_id: searchPhrase.course_id })
-    ).data.course_section;
+    let response: SectionInterface[] = [];
+    try {
+      response = (
+        await gql(GQL_QUERY, { term_id: actualTermId.value, course_id: searchPhrase.course_id })
+      ).data.course_section;
+    } catch {
+      setMessage('Could not load class sections. Please try again.');
+      updateStatus('error');
+      return;
+    }
     if (!response || response.length == 0) {
       setMessage('There are no available sections for this course this semster.');
       updateStatus('error');
+      return;
     }
     setSectionOptions(response);
   }

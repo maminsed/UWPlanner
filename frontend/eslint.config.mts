@@ -10,11 +10,11 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   {
-    ignores: ['**/node_modules/**', '**/build/**', '**/.next/**'],
+    ignores: ['**/node_modules/**', '**/build/**', '**/.next/**', '**/next-env.d.ts'],
   },
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    ignores: ['node_modules/', 'build/', '.next/'],
+    ignores: ['node_modules/', 'build/', '.next/', 'next-env.d.ts'],
     plugins: {
       react,
       'react-hooks': reactHooks,

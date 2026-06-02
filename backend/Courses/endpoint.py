@@ -36,17 +36,19 @@ ALLOWED_TAGS = {
 GQL_URL = os.getenv("GQL_URL")
 
 
+def get_gql_url() -> str:
+    """Return configured GraphQL endpoint or fail safely."""
+    if not GQL_URL:
+        raise RuntimeError("GraphQL endpoint is not configured")
+    return GQL_URL
+
+
 @courses_bp.before_request
 def verify():
     return verify_jwt()
 
 
-@courses_bp.route("/populate_course", methods=["GET"])
-def populate_courses():
-    """Endpoint to populate the courses database. It's used in case UWFLOW is down"""
-    return "", 204  # remove this incase anything broke
-    # errors = get_course_data()
-    return jsonify({"errors": errors}), 200
+# Use get_course_data() to populate course database. In case UWFLOW is down
 
 
 @courses_bp.route("/get_user_sections", methods=["POST"])
@@ -124,11 +126,12 @@ def delete_course():
                 # Initialize a session for making HTTP requests
                 session = requests.Session()
                 resp = session.post(
-                    GQL_URL,
+                    get_gql_url(),
                     json={
                         "query": GQL_QUERY,
                         "variables": {"term_id": term_id, "course_ids": course_ids},
                     },
+                    timeout=10,
                 )
                 resp.raise_for_status()
                 payload = resp.json()
@@ -318,6 +321,8 @@ def add_batch():
     # Initialize a session for making HTTP requests
     s = requests.Session()
     added_sections = []
+    parsed_rows = 0
+    failed_rows = 0
     for table in tables:
         inner_tables = table.find_all("table", class_="PSLEVEL3GRID")
         if len(inner_tables) <= 1:
@@ -328,13 +333,17 @@ def add_batch():
         for row in rows[1:]:
             try:
                 class_number = get_int(row.find("td").text)  # getting the number
+                if class_number <= 0:
+                    continue
+                parsed_rows += 1
                 # calling backend
                 resp = s.post(
-                    GQL_URL,
+                    get_gql_url(),
                     json={
                         "query": GQL_QUERY,
                         "variables": {"term_id": term_id, "class_number": class_number},
                     },
+                    timeout=10,
                 )
                 resp.raise_for_status()
                 payload = resp.json()
@@ -352,5 +361,8 @@ def add_batch():
                         data[0]["course"]["name"] + " - " + data[0]["section_name"]
                     )
             except Exception as e:
+                failed_rows += 1
                 print("error:", e)
+    if parsed_rows and failed_rows == parsed_rows and not added_sections:
+        return jsonify({"message": "Could not reach course data service"}), 502
     return jsonify({"added_sections": added_sections}), 200

@@ -7,22 +7,24 @@ from flask import Flask
 from flask_cors import CORS
 
 from .Auth import auth_bp
+from .config import get_database_uri, get_frontend_origins, validate_required_config
 from .Courses import courses_bp
 from .Login_actions import update_info
 from .Schema import db, migrate
-from .School_info import school_info_bp
-from .Test import test_bp
 
 load_dotenv()
 
 
 def create_app() -> Flask:
     """Setps up the Database and Flask Backend."""
+    validate_required_config()
+
     app = Flask(__name__)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"postgresql://{os.getenv('PGUSER')}:{os.getenv('PGPASSWORD')}@{os.getenv('PGHOST')}/neondb?sslmode=require"
-    )
+    frontend_origins = get_frontend_origins()
+    app.config["FRONTEND_ORIGINS"] = frontend_origins
+    app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_CONTENT_LENGTH", "524288"))
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -33,14 +35,12 @@ def create_app() -> Flask:
     app.register_blueprint(update_info, url_prefix="/update_info")
     app.register_blueprint(courses_bp, url_prefix="/courses")
 
-    # get rid of
-    app.register_blueprint(test_bp, url_prefix="/test")
-    app.register_blueprint(school_info_bp, url_prefix="/school_info")  # ?
-
     CORS(
         app,
-        origins=["http://localhost:3000"],
+        origins=frontend_origins,
         supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )
     return app
 

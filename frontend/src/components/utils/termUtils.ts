@@ -69,3 +69,7 @@ export function getTermDistance(termId1: number, termId2: number) {
     termMap[(termId1 % 10) as keyof typeof termMap];
   return yearDiff * 3 + monthDiff;
 }
+
+export function isTermWithoutSection(termId: number, currentTermId: number = getCurrentTermId()) {
+  return getTermDistance(currentTermId, termId) > 1;
+}

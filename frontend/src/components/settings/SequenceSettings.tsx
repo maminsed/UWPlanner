@@ -8,7 +8,7 @@ import GroupedDropDown from '../utils/GroupedDropDown';
 import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
-import { SequenceChoosing, SequenceOptionsType } from '@/app/signUp/info/page';
+import { SequenceChoosing, SequenceOptionsType } from '@/components/settings/SequenceChoosing';
 import { useApi } from '@/lib/useApi';
 
 function groupK<T>(path: T[], k: number = 3): T[][] {
@@ -32,7 +32,6 @@ export function SequenceSettings() {
   const [seqId, setSeqId] = useState<number>(0);
   const [startedTermId, setStartedTermId] = useState<number>(0);
   const [originalStartedTermId, setOriginalStartedTermId] = useState<number>(0);
-  const [originalSeqId, setOriginalSeqId] = useState<number>(0);
   const [startedTermSearchPhrase, setStartedTermSearchPhrase] = useState<string>();
   const [sequenceOptions, setSequenceOptions] = useState<SequenceOptionsType>([]);
   const [gradTerm, setGradTerm] = useState<string>('');
@@ -69,7 +68,6 @@ export function SequenceSettings() {
     } else {
       setSeqName(response.sequence_name);
       setSeqId(response.sequence_id);
-      setOriginalSeqId(response.sequence_id);
       setCoop(response.coop);
       setStartedTermId(response.started_term_id);
       setOriginalStartedTermId(response.started_term_id);
@@ -109,6 +107,7 @@ export function SequenceSettings() {
         method: 'POST',
         body: JSON.stringify({
           coop: coop,
+          sequence_id: seqId,
           sequence_path: path.map((v) => v.name),
           started_term_id: startedTermId,
         }),
@@ -123,10 +122,9 @@ export function SequenceSettings() {
       } else {
         setState('idle');
         setMessage('Changes saved');
-        setOriginalSeqId(seqId);
         setOriginalStartedTermId(startedTermId);
       }
-    } catch (err) {
+    } catch {
       setState('error');
       setMessage('error occured while submitting');
     }

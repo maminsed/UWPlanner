@@ -11,12 +11,7 @@ import {
 } from '../interface';
 import { generateRandomColours } from '../utils/colour';
 import { generateConnectionLines, totalRequirementStatus } from '../utils/preReqUtils';
-import {
-  getTermSeason,
-  termOperation,
-  getTermDistance,
-  getCurrentTermId,
-} from '../utils/termUtils';
+import { getTermSeason, termOperation, isTermWithoutSection } from '../utils/termUtils';
 
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
@@ -55,6 +50,7 @@ export class AllCourseInformation {
     courseId: number;
   }[] = [];
   missingCourses: { id: number; code: string; name: string }[] = [];
+  sectionsUnavailableForTerm = false;
 
   // initializers:
   constructor(
@@ -128,6 +124,11 @@ export class AllCourseInformation {
   }
 
   async initSchedule(termId: number) {
+    this.scheduleClasses = [];
+    this.noMeetingSections = [];
+    this.missingCourses = [];
+    this.sectionsUnavailableForTerm = isTermWithoutSection(termId);
+
     const res = await this.#backend(
       `${process.env.NEXT_PUBLIC_API_URL}/courses/get_user_sections`,
       {
@@ -142,14 +143,12 @@ export class AllCourseInformation {
       return;
     }
 
-    const response = await res.json().catch(() => {});
-    let sections: number[] = response.sections || [];
+    const response = (await res.json().catch(() => ({}))) as {
+      sections?: number[];
+      courses?: number[];
+    };
+    const sections: number[] = this.sectionsUnavailableForTerm ? [] : response.sections || [];
     const course_ids: number[] = response.courses || [];
-
-    const noSections = getTermDistance(getCurrentTermId(), termId) > 1;
-    if (noSections) {
-      sections = [];
-    }
 
     let fetchedData: ClassInterface[] = [];
     let noMeetingData: {

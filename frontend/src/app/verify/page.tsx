@@ -64,6 +64,9 @@ export default function Verify() {
       if (res.action == 'main_page') {
         router.push('/semester');
       }
+      setError('code', {
+        message: res.message || 'Could not send verification email. Please try again.',
+      });
       return;
     }
     setEmail(res.email);
@@ -136,7 +139,7 @@ export default function Verify() {
         <p className="text-center">
           Enter the code sent to the email: <br /> <span>{email}</span>
         </p>
-        <p className="mb-8 text-center text-xs">Please check your spam account.</p>
+        <p className="mb-8 text-center text-xs text-red-500">Please check your spam account.</p>
         <form className="flex flex-col items-center" onSubmit={handleSubmit(onSubmit)}>
           <div className="relative">
             <div className="flex gap-2 justify-center">

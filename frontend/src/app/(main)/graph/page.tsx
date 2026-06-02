@@ -181,7 +181,8 @@ export default function GraphPage() {
     closeAllPanles();
     setOverlayRaw(val);
   };
-  const [status, setStatus] = useState<'Loading' | 'idle'>('Loading');
+  const [status, setStatus] = useState<'Loading' | 'idle' | 'error'>('Loading');
+  const [message, setMessage] = useState<string>('');
   const expandPanelsCloseFns = useRef<(() => void)[]>([]);
 
   const allCourses = useRef(
@@ -208,16 +209,20 @@ export default function GraphPage() {
 
   useEffect(() => {
     async function initialize() {
-      await allCourses.current.init();
-      // Generate connection lines for prerequisites and update the connections state
-      setStatus('idle');
-      //TODO: remove
-      await new Promise((resolve) =>
-        setTimeout(() => {
-          resolve(0);
-        }, 2),
-      );
-      await allCourses.current.generateConnectionLines();
+      try {
+        await allCourses.current.init();
+        setStatus('idle');
+        //TODO: remove
+        await new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(0);
+          }, 2),
+        );
+        await allCourses.current.generateConnectionLines();
+      } catch {
+        setStatus('error');
+        setMessage('Could not load your course graph. Please try reloading.');
+      }
     }
     initialize();
   }, []);
@@ -276,15 +281,21 @@ export default function GraphPage() {
 
   async function reloadCourses() {
     setStatus('Loading');
-    await allCourses.current.updateAllCourses();
-    setStatus('idle');
-    //TODO: remove
-    await new Promise((resolve) =>
-      setTimeout(() => {
-        resolve(0);
-      }, 100),
-    );
-    await allCourses.current.generateConnectionLines();
+    setMessage('');
+    try {
+      await allCourses.current.updateAllCourses();
+      setStatus('idle');
+      //TODO: remove
+      await new Promise((resolve) =>
+        setTimeout(() => {
+          resolve(0);
+        }, 100),
+      );
+      await allCourses.current.generateConnectionLines();
+    } catch {
+      setStatus('error');
+      setMessage('Could not reload courses. Please try again.');
+    }
   }
 
   function deleteCourse({
@@ -347,6 +358,11 @@ export default function GraphPage() {
           )}
         </CourseContext.Provider>
       </PanZoomCanvas>
+      {status === 'error' && (
+        <div className="fixed left-1/2 top-24 z-10 w-[min(28rem,92vw)] -translate-x-1/2 rounded-md bg-white px-4 py-3 text-center text-red-700 shadow-lg">
+          {message}
+        </div>
+      )}
       <div className="fixed left-6 bottom-5">
         <ExpandPanel addCloseFunction={(fn) => expandPanelsCloseFns.current.push(fn)}>
           <ControlPanel

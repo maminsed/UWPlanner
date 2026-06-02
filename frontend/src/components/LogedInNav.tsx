@@ -11,6 +11,7 @@ import { MdAccountCircle, MdExitToApp } from 'react-icons/md';
 import HoverEffect from './HoverEffect';
 
 import { useAuth } from '@/app/AuthProvider';
+import { useApi } from '@/lib/useApi';
 
 export default function LogedInNav() {
   const [panelOn, setPanelOn] = useState<boolean>(false);
@@ -19,12 +20,13 @@ export default function LogedInNav() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const { setAccess, setExp, setUsername, username } = useAuth();
+  const backend = useApi();
   const router = useRouter();
 
   async function logOut() {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
-        credentials: 'include',
+      const response = await backend(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+        method: 'POST',
       });
       const res = await response.json().catch(() => {});
       if (response.ok) {

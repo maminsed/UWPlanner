@@ -1,14 +1,13 @@
 'use client';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useRef } from 'react';
 
 export default function useSafeRouter() {
   const router = useRouter();
   const pathName = usePathname();
-  const searchParams = useSearchParams();
   const lastPushed = useRef<string | null>(null);
 
-  const current = pathName + (searchParams?.toString() ? `?${searchParams}` : '');
+  const current = pathName || '';
   return useCallback(
     (url: string) => {
       if (lastPushed.current === current) return;

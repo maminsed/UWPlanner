@@ -3,6 +3,8 @@ import os
 from email.message import EmailMessage
 from typing import Optional
 
+from backend.app_logger import logger
+
 from .google_api import Resource, create_service
 
 
@@ -56,9 +58,6 @@ def gmail_send_message(to: str, body: str, subject: str) -> Optional[dict]:
                 os.path.join(__file__, "..", "..", "..", "client_secret.json")
             )
         )
-        print(
-            f"Client Secret Path: {os.path.abspath(os.path.join(__file__, '..', '..', '..', 'client_secret.json'))}"
-        )
         service = init_gmail_service(client_service)
         message = EmailMessage()
 
@@ -74,8 +73,8 @@ def gmail_send_message(to: str, body: str, subject: str) -> Optional[dict]:
         send_message = (
             service.users().messages().send(userId="me", body=create_message).execute()
         )
-        print(f"Message Id: {send_message['id']}")
-    except Exception as e:
-        print("Error Occured")
-        print(e)
-    send_message = None
+        logger.info("Gmail API message sent")
+        return send_message
+    except Exception:
+        logger.exception("Gmail API message failed")
+        return None

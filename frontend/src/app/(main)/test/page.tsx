@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 export default function Test() {
@@ -13,7 +14,7 @@ export default function Test() {
   const router = useRouter();
 
   useEffect(() => {
-    console.info('username: ' + username);
+    appLogger.debug('Loaded test page user state', { hasUsername: Boolean(username) });
     async function initial_handle() {
       try {
         const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/test/`, {
@@ -38,7 +39,9 @@ export default function Test() {
         }
         setMessage(response.message);
       } catch (err) {
-        console.error(err);
+        appLogger.error('Test page request failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
         setMessage('Error in Response');
       }
     }

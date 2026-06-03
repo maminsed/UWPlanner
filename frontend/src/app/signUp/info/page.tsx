@@ -13,6 +13,7 @@ import {
   getTermSeason,
   termOperation,
 } from '@/components/utils/termUtils';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 type programOptionType = {
@@ -68,8 +69,10 @@ export default function Info() {
 
         const response = await (res as Response).json().catch(() => {});
         if (!res.ok) {
-          console.error('Error in Resposne');
-          console.info(response);
+          appLogger.error('Failed to load signup info options', {
+            status: res.status,
+            code: response?.code,
+          });
           return;
         }
         if (stage !== 'all') {
@@ -89,8 +92,9 @@ export default function Info() {
           setSequenceOptions(response);
         }
       } catch (err) {
-        console.error('Error: ');
-        console.info(err);
+        appLogger.error('Failed to load signup info options', {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 

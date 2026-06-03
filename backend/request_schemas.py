@@ -65,7 +65,13 @@ def _validation_error_response(
                 "type": error["type"],
             }
         )
-    return jsonify({"message": f"{source} did not match schema", "errors": errors}), 400
+    return jsonify(
+        {
+            "message": f"{source} did not match schema",
+            "code": "VALIDATION_ERROR",
+            "errors": errors,
+        }
+    ), 400
 
 
 def parse_json_body(

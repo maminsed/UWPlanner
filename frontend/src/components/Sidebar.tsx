@@ -14,6 +14,7 @@ import {
 } from 'react-icons/lu';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 const navItems = [
@@ -41,11 +42,12 @@ export function Sidebar() {
         setUsername(undefined);
         // router.push("/"); // This should be handled by AuthProvider or a redirect
       } else {
-        console.error('error in backend');
+        appLogger.error('Sidebar logout failed', { status: response.status });
       }
     } catch (err) {
-      console.error('error occured in logout');
-      console.info(err);
+      appLogger.error('Sidebar logout request failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

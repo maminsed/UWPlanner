@@ -4,6 +4,7 @@ import requests
 from dotenv import load_dotenv
 from sqlalchemy import insert
 
+from ..app_logger import logger
 from ..Schema import Course, db
 
 load_dotenv()
@@ -31,7 +32,7 @@ def get_course_data():  # You can update this to use JSON
     s = requests.Session()
     errors = []
     while True:
-        print(f"offset:{offset}")
+        logger.info("Fetching course data", offset=offset)
         resp = s.post(
             GQL_URL,
             json={"query": GQL_QUERY, "variables": {"limit": limit, "offset": offset}},
@@ -49,7 +50,7 @@ def get_course_data():  # You can update this to use JSON
             db.session.execute(insert(Course), rows)
             db.session.commit()
         except Exception as e:
-            print(str(e))
+            logger.exception("Failed to insert course batch", offset=offset)
             errors.extend([(r["code"], str(e)) for r in rows])
 
         if len(rows) < limit:

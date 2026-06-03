@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from ..app_logger import logger
 from ..Schema import Users, db
 
 APP_NAME = "UWPlanner"
@@ -37,8 +38,8 @@ def send_smtp_mail(to: str, subject: str, body: str) -> None:
             server.login(login, password)
             server.sendmail(from_addr, to, msg.as_string())
     except Exception as e:
-        print(f"[email] Delivery failed to {to}: {e}")
-        raise EmailDeliveryError(f"Failed to send email to {to}") from e
+        logger.exception("Email delivery failed")
+        raise EmailDeliveryError("Failed to send email") from e
 
 
 def send_verification_mail(
@@ -65,8 +66,7 @@ def send_verification_mail(
 
     except Exception as e:
         db.session.rollback()
-        print("ERROR OCCURRED: VERIFICATION CODE WAS NOT SAVED")
-        print(e)
+        logger.exception("Verification code could not be saved")
         raise EmailDeliveryError("Failed to save verification code") from e
 
     body = f"""Hi there,
@@ -113,6 +113,5 @@ This is an automated message from {APP_NAME}. Please do not reply to this email.
 
     try:
         send_smtp_mail(email, f"Your {APP_NAME} account has been deleted", body)
-    except Exception as e:
-        print("ERROR OCCURRED WHILE SENDING ACCOUNT DELETION EMAIL")
-        print(e)
+    except Exception:
+        logger.exception("Failed to send account deletion email")

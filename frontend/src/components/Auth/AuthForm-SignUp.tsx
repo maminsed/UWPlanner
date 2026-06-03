@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { useLoginWithGoogle } from './AuthForm-utility';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 
 const schema = z
   .object({
@@ -71,7 +72,10 @@ export default function SignUp() {
 
       const res = await response.json().catch(() => {});
       if (!response.ok) {
-        console.info(res.error);
+        appLogger.info('Signup request failed', {
+          code: res?.code,
+          status: response.status,
+        });
         throw new Error(`${res.message || 'Error in Backend'}`);
       }
       setAccess(res.Access_Token.token);

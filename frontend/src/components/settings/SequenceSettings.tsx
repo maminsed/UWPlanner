@@ -9,6 +9,7 @@ import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermId, getTermSeason, termOperation } from '../utils/termUtils';
 
 import { SequenceChoosing, SequenceOptionsType } from '@/components/settings/SequenceChoosing';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 function groupK<T>(path: T[], k: number = 3): T[][] {
@@ -49,10 +50,12 @@ export function SequenceSettings() {
     });
     const response = await (res as Response).json().catch(() => {});
     if (!res.ok) {
-      console.error('Error in Resposne');
+      appLogger.error('Failed to retrieve sequence options', {
+        code: response?.code,
+        status: res.status,
+      });
       setState('error');
       setMessage('error when fetching sequences');
-      console.info(response);
       return;
     }
     setSequenceOptions(response);
@@ -63,7 +66,10 @@ export function SequenceSettings() {
     const res = await backend(`${process.env.NEXT_PUBLIC_API_URL}/update_info/user_seqs`);
     const response = await res.json().catch(() => {});
     if (!res.ok) {
-      console.error('error occured - please reload');
+      appLogger.error('Failed to retrieve user sequence', {
+        code: response?.code,
+        status: res.status,
+      });
       setState('error');
     } else {
       setSeqName(response.sequence_name);

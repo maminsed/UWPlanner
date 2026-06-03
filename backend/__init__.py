@@ -1,9 +1,10 @@
 """Setps up the Database and Flask Backend."""
 
 import os
+from uuid import uuid4
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, Response, g, request
 from flask_cors import CORS
 
 from .Auth import auth_bp
@@ -25,6 +26,15 @@ def create_app() -> Flask:
     app.config["FRONTEND_ORIGINS"] = frontend_origins
     app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_CONTENT_LENGTH", "524288"))
     app.config["SQLALCHEMY_DATABASE_URI"] = get_database_uri()
+
+    @app.before_request
+    def add_request_id() -> None:
+        g.request_id = request.headers.get("X-Request-ID") or uuid4().hex
+
+    @app.after_request
+    def attach_request_id(response: Response) -> Response:
+        response.headers["X-Request-ID"] = g.request_id
+        return response
 
     db.init_app(app)
     migrate.init_app(app, db)

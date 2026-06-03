@@ -4,8 +4,10 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from time import time
 
-from flask import jsonify, request
+from flask import request
 from flask.typing import ResponseReturnValue
+
+from .responses import api_error
 
 _buckets: dict[str, deque[float]] = defaultdict(deque)
 
@@ -45,9 +47,9 @@ def enforce_rate_limits(
             bucket.popleft()
 
         if len(bucket) >= max_requests:
-            return jsonify(
-                {"message": "Too many requests. Please try again later."}
-            ), 429
+            return api_error(
+                "Too many requests. Please try again later.", 429, "RATE_LIMITED"
+            )
 
     for name, _, _, key_func in rules:
         _buckets[f"{name}:{key_func()}"].append(now)

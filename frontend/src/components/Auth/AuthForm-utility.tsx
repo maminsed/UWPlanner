@@ -4,6 +4,7 @@ import type { CodeResponse } from '@react-oauth/google';
 import type { FieldValues, UseFormSetError } from 'react-hook-form';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 
 type AppRouter = {
   push: (href: string) => void;
@@ -77,7 +78,7 @@ export function useLoginWithGoogle<TFieldValues extends FieldValues>(
       }
     },
     onError: () => {
-      console.error('Auth Failed');
+      appLogger.error('Google auth failed');
       setError('root', {
         message: 'Error - Please Try again',
       });

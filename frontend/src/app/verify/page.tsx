@@ -9,6 +9,8 @@ import { z } from 'zod';
 
 import { useAuth } from '../AuthProvider';
 
+import { appLogger } from '@/lib/logger';
+
 const Schema = z.object({
   code: z.string(),
 });
@@ -33,7 +35,7 @@ export default function Verify() {
 
   useEffect(() => {
     if (!username) {
-      console.error('please logIn First');
+      appLogger.error('Verification page reached without an authenticated user');
       router.push('/login');
       return;
     }
@@ -97,7 +99,7 @@ export default function Verify() {
       } else if (res.action) {
         router.push('/semester');
       } else {
-        console.info('Congrats: ' + res.message);
+        appLogger.info('Verification succeeded');
         router.push('/signUp/info');
       }
     } catch (err) {

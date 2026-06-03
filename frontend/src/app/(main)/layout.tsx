@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 
 import { useAuth } from '@/app/AuthProvider';
 import LogedInNav from '@/components/LogedInNav';
+import { appLogger } from '@/lib/logger';
 import { isExpired } from '@/lib/useApi';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -35,7 +36,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           }
         } catch {
           clearAuth();
-          console.error('error in frontend');
+          appLogger.error('Failed to refresh session from layout');
           router.push('/login');
         }
       }

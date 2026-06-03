@@ -1,9 +1,10 @@
 import json
 from collections import defaultdict
-from typing import Optional
 
-from flask import Blueprint, current_app, g, jsonify, make_response
+from flask import Blueprint, g, jsonify
+from flask.typing import ResponseReturnValue
 
+from backend.app_logger import logger
 from backend.Auth import verify as verify_jwt
 from backend.Auth.auth import add_tokens
 from backend.Auth.send_mail import EmailDeliveryError, send_verification_mail
@@ -18,6 +19,7 @@ from backend.request_schemas import (
     parse_json_body,
     parse_query_params,
 )
+from backend.responses import api_error
 from backend.Schema import (
     Course,
     Programs,
@@ -38,7 +40,7 @@ update_info = Blueprint("UpdateInfo", __name__)
 
 
 @update_info.before_request
-def verify() -> Optional[make_response]:
+def verify() -> ResponseReturnValue | None:
     return verify_jwt()
 
 
@@ -197,9 +199,9 @@ def update_programs():
     program_ids = payload.program_ids
     user = Users.query.filter_by(username=g.username).first()
     if not user:
-        return jsonify({"message": "user does not exist"}), 400
+        return api_error("user does not exist", 400, "USER_NOT_FOUND")
     if only_majors and not program_ids:
-        return jsonify({"message": "Please select at least one major"}), 400
+        return api_error("Please select at least one major", 400, "MAJOR_REQUIRED")
     msg, status_code = update_programs_in_db(user, program_ids, only_majors)
     return msg, status_code
 
@@ -208,7 +210,9 @@ def update_programs_in_db(user: Users, program_ids: list[int], only_majors: bool
     if not only_majors and not program_ids:
         programs = [p for p in user.programs if p.programType in onlyMajorProgramTypes]
         if not programs:
-            return jsonify({"message": "Please keep at least one major selected"}), 400
+            return api_error(
+                "Please keep at least one major selected", 400, "MAJOR_REQUIRED"
+            )
         user.programs = programs
         db.session.add(user)
         db.session.commit()
@@ -216,9 +220,9 @@ def update_programs_in_db(user: Users, program_ids: list[int], only_majors: bool
 
     programs = Programs.query.filter(Programs.id.in_(program_ids)).all()
     if len(programs) != len(program_ids):
-        return jsonify({"message": "One or more programs do not exist"}), 404
+        return api_error("One or more programs do not exist", 404, "PROGRAM_NOT_FOUND")
     if not any(p.programType in onlyMajorProgramTypes for p in programs):
-        return jsonify({"message": "Please select at least one major"}), 400
+        return api_error("Please select at least one major", 400, "MAJOR_REQUIRED")
     if only_majors:
         programs += [
             p for p in user.programs if p.programType not in onlyMajorProgramTypes
@@ -242,7 +246,9 @@ def get_sequence():
         ]
         degree_ids = {m.degreeId for m in majors}
         if not majors:
-            return jsonify({"You need to have a major or degree first"}), 403
+            return api_error(
+                "You need to have a major or degree first", 403, "MAJOR_REQUIRED"
+            )
         degrees: list[Programs] = Programs.query.filter(
             Programs.id.in_(degree_ids)
         ).all()
@@ -261,7 +267,9 @@ def get_sequence():
                 )
         default = Sequence.query.filter_by(name="Default").first()
         if not default:
-            return jsonify({"message": "Default sequence is not configured"}), 500
+            return api_error(
+                "Default sequence is not configured", 500, "DEFAULT_SEQUENCE_MISSING"
+            )
         res[default.legend]["default"].append(
             {
                 "id": default.id,
@@ -282,9 +290,9 @@ def get_sequence():
                 for legend, seqGroups in res.items()
             ]
         ), 200
-    except Exception as e:
-        print(e)
-        return jsonify({"message": "there was an error in backend"}), 500
+    except Exception:
+        logger.exception("Failed to load sequence options")
+        return api_error("there was an error in backend", 500, "INTERNAL_ERROR")
 
 
 @update_info.route("/sequences", methods=["POST"])
@@ -294,7 +302,7 @@ def update_sequences() -> tuple[str, int]:
         return error
     user: Users = Users.query.filter_by(username=g.username).first()
     if not user:
-        return jsonify({"message": "user does not exist"}), 400
+        return api_error("user does not exist", 400, "USER_NOT_FOUND")
     # updating coop
     user.coop = payload.coop
     # updating sequence
@@ -311,7 +319,7 @@ def update_sequences() -> tuple[str, int]:
         else:
             seq_obj: Sequence = Sequence.query.filter_by(id=sequence_id).first()
         if not seq_obj:
-            return jsonify({"message": "sequence does not exist"}), 400
+            return api_error("sequence does not exist", 400, "SEQUENCE_NOT_FOUND")
         user.sequence = seq_obj
         if sequence_path is None:
             sequence_path = seq_obj.plan
@@ -355,7 +363,9 @@ def get_user_seqs() -> tuple[str, int]:
     include_courses = query.include_courses
     user: Users = Users.query.filter_by(username=g.username).first()
     if not user.sequence or not user.path:
-        return jsonify({"message": "User sequence is not configured"}), 409
+        return api_error(
+            "User sequence is not configured", 409, "USER_SEQUENCE_NOT_CONFIGURED"
+        )
     path = [{"name": term, "course_ids": []} for term in translate_path(user.path)]
     if include_courses:
         user_semesters = {
@@ -381,6 +391,8 @@ def update_user_info():
     if error:
         return error
     user: Users = Users.query.filter_by(username=g.username).first()
+    if not user:
+        return api_error("user does not exist", 400, "USER_NOT_FOUND")
 
     user.bio = payload.bio
     db.session.add(user)
@@ -390,7 +402,9 @@ def update_user_info():
         existing_user = Users.query.filter_by(username=new_username).first()
         if existing_user:
             db.session.commit()
-            return jsonify({"message": "user with this username already exists"}), 403
+            return api_error(
+                "user with this username already exists", 403, "USERNAME_EXISTS"
+            )
         user.username = new_username
         username_updated = True
         db.session.add(user)
@@ -400,7 +414,9 @@ def update_user_info():
         existing_user = Users.query.filter_by(email=new_email).first()
         if existing_user:
             db.session.commit()
-            return jsonify({"message": "user with this email already exists"}), 403
+            return api_error(
+                "user with this email already exists", 403, "EMAIL_ALREADY_EXISTS"
+            )
         user.email = new_email
         user.is_verified = False
         user.verification_code = 0
@@ -410,10 +426,10 @@ def update_user_info():
         try:
             send_verification_mail(user)
         except EmailDeliveryError:
-            current_app.logger.exception(
-                "Failed to send verification email after email update"
+            logger.exception("Failed to send verification email after email update")
+            return api_error(
+                "could not send verification email", 502, "EMAIL_DELIVERY_FAILED"
             )
-            return jsonify({"message": "could not send verification email"}), 502
     db.session.add(user)
     db.session.commit()
     if username_updated:
@@ -671,7 +687,7 @@ def get_course_reqs() -> tuple[str, int]:
     if error:
         return error
     course_codes = payload.course_codes
-    print(course_codes)
+    logger.debug("Fetching course requirements", course_count=len(course_codes))
     res = {}
     if course_codes:
         db_courses = Course.query.filter(Course.code.in_(course_codes)).all()
@@ -679,8 +695,10 @@ def get_course_reqs() -> tuple[str, int]:
             url = course.url or ""
             try:
                 courseInfo = json.loads(course.courseInfo) if course.courseInfo else {}
-            except:
-                print("error in loading courseInfo")
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Stored courseInfo could not be parsed", course_code=course.code
+                )
                 courseInfo = {}
             res[course.code] = {"url": url, "courseInfo": courseInfo}
     return jsonify({"courses": res}), 200
@@ -738,7 +756,9 @@ def update_terms():
 
     # Validate that all required data is present
     if not termId1 or not termId2 or not user or not user.path:
-        return jsonify({"message": "some of the arguments were not supplied"}), 403
+        return api_error(
+            "some of the arguments were not supplied", 403, "TERM_SWAP_INVALID"
+        )
 
     # Find existing semester records for both terms
     term1 = None
@@ -790,9 +810,9 @@ def update_terms():
         db.session.commit()
 
         return "", 204
-    except Exception as e:
-        print(e)
-        return jsonify({"message": "error in bk"}), 500
+    except Exception:
+        logger.exception("Failed to swap user terms")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 """

@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from flask import Blueprint, g, jsonify
 
+from backend.app_logger import logger
 from backend.Auth import verify as verify_jwt
 from backend.request_schemas import (
     AddBatchRequest,
@@ -15,6 +16,7 @@ from backend.request_schemas import (
     TermRequest,
     parse_json_body,
 )
+from backend.responses import api_error
 from backend.utils.path import term_distance, translate_path
 
 from ..Schema import Semester, Users, db
@@ -62,7 +64,7 @@ def get_user_sections():
     # Retrieve the user from the database
     user: Users = Users.query.filter_by(username=g.username).first()
     if not user:
-        return jsonify({"message": "user not found"}), 500
+        return api_error("user not found", 404, "USER_NOT_FOUND")
 
     # Get the sections for the specified term
     section_ids = [
@@ -163,10 +165,10 @@ def delete_course():
 
         # Return a success response
         return "", 204
-    except Exception as e:
+    except Exception:
         # Handle any errors that occur during the process
-        print(e)
-        return jsonify({"message": "error in backend"}), 500
+        logger.exception("Failed to delete course from user schedule")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 @courses_bp.route("/add_single", methods=["POST"])
@@ -178,7 +180,7 @@ def add_section_to_user():
     courses = payload.courses
     user = Users.query.filter_by(username=g.username).first()
     if not user:
-        return jsonify({"message": "please provide all fields"}), 400
+        return api_error("user not found", 404, "USER_NOT_FOUND")
     if courses.course_ids is not None:
         course_ids = courses.course_ids
         for course_id in course_ids:
@@ -240,10 +242,10 @@ def enrol_user_in_section(
         db.session.add(available_semester)
         db.session.commit()
         return jsonify({"message": "user successfully enrolled"}), 200
-    except Exception as e:
+    except Exception:
         # Handle any errors that occur during the process
-        print(e)
-        return jsonify({"message": "error in backend"}), 500
+        logger.exception("Failed to enroll user in section")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 def allowed_attr(tag, name, value):
@@ -283,22 +285,22 @@ def add_batch():
 
     # Validate the input data
     if not user:
-        return jsonify(
-            {
-                "message": "We couldn't parse your information. If it persists please contact someone"
-            }
-        ), 400
+        return api_error(
+            "We couldn't parse your information. If it persists please contact someone",
+            400,
+            "COURSE_IMPORT_PARSE_FAILED",
+        )
 
     # sanetizing incoming input
     cleaned = bleach.clean(html, tags=ALLOWED_TAGS, attributes=allowed_attr, strip=True)
     soup = BeautifulSoup(cleaned, "lxml")
     tables = soup.find_all(class_="PSGROUPBOXWBO")
     if len(tables) <= 1:
-        return jsonify(
-            {
-                "message": "We couldn't parse your information. If it persists please contact someone"
-            }
-        ), 400
+        return api_error(
+            "We couldn't parse your information. If it persists please contact someone",
+            400,
+            "COURSE_IMPORT_PARSE_FAILED",
+        )
     tables = tables[1:]
     # GraphQL endpoint and query to fetch course section details
     GQL_QUERY = """
@@ -331,6 +333,7 @@ def add_batch():
         if len(inner_tables) <= 1:
             continue
         for row in rows[1:]:
+            class_number = None
             try:
                 class_number = get_int(row.find("td").text)  # getting the number
                 if class_number <= 0:
@@ -360,9 +363,13 @@ def add_batch():
                     added_sections.append(
                         data[0]["course"]["name"] + " - " + data[0]["section_name"]
                     )
-            except Exception as e:
+            except Exception:
                 failed_rows += 1
-                print("error:", e)
+                logger.warning(
+                    "Failed to import a schedule row", class_number=class_number
+                )
     if parsed_rows and failed_rows == parsed_rows and not added_sections:
-        return jsonify({"message": "Could not reach course data service"}), 502
+        return api_error(
+            "Could not reach course data service", 502, "COURSE_DATA_UNAVAILABLE"
+        )
     return jsonify({"added_sections": added_sections}), 200

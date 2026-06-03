@@ -6,11 +6,12 @@ import requests
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from codename import codename
-from flask import Blueprint, Response, current_app, g, jsonify, make_response, request
+from flask import Blueprint, Response, g, jsonify, make_response, request
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from jwt.exceptions import ExpiredSignatureError
 
+from ..app_logger import logger
 from ..rate_limit import client_ip, enforce_rate_limits, normalized_json_value
 from ..request_schemas import (
     ConfirmVerificationRequest,
@@ -20,9 +21,10 @@ from ..request_schemas import (
     SignupRequest,
     parse_json_body,
 )
+from ..responses import api_error, error_payload
 from ..Schema import JwtToken, LoginMethod, Sequence, Users, db
 from ..security import require_trusted_origin
-from .jwt import clean_up_jwt, encode
+from .jwt import clean_up_jwt, encode, hash_refresh_token
 from .jwt import verify as verify_access_token
 from .send_mail import (
     EmailDeliveryError,
@@ -36,6 +38,27 @@ ph = PasswordHasher()
 
 class DefaultSequenceMissingError(RuntimeError):
     """Raised when required seed data is missing."""
+
+
+def _delete_refresh_cookie(response: Response) -> Response:
+    """Clear the refresh-token cookie from a response."""
+    response.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
+    return response
+
+
+def _cookie_error(
+    message: str,
+    status_code: int,
+    code: str,
+    *,
+    action: str | None = None,
+) -> Response:
+    """Return a normalized error response that also clears the refresh cookie."""
+    resp = make_response(
+        jsonify(error_payload(message, code, action=action)),
+        status_code,
+    )
+    return _delete_refresh_cookie(resp)
 
 
 def assign_default_sequence(user: Users) -> None:
@@ -69,18 +92,19 @@ def delete_account() -> Response:
 
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
-        return make_response(jsonify({"message": "Not authenticated"}), 401)
+        return api_error("Not authenticated", 401, "NOT_AUTHENTICATED")
 
     try:
-        jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
+        refresh_token_hash = hash_refresh_token(refresh_token)
+        jwt_db = JwtToken.query.filter_by(
+            refresh_token_string=refresh_token_hash
+        ).first()
         if not jwt_db:
-            resp = make_response(jsonify({"message": "Invalid token"}), 401)
-            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-            return resp
+            return _cookie_error("Invalid token", 401, "INVALID_REFRESH_TOKEN")
 
         user = jwt_db.user
         if user.username != g.username:
-            return make_response(jsonify({"message": "Invalid token"}), 403)
+            return _cookie_error("Invalid token", 403, "INVALID_REFRESH_TOKEN")
 
         # Clean up JWTs
         clean_up_jwt(user.username)
@@ -104,12 +128,11 @@ def delete_account() -> Response:
         send_delete_account_mail(user_email)
 
         resp = make_response(jsonify({"message": "User deleted successfully"}), 200)
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-        return resp
+        return _delete_refresh_cookie(resp)
     except Exception:
         db.session.rollback()
-        current_app.logger.exception("Failed to delete user")
-        return make_response(jsonify({"message": "error in backend"}), 500)
+        logger.exception("Failed to delete user")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 @auth_bp.route("/signup", methods=["POST"])
@@ -143,7 +166,7 @@ def add_user() -> Response:
     # check for duplicates
     res = Users.query.filter_by(email=email).first()
     if res:
-        return jsonify({"message": "user with email already exists"}), 409
+        return api_error("user with email already exists", 409, "EMAIL_ALREADY_EXISTS")
     try:
         # getting a username for the user
         username = codename(separator="_")
@@ -167,18 +190,22 @@ def add_user() -> Response:
         except EmailDeliveryError:
             db.session.delete(user)
             db.session.commit()
-            current_app.logger.exception("Failed to send signup verification email")
-            return jsonify({"message": "could not send verification email"}), 502
+            logger.exception("Failed to send signup verification email")
+            return api_error(
+                "could not send verification email", 502, "EMAIL_DELIVERY_FAILED"
+            )
         # Adding the tokens
         return add_tokens("user created", 201, user)
     except DefaultSequenceMissingError:
         db.session.rollback()
-        current_app.logger.exception("Default sequence is missing")
-        return jsonify({"message": "Default sequence is not configured"}), 500
+        logger.exception("Default sequence is missing")
+        return api_error(
+            "Default sequence is not configured", 500, "DEFAULT_SEQUENCE_MISSING"
+        )
     except Exception:
         db.session.rollback()
-        current_app.logger.exception("Failed to create user")
-        return jsonify({"message": "error in backend"}), 500
+        logger.exception("Failed to create user")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -224,20 +251,24 @@ def handle_login() -> Response | tuple[str, int]:
         user: Users = Users.query.filter_by(username=username).first()
 
     if not user:
-        return jsonify({"message": "user not found"}), 401
+        return api_error("user not found", 401, "INVALID_CREDENTIALS")
     if user.login_method != LoginMethod.email:
-        return jsonify(
-            {"message": "Use an alternate sign-in method for this account"}
-        ), 401
+        return api_error(
+            "Use an alternate sign-in method for this account",
+            401,
+            "USE_ALTERNATE_SIGN_IN",
+        )
     try:
         if ph.verify(user.pass_hash, password):
             # Adding the tokens
             return add_tokens("login successfull", 202, user)
     except VerifyMismatchError:
-        return jsonify({"message": "user does not exist or incorrect password"}), 401
+        return api_error(
+            "user does not exist or incorrect password", 401, "INVALID_CREDENTIALS"
+        )
     except Exception:
-        current_app.logger.exception("Login failed unexpectedly")
-        return jsonify({"message": "error in backend"}), 500
+        logger.exception("Login failed unexpectedly")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")
 
 
 @auth_bp.route("/auth_with_google", methods=["POST"])
@@ -267,7 +298,9 @@ def handle_auth_with_google() -> Response:
     google_client_id = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_ID")
     google_client_secret = os.getenv("SIGN_IN_W_GOOGLE_CLIENT_SECRET")
     if not google_client_id or not google_client_secret:
-        return jsonify({"message": "google sign in is not configured"}), 500
+        return api_error(
+            "google sign in is not configured", 500, "GOOGLE_AUTH_NOT_CONFIGURED"
+        )
 
     try:
         token_res = requests.post(
@@ -294,18 +327,29 @@ def handle_auth_with_google() -> Response:
 
         email = user_info.get("email")
         if not email:
-            return jsonify({"message": "google account did not include an email"}), 400
+            return api_error(
+                "google account did not include an email",
+                400,
+                "GOOGLE_EMAIL_MISSING",
+            )
         if not user_info.get("email_verified"):
-            return jsonify({"message": "google email is not verified"}), 403
+            return api_error(
+                "google email is not verified", 403, "GOOGLE_EMAIL_NOT_VERIFIED"
+            )
     except requests.exceptions.HTTPError:
-        return jsonify({"message": "invalid google authorization code"}), 401
+        return api_error(
+            "invalid google authorization code", 401, "INVALID_GOOGLE_AUTH_CODE"
+        )
     except requests.exceptions.RequestException:
-        return jsonify(
-            {"message": "could not reach google authentication service"}
-        ), 502
+        logger.exception("Could not reach Google authentication service")
+        return api_error(
+            "could not reach google authentication service",
+            502,
+            "GOOGLE_AUTH_UNAVAILABLE",
+        )
     except Exception:
-        current_app.logger.exception("Error verifying Google account")
-        return jsonify({"message": "error in verifying google account"}), 401
+        logger.exception("Error verifying Google account")
+        return api_error("error in verifying google account", 401, "GOOGLE_AUTH_FAILED")
 
     try:
         user = Users.query.filter_by(email=email).first()
@@ -339,12 +383,14 @@ def handle_auth_with_google() -> Response:
             payload["redirect"] = "info"
     except DefaultSequenceMissingError:
         db.session.rollback()
-        current_app.logger.exception("Default sequence is missing")
-        return jsonify({"message": "Default sequence is not configured"}), 500
+        logger.exception("Default sequence is missing")
+        return api_error(
+            "Default sequence is not configured", 500, "DEFAULT_SEQUENCE_MISSING"
+        )
     except Exception:
         db.session.rollback()
-        current_app.logger.exception("Failed to create Google-authenticated user")
-        return jsonify({"message": "error creating user"}), 500
+        logger.exception("Failed to create Google-authenticated user")
+        return api_error("error creating user", 500, "INTERNAL_ERROR")
 
     return add_tokens(payload, 202, user)
 
@@ -368,9 +414,14 @@ def add_tokens(payload: dict | str, code: int, user: Users) -> Response:
     # generating the tokens
     access_token = encode(user.username, "ACCESS")
     refresh_token = encode(user.username, "REFRESH")
+    if not isinstance(refresh_token, str):
+        raise TypeError("refresh token encoder returned an access-token payload")
+
     # Saving the refresh token
     refresh_token_instance = JwtToken(
-        refresh_token_string=refresh_token, user_id=user.id, user=user
+        refresh_token_string=hash_refresh_token(refresh_token),
+        user_id=user.id,
+        user=user,
     )
     db.session.add(refresh_token_instance)
     db.session.commit()
@@ -428,19 +479,26 @@ def refresh_ver_code() -> tuple[str, int]:
         user = Users.query.filter_by(username=username).first()
 
     if not user:
-        return jsonify(
-            {"message": "user with that email or username does not exist"}
-        ), 401
+        return api_error(
+            "user with that email or username does not exist", 401, "USER_NOT_FOUND"
+        )
 
     if user.is_verified:
-        return jsonify({"message": "user already verified", "action": "main_page"}), 403
+        return api_error(
+            "user already verified",
+            403,
+            "USER_ALREADY_VERIFIED",
+            action="main_page",
+        )
 
     # sending the code
     try:
         sent = send_verification_mail(user)
     except EmailDeliveryError:
-        current_app.logger.exception("Failed to send verification email")
-        return jsonify({"message": "could not send verification email"}), 502
+        logger.exception("Failed to send verification email")
+        return api_error(
+            "could not send verification email", 502, "EMAIL_DELIVERY_FAILED"
+        )
 
     message = "email sent" if sent else "verification email already sent recently"
     return jsonify({"message": message, "email": user.email}), 200
@@ -478,7 +536,7 @@ def confirm_ver_code() -> tuple[str, int]:
 
     user = Users.query.filter_by(username=username).first()
     if not user:
-        return jsonify({"message": "user does not exist"}), 401
+        return api_error("user does not exist", 401, "USER_NOT_FOUND")
 
     # Making sure the user isn't already verified
     if user.is_verified:
@@ -488,16 +546,18 @@ def confirm_ver_code() -> tuple[str, int]:
         user.verification_expiration < datetime.now(timezone.utc)
         or user.verification_code == 0
     ):
-        return jsonify({"message": "code has timed out", "action": "verify_code"}), 401
+        return api_error(
+            "code has timed out", 401, "VERIFICATION_CODE_EXPIRED", action="verify_code"
+        )
 
     try:
         code = int(code)
     except ValueError:
-        return jsonify({"message": "Wrong code"}), 403
+        return api_error("Wrong code", 403, "INVALID_VERIFICATION_CODE")
 
     # Making sure the code is correct
     if user.verification_code != code:
-        return jsonify({"message": "wrong code"}), 403
+        return api_error("wrong code", 403, "INVALID_VERIFICATION_CODE")
 
     # Adding to database and sending back the result.
     user.is_verified = True
@@ -528,18 +588,23 @@ def refresh_token_handle() -> tuple[str, int]:
     # Getting the refresh token from user.
     refresh_token = request.cookies.get("jwt")
     if not refresh_token:
-        return jsonify(
-            {"message": "Refresh Cookie Token was not set", "action": "logout"}
-        ), 401
+        return _cookie_error(
+            "Refresh Cookie Token was not set",
+            401,
+            "REFRESH_TOKEN_MISSING",
+            action="logout",
+        )
 
     # getting the username based on the refresh token on database
-    jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
+    refresh_token_hash = hash_refresh_token(refresh_token)
+    jwt_obj = JwtToken.query.filter_by(refresh_token_string=refresh_token_hash).first()
     if not jwt_obj:
-        resp = make_response(
-            jsonify({"message": "token was not in database", "action": "logout"}), 403
+        return _cookie_error(
+            "token was not in database",
+            403,
+            "REFRESH_TOKEN_NOT_FOUND",
+            action="logout",
         )
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-        return resp
     user_table = jwt_obj.user
     try:
         # Getting the username based on refresh token
@@ -547,13 +612,16 @@ def refresh_token_handle() -> tuple[str, int]:
             refresh_token,
             os.getenv("REFRESH_TOKEN_SECRET"),
             algorithms=["HS256"],
-            options={"require": ["exp", "username"], "verify_exp": True},
+            options={"require": ["exp", "username", "jti"], "verify_exp": True},
         )["username"]
         # if the databse does not match the token, it sends an error.
         if username_jwt != user_table.username:
-            return jsonify(
-                {"message": "Token has been tampered with", "action": "logout"}
-            ), 403
+            return _cookie_error(
+                "Token has been tampered with",
+                403,
+                "REFRESH_TOKEN_INVALID",
+                action="logout",
+            )
         # encoding a new token and sending it.
         access_token = encode(username_jwt, "ACCESS")
         return jsonify(
@@ -562,18 +630,20 @@ def refresh_token_handle() -> tuple[str, int]:
     except ExpiredSignatureError:
         db.session.delete(jwt_obj)
         db.session.commit()
-        resp = make_response(
-            jsonify({"message": "Token has already expired.", "action": "logout"}), 403
-        )
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-        return resp
-    except Exception:
-        resp = make_response(
-            jsonify({"message": "Token has been tampered with", "action": "logout"}),
+        return _cookie_error(
+            "Token has already expired.",
             403,
+            "REFRESH_TOKEN_EXPIRED",
+            action="logout",
         )
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-        return resp
+    except Exception:
+        logger.exception("Refresh token failed validation")
+        return _cookie_error(
+            "Token has been tampered with",
+            403,
+            "REFRESH_TOKEN_INVALID",
+            action="logout",
+        )
 
 
 @auth_bp.route("/logout", methods=["POST"])
@@ -597,20 +667,20 @@ def log_out() -> Response:
         return make_response("", 204)
 
     try:
-        jwt_db = JwtToken.query.filter_by(refresh_token_string=refresh_token).first()
+        refresh_token_hash = hash_refresh_token(refresh_token)
+        jwt_db = JwtToken.query.filter_by(
+            refresh_token_string=refresh_token_hash
+        ).first()
         if not jwt_db:
             resp = make_response(
                 jsonify({"message": "refresh token not in database"}), 200
             )
-            resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-
-            return resp
+            return _delete_refresh_cookie(resp)
         clean_up_jwt(jwt_db.user.username)
         db.session.delete(jwt_db)
         db.session.commit()
         resp = make_response(jsonify({"message": "logout successfull"}), 200)
-        resp.delete_cookie("jwt", httponly=True, secure=True, samesite="None")
-        return resp
+        return _delete_refresh_cookie(resp)
     except Exception:
-        current_app.logger.exception("Logout failed")
-        return make_response(jsonify({"message": "error in backend"}), 500)
+        logger.exception("Logout failed")
+        return api_error("error in backend", 500, "INTERNAL_ERROR")

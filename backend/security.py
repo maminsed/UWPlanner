@@ -2,8 +2,10 @@
 
 from urllib.parse import urlparse
 
-from flask import current_app, jsonify, request
+from flask import current_app, request
 from flask.typing import ResponseReturnValue
+
+from .responses import api_error
 
 
 def _origin_from_referer(referer: str | None) -> str | None:
@@ -22,10 +24,10 @@ def require_trusted_origin() -> ResponseReturnValue | None:
         request.headers.get("Referer")
     )
     if not request_origin:
-        return jsonify({"message": "Missing request origin"}), 403
+        return api_error("Missing request origin", 403, "MISSING_ORIGIN")
 
     allowed_origins = current_app.config.get("FRONTEND_ORIGINS", [])
     if request_origin.rstrip("/") not in allowed_origins:
-        return jsonify({"message": "Request origin is not allowed"}), 403
+        return api_error("Request origin is not allowed", 403, "ORIGIN_NOT_ALLOWED")
 
     return None

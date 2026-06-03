@@ -11,6 +11,7 @@ import { MdAccountCircle, MdExitToApp } from 'react-icons/md';
 import HoverEffect from './HoverEffect';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 export default function LogedInNav() {
@@ -35,12 +36,15 @@ export default function LogedInNav() {
         setUsername(undefined);
         router.push('/');
       } else {
-        console.error('error in backend');
-        console.info(res.message);
+        appLogger.error('Logout failed', {
+          message: res?.message,
+          status: response.status,
+        });
       }
     } catch (err) {
-      console.error('error occured in logout');
-      console.info(err);
+      appLogger.error('Logout request failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

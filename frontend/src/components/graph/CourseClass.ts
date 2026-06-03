@@ -13,6 +13,7 @@ import { generateRandomColours } from '../utils/colour';
 import { generateConnectionLines, totalRequirementStatus } from '../utils/preReqUtils';
 import { getTermSeason, termOperation, isTermWithoutSection } from '../utils/termUtils';
 
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 import useGQL from '@/lib/useGQL';
 
@@ -139,7 +140,7 @@ export class AllCourseInformation {
     );
 
     if (!res?.ok) {
-      console.error('error fetching user sections');
+      appLogger.error('Failed to fetch user sections', { status: res?.status });
       return;
     }
 
@@ -291,7 +292,9 @@ export class AllCourseInformation {
         courseIds.forEach((courseId) => this.courseIds.add(courseId)),
       );
     } catch (err) {
-      console.error(`error in #extractPath: ${err}`);
+      appLogger.error('Failed to extract user path', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       throw err;
     }
   }
@@ -333,7 +336,9 @@ export class AllCourseInformation {
       }
       return response.data.course;
     } catch (err) {
-      console.error(`error occured in #extractFromUWF: ${err}`);
+      appLogger.error('Failed to extract course data from GraphQL', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       throw err;
     }
   }
@@ -354,7 +359,9 @@ export class AllCourseInformation {
       const course_reqs: Record<string, BKCourseInfo> = (await res.json().catch(() => {})).courses;
       return course_reqs;
     } catch (err) {
-      console.error(`error occured in #extractFromBk: ${err}`);
+      appLogger.error('Failed to extract course requirements from backend', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       throw err;
     }
   }
@@ -369,7 +376,9 @@ export class AllCourseInformation {
       }
       this.#studentDegrees = (await res.json().catch(() => {})).programs;
     } catch (err) {
-      console.error(`error occured in #getDegreefromBK: ${err}`);
+      appLogger.error('Failed to extract degree data from backend', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       throw err;
     }
   }
@@ -535,7 +544,7 @@ export class AllCourseInformation {
       });
       this.#updateCourseVisibility();
     } else if (!course) {
-      console.error(`course does not exist: courseId: ${courseId} termId: ${termId}`);
+      appLogger.error('Course term info does not exist', { courseId, termId });
     }
   }
 
@@ -563,7 +572,7 @@ export class AllCourseInformation {
     });
 
     if (!res.ok) {
-      console.error('error occured in switching');
+      appLogger.error('Failed to swap semesters', { status: res.status });
       return false;
     }
     const term1 = this.path.find((term) => term.termId == termId1);

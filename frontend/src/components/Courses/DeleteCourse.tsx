@@ -4,6 +4,7 @@ import { AllCourseInformation } from '../graph/CourseClass';
 import RightSide from '../utils/RightSide';
 import { getCurrentTermId, getTermSeason } from '../utils/termUtils';
 
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 type DeleteCourseInterface = {
@@ -38,8 +39,10 @@ export default function DeleteCourse({
     });
     const response = await res.json().catch(() => {});
     if (!res.ok) {
-      console.error('error occured in deleting');
-      console.info(response);
+      appLogger.error('Failed to delete course', {
+        code: response?.code,
+        status: res.status,
+      });
     } else {
       updatePage();
     }

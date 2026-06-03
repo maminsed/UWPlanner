@@ -6,6 +6,7 @@ import { LuX } from 'react-icons/lu';
 import RightSide from '../utils/RightSide';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 import { useApi } from '@/lib/useApi';
 
 export function SecuritySettings() {
@@ -35,7 +36,7 @@ export function SecuritySettings() {
 
       window.location.href = '/';
     } else {
-      console.error('Failed to delete account');
+      appLogger.error('Failed to delete account', { status: res.status });
     }
   }
 

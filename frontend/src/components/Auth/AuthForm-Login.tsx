@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useLoginWithGoogle } from './AuthForm-utility';
 
 import { useAuth } from '@/app/AuthProvider';
+import { appLogger } from '@/lib/logger';
 
 const schema = z.object({
   email: z.string({ required_error: 'Email is mandatory' }).email(),
@@ -63,7 +64,7 @@ export default function LogIn() {
       });
       if (!response.ok) {
         const { message } = await response.json().catch(() => ({}));
-        console.error('Error Occured');
+        appLogger.error('Login request failed', { status: response.status });
         throw new Error(message || `Request Faild. Res: ${response.status}`);
       }
 
@@ -131,7 +132,9 @@ export default function LogIn() {
           >
             {isAuthBusy ? 'Loading...' : 'Log In'}
           </button>
-          {errors.root && <span className="text-red-600">{errors.root.message}</span>}
+          {errors.root && (
+            <span className="text-red-600 text-sm text-center">{errors.root.message}</span>
+          )}
         </form>
 
         <Link href="/signUp" className="block w-full text-center text-sm mt-2 mb-6 underline">

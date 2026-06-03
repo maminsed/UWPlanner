@@ -6,6 +6,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 
+from backend.app_logger import logger
+
 
 def create_service(
     client_secret_file: str,
@@ -65,10 +67,13 @@ def create_service(
         service = build(
             api_name, api_version, credentials=creds, static_discovery=False
         )
-        print(api_name, api_version, "service created successfully")
+        logger.info(
+            "Google API service created",
+            api_name=api_name,
+            api_version=api_version,
+        )
         return service
-    except Exception as e:
-        print(e)
-        print(f"failed to create service instance for {api_name}")
+    except Exception:
+        logger.exception("Failed to create Google API service", api_name=api_name)
         os.remove(os.path.join(working_dir, token_dir, token_file))
         return None
